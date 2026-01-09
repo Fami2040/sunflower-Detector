@@ -150,6 +150,82 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
+def compute_seed_counts(result):
+    """
+    Post-process SAHI detection results to count seeds.
+    
+    Args:
+        result: SAHI prediction result object containing object_prediction_list
+        
+    Returns:
+        tuple: (total_seeds, fertilized_seeds)
+            - total_seeds (T): total number of detected seeds
+            - fertilized_seeds (F): number of seeds classified as fertilized (class 0)
+    """
+    count = {0: 0, 1: 0}  # 0 = Fertilized, 1 = Unfertilized
+    
+    for p in result.object_prediction_list:
+        cls_id = int(p.category.id)
+        score = p.score.value
+        
+        # Final safety filter (VERY LOW threshold)
+        if score < CONF_THR:
+            continue
+        
+        count[cls_id] += 1
+    
+    total_seeds = count[0] + count[1]  # T = total detected seeds
+    fertilized_seeds = count[0]  # F = fertilized seeds (class 0)
+    
+    return total_seeds, fertilized_seeds
+
+def calculate_fertilization_percentage(fertilized_seeds: int, total_seeds: int) -> float:
+    """
+    Calculate fertilization percentage: (F/T) × 100
+    
+    Args:
+        fertilized_seeds (F): number of fertilized seeds
+        total_seeds (T): total number of detected seeds
+        
+    Returns:
+        float: fertilization percentage, rounded to 2 decimal places
+               Returns 0.0 if total_seeds == 0 (edge case)
+    """
+    if total_seeds == 0:
+        return 0.0
+    
+    percentage = (fertilized_seeds / total_seeds) * 100.0
+    return round(percentage, 2)
+
+def format_results(total_seeds: int, fertilized_seeds: int, fertilization_percentage: float) -> str:
+    """
+    Format the Telegram response with seed analysis results.
+    
+    Args:
+        total_seeds (T): total number of detected seeds
+        fertilized_seeds (F): number of fertilized seeds
+        fertilization_percentage: fertilization percentage (0.0-100.0)
+        
+    Returns:
+        str: Formatted message for Telegram
+    """
+    if total_seeds == 0:
+        return (
+            "🌻 **Sunflower Seed Analysis Results**\n\n"
+            "Total seeds detected: 0\n"
+            "Fertilized seeds: 0\n"
+            "Fertilization rate: 0.00%\n\n"
+            "⚠️ **No seeds were detected in this image.**\n"
+            "Please ensure the image contains a clear view of sunflower seeds."
+        )
+    
+    return (
+        "🌻 **Sunflower Seed Analysis Results**\n\n"
+        f"Total seeds detected: {total_seeds}\n"
+        f"Fertilized seeds: {fertilized_seeds}\n"
+        f"Fertilization rate: {fertilization_percentage:.2f}%"
+    )
+
 def is_sunflower_image(image_path, threshold=0.5):
     """Check if the image is a sunflower using classifier model.
     
@@ -343,27 +419,14 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # ================= COUNT SEEDS =================
         await _retry_tg("edit_text(counting)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
         
-        count = {0: 0, 1: 0}
+        # Compute seed counts using modular function
+        total_seeds, fertilized_seeds = compute_seed_counts(result)
         
-        for p in result.object_prediction_list:
-            cls_id = int(p.category.id)
-            score = p.score.value
-            
-            # final safety filter (VERY LOW)
-            if score < CONF_THR:
-                continue
-            
-            count[cls_id] += 1
+        # Calculate fertilization percentage
+        fertilization_percentage = calculate_fertilization_percentage(fertilized_seeds, total_seeds)
         
-        total = count[0] + count[1]
-        
-        # ================= SEND RESULTS =================
-        result_text = (
-            f"📊 **FINAL COUNTS**\n\n"
-            f"🌻 **Fertilized**   : {count[0]}\n"
-            f"🌱 **Unfertilized** : {count[1]}\n"
-            f"📦 **TOTAL SEEDS**  : {total}"
-        )
+        # Format results
+        result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
         
         # Delete status message and send results
         try:
@@ -380,7 +443,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         
-        logger.info(f"Processed image: Fertilized={count[0]}, Unfertilized={count[1]}, Total={total}")
+        logger.info(f"Processed image: Fertilized={fertilized_seeds}, Total={total_seeds}, Percentage={fertilization_percentage:.2f}%")
         
         # Clean up temp files
         try:
@@ -556,26 +619,14 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # ================= COUNT SEEDS =================
             await _retry_tg("edit_text(counting_doc)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
             
-            count = {0: 0, 1: 0}
+            # Compute seed counts using modular function
+            total_seeds, fertilized_seeds = compute_seed_counts(result)
             
-            for p in result.object_prediction_list:
-                cls_id = int(p.category.id)
-                score = p.score.value
-                
-                if score < CONF_THR:
-                    continue
-                
-                count[cls_id] += 1
+            # Calculate fertilization percentage
+            fertilization_percentage = calculate_fertilization_percentage(fertilized_seeds, total_seeds)
             
-            total = count[0] + count[1]
-            
-            # ================= SEND RESULTS =================
-            result_text = (
-                f"📊 **FINAL COUNTS**\n\n"
-                f"🌻 **Fertilized**   : {count[0]}\n"
-                f"🌱 **Unfertilized** : {count[1]}\n"
-                f"📦 **TOTAL SEEDS**  : {total}"
-            )
+            # Format results
+            result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
             
             try:
                 await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
@@ -591,7 +642,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             )
             
-            logger.info(f"Processed document: Fertilized={count[0]}, Unfertilized={count[1]}, Total={total}")
+            logger.info(f"Processed document: Fertilized={fertilized_seeds}, Total={total_seeds}, Percentage={fertilization_percentage:.2f}%")
             
         else:
             await update.message.reply_text("❌ Please send an image file (JPG, PNG, etc.)")
