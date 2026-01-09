@@ -71,3 +71,6 @@ Make sure these are set in Railway:
 3. **Verify requirements.txt**: All packages compatible with Python 3.11
 4. **Check Python version**: Railway should use Python 3.11
 
+
+
+

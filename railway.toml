@@ -6,3 +6,6 @@ startCommand = "python telegram_bot.py"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
+
+
+
