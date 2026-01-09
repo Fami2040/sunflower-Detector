@@ -779,18 +779,14 @@ def main():
         application = Application.builder().token(BOT_TOKEN).build()
         logger.info("Application created successfully")
         
-        # Verify bot connection before starting
-        async def verify_connection():
-            return await verify_bot_connection(application.bot)
-        
-        # Run verification
-        import asyncio
-        connection_ok = asyncio.run(verify_connection())
-        
-        if not connection_ok:
-            logger.error("Bot connection verification failed. Exiting.")
-            print("❌ Bot connection failed. Check your BOT_TOKEN and network connection.")
+        # Quick connection test using a simple synchronous approach
+        # We'll let run_polling handle the actual connection, but verify token format
+        if not BOT_TOKEN or len(BOT_TOKEN) < 20:
+            logger.error("Invalid BOT_TOKEN format")
+            print("❌ Error: Invalid BOT_TOKEN format. Token should be longer than 20 characters.")
             return
+        
+        logger.info("BOT_TOKEN format validated")
         
         # Configure request timeout settings
         try:
@@ -819,10 +815,12 @@ def main():
         application.add_error_handler(error_handler)
         
         # Start bot
-        logger.info("Starting polling...")
+        logger.info("Starting bot polling...")
         print("✅ Bot is ready and polling for messages...")
+        print("📱 Send /start to test the bot")
         print("Press Ctrl+C to stop")
         
+        # Run polling - this will handle connection verification internally
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True  # Drop pending updates to avoid conflicts
