@@ -212,18 +212,28 @@ def format_results(total_seeds: int, fertilized_seeds: int, fertilization_percen
     if total_seeds == 0:
         return (
             "🌻 **Sunflower Seed Analysis Results**\n\n"
-            "Total seeds detected: 0\n"
-            "Fertilized seeds: 0\n"
-            "Fertilization rate: 0.00%\n\n"
+            "📊 Total seeds detected: 0\n"
+            "✅ Fertilized seeds: 0\n"
+            "📈 Fertilization rate: 0.00%\n\n"
             "⚠️ **No seeds were detected in this image.**\n"
             "Please ensure the image contains a clear view of sunflower seeds."
         )
     
+    # Choose emoji based on fertilization rate
+    if fertilization_percentage >= 80:
+        rate_emoji = "🎉"  # Excellent
+    elif fertilization_percentage >= 60:
+        rate_emoji = "✅"  # Good
+    elif fertilization_percentage >= 40:
+        rate_emoji = "⚠️"  # Moderate
+    else:
+        rate_emoji = "📉"  # Low
+    
     return (
         "🌻 **Sunflower Seed Analysis Results**\n\n"
-        f"Total seeds detected: {total_seeds}\n"
-        f"Fertilized seeds: {fertilized_seeds}\n"
-        f"Fertilization rate: {fertilization_percentage:.2f}%"
+        f"📊 Total seeds detected: {total_seeds}\n"
+        f"✅ Fertilized seeds: {fertilized_seeds}\n"
+        f"📈 Fertilization rate: {fertilization_percentage:.2f}% {rate_emoji}"
     )
 
 def is_sunflower_image(image_path, threshold=0.5):
