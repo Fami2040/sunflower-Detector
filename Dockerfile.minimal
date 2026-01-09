@@ -1,0 +1,37 @@
+# Minimal Dockerfile for Railway - optimized for speed
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Minimal system deps (only what's absolutely needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DEFAULT_TIMEOUT=300
+
+# Install pip dependencies in stages to avoid timeout
+RUN pip install --upgrade pip
+
+# Install PyTorch CPU (smallest, fastest)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Install other packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir \
+    python-telegram-bot>=22.5 \
+    sahi>=0.11.18 \
+    opencv-python-headless>=4.8.0 \
+    ultralytics>=8.0.0 \
+    numpy>=1.24.0 \
+    pillow>=10.0.0 \
+    python-dotenv>=1.0.0
+
+# Copy code
+COPY . .
+
+CMD ["python", "telegram_bot.py"]
+
