@@ -619,11 +619,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             
             # ================= SAHI INFERENCE =================
-            try:
-                await _retry_tg("edit_text(sahi_doc)", lambda: status_msg.edit_text(f"🔄 Analyzing image with SAHI (slice: {SLICE_SIZE}px, device: {DEVICE})... This may take 30-90 seconds."))
-            except:
-                pass
-            
             import time
             start_time = time.time()
                 
