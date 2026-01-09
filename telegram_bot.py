@@ -708,48 +708,89 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         print("Stopping this instance...")
         return
 
+async def verify_bot_connection(bot):
+    """Verify bot can connect to Telegram API."""
+    try:
+        bot_info = await bot.get_me()
+        logger.info(f"✅ Bot connected successfully: @{bot_info.username} ({bot_info.first_name})")
+        print(f"✅ Bot connected: @{bot_info.username}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to Telegram API: {e}", exc_info=True)
+        print(f"❌ Failed to connect to Telegram API: {e}")
+        return False
+
 def main():
     """Start the bot."""
+    logger.info("=" * 60)
+    logger.info("Starting Sunflower Seed Counter Telegram Bot")
+    logger.info("=" * 60)
+    
     if not BOT_TOKEN:
-        print("❌ Error: BOT_TOKEN not found!")
-        print("Please set BOT_TOKEN environment variable or add it to .env file")
+        error_msg = "❌ Error: BOT_TOKEN not found! Please set BOT_TOKEN environment variable or add it to .env file"
+        logger.error(error_msg)
+        print(error_msg)
+        print("\n💡 For Railway: Go to your project → Variables → Add BOT_TOKEN")
         return
     
-    # Create application with timeout settings
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Configure request timeout settings
-    # Increase timeouts for image processing (if supported)
-    try:
-        if hasattr(application.bot, 'request'):
-            application.bot.request.timeout = 120  # 2 minutes for requests
-            application.bot.request.connect_timeout = 30  # 30 seconds for connection
-            logger.info("Bot timeout settings configured: 120s request, 30s connect")
-    except Exception as e:
-        logger.warning(f"Could not configure bot timeout settings: {e}")
-    
-    # Register handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(MessageHandler(filters.PHOTO, process_image))
-    application.add_handler(MessageHandler(filters.Document.IMAGE, handle_document))
-    
-    # Add error handler
-    application.add_error_handler(error_handler)
-    
-    # Start bot
+    logger.info(f"BOT_TOKEN found: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
     print("🤖 Bot is starting...")
-    print("Press Ctrl+C to stop")
+    
     try:
+        # Create application with timeout settings
+        application = Application.builder().token(BOT_TOKEN).build()
+        logger.info("Application created successfully")
+        
+        # Verify bot connection before starting
+        async def verify_connection():
+            return await verify_bot_connection(application.bot)
+        
+        # Run verification
+        import asyncio
+        connection_ok = asyncio.run(verify_connection())
+        
+        if not connection_ok:
+            logger.error("Bot connection verification failed. Exiting.")
+            print("❌ Bot connection failed. Check your BOT_TOKEN and network connection.")
+            return
+        
+        # Configure request timeout settings
+        try:
+            if hasattr(application.bot, 'request'):
+                application.bot.request.timeout = 120  # 2 minutes for requests
+                application.bot.request.connect_timeout = 30  # 30 seconds for connection
+                logger.info("Bot timeout settings configured: 120s request, 30s connect")
+        except Exception as e:
+            logger.warning(f"Could not configure bot timeout settings: {e}")
+        
+        # Register handlers
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(MessageHandler(filters.PHOTO, process_image))
+        application.add_handler(MessageHandler(filters.Document.IMAGE, handle_document))
+        logger.info("Handlers registered successfully")
+        
+        # Add error handler
+        application.add_error_handler(error_handler)
+        
+        # Start bot
+        logger.info("Starting polling...")
+        print("✅ Bot is ready and polling for messages...")
+        print("Press Ctrl+C to stop")
+        
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True  # Drop pending updates to avoid conflicts
         )
+        
     except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
         print("\n🛑 Bot stopped by user")
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         print(f"❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == '__main__':
     main()
