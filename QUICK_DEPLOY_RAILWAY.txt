@@ -1,0 +1,43 @@
+═══════════════════════════════════════════════════════════════
+  RAILWAY.APP DEPLOYMENT - SUPER EASY!
+═══════════════════════════════════════════════════════════════
+
+Railway is EASIER than Render! Here's how:
+
+STEP 1: Go to Railway
+   → https://railway.app
+   → Click "Start a New Project"
+   → Sign up with GitHub (one click!)
+
+STEP 2: Deploy from GitHub
+   → Click "Deploy from GitHub repo"
+   → Select "sunflower-Detector"
+   → Railway auto-detects everything! ✨
+
+STEP 3: Add Bot Token
+   → Click on your service
+   → Go to "Variables" tab
+   → Click "New Variable"
+   → Key: BOT_TOKEN
+   → Value: 8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY
+   → Click "Add"
+
+STEP 4: Done!
+   → Railway automatically builds and deploys
+   → Watch logs for "🤖 Bot is starting..."
+   → Test in Telegram with /start
+
+That's it! Railway is that simple! 🚂
+
+═══════════════════════════════════════════════════════════════
+  WHY RAILWAY IS BETTER:
+═══════════════════════════════════════════════════════════════
+
+✅ Auto-detects Python and dependencies
+✅ $5 free credit/month (enough for bots)
+✅ No spin-down delays (unlike Render)
+✅ One-click GitHub integration
+✅ Better performance
+
+═══════════════════════════════════════════════════════════════
+
