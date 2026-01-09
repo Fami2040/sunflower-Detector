@@ -6,7 +6,9 @@ A Telegram bot that uses SAHI (Slice, Predict ALL, Merge, and COUNT) to analyze 
 
 - **SAHI Processing**: Slices images into smaller pieces for better detection accuracy
 - **Automatic Counting**: Counts fertilized and unfertilized sunflower seeds
-- **Annotated Output**: Returns images with bounding boxes and labels
+- **Image Classification**: Validates that uploaded images are sunflowers before processing
+- **Real-time Status Updates**: Shows processing progress with status messages
+- **Text-only Results**: Returns clean count statistics (no annotated images)
 - **Telegram Integration**: Easy-to-use Telegram bot interface
 
 ## Prerequisites
@@ -32,8 +34,9 @@ A Telegram bot that uses SAHI (Slice, Predict ALL, Merge, and COUNT) to analyze 
      ```
 
 4. **Ensure model files are in place:**
-   - The bot expects `models/best.pt` to exist
-   - Make sure your YOLO model is located at `models/best.pt`
+   - The bot expects `models/best.pt` (or `models/best2.pt`) for seed detection
+   - The bot expects `models/classifier.pt` for sunflower validation
+   - Place your trained YOLO models in the `models/` directory
 
 ## Configuration
 
@@ -41,7 +44,7 @@ You can modify these settings in `telegram_bot.py`:
 
 ```python
 # SAHI slicing parameters
-SLICE_SIZE = 850       # smaller → more slices → more recall
+SLICE_SIZE = 800       # smaller → more slices → more recall
 OVERLAP = 0.25         # overlap avoids border misses
 
 # Detection thresholds
@@ -63,8 +66,11 @@ DEVICE = "cuda"        # use "cpu" if CUDA not available
    - Start a conversation with your bot
    - Send `/start` to see welcome message
    - Send a sunflower image (as photo or document)
-   - Wait for processing
-   - Receive annotated image with seed counts
+   - Watch the processing status messages:
+     - 🔍 Checking if image is a sunflower...
+     - 🔄 Processing sunflower image...
+     - 🔢 Counting seeds...
+   - Receive text results with seed counts
 
 ## Bot Commands
 
@@ -73,20 +79,21 @@ DEVICE = "cuda"        # use "cpu" if CUDA not available
 
 ## Output
 
-The bot returns:
-- An annotated image with bounding boxes for detected seeds
-- Count statistics:
-  - **Fertilized seeds**: Count of class 0
-  - **Unfertilized seeds**: Count of class 1
-  - **Total seeds**: Sum of both classes
+The bot returns text-only results with count statistics:
+- **Fertilized seeds**: Count of class 0
+- **Unfertilized seeds**: Count of class 1
+- **Total seeds**: Sum of both classes
+
+If a non-sunflower image is uploaded, the bot will reject it with a clear message.
 
 ## Model Information
 
-- **Model Type**: YOLO (Ultralytics)
-- **Model Path**: `models/best.pt`
-- **Classes**:
-  - Class 0: Fertilized seeds (red boxes)
-  - Class 1: Unfertilized seeds (yellow boxes)
+- **Detection Model**: YOLO (Ultralytics) - `models/best.pt` or `models/best2.pt`
+  - Class 0: Fertilized seeds
+  - Class 1: Unfertilized seeds
+- **Classifier Model**: YOLO Classification - `models/classifier.pt`
+  - Class 0: Other (not sunflower)
+  - Class 1: Sunflower
 
 ## Troubleshooting
 
@@ -107,5 +114,6 @@ The bot returns:
 ## License
 
 This project is provided as-is for educational and research purposes.
+
 
 
