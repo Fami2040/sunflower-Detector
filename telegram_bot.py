@@ -32,17 +32,23 @@ except:
     DEVICE = "cpu"
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-SLICE_SIZE = 800       # smaller → more slices → more recall
-OVERLAP = 0.25         # overlap avoids border misses
+# Optimized for speed: larger slices = fewer inferences = faster processing
+# Trade-off: slightly less recall, but much faster
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = faster (was 800)
+OVERLAP = float(os.getenv("OVERLAP", "0.2"))       # reduced overlap = faster (was 0.25)
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = 0.15        # allow almost everything
-NMS_IOU = 0.3          # reasonable merge
+CONF_THR = float(os.getenv("CONF_THR", "0.15"))    # allow almost everything
+NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))       # reasonable merge
 
 # ---- Telegram / performance ----
-MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "2000"))  # downscale large images to avoid timeouts
+# Optimized for CPU: smaller max size = faster processing
+MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "1600"))  # reduced from 2000 for faster CPU processing
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
 TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
+
+# ---- Performance optimizations ----
+SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "false").lower() == "true"  # Skip classifier for speed
 
 # ---- Classes ----
 CLASSES = ["Fertilized", "Unfertilized"]
@@ -90,7 +96,7 @@ def downscale_image_inplace(image_path: str, max_side: int = MAX_IMAGE_SIDE) -> 
     resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
     # Save back as JPEG with decent quality
     cv2.imwrite(image_path, resized, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
-    logger.info(f"Downscaled image from {w}x{h} -> {new_w}x{new_h}")
+    logger.info(f"Downscaled image from {w}x{h} -> {new_w}x{new_h} (scale: {scale:.3f}, saved {100*(1-scale**2):.1f}% pixels)")
 
 # ================= LOAD MODELS =================
 print(f"🔄 Loading detection model on {DEVICE}...")
@@ -373,16 +379,21 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.warning(f"Downscale skipped/failed: {e}")
         
         # ================= CHECK IF SUNFLOWER =================
-        try:
-            await _retry_tg("edit_text(check_sunflower)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
-        except:
-            pass
-            
-        try:
-            is_sunflower = is_sunflower_image(input_path)
-        except Exception as e:
-            logger.error(f"Error in classifier check: {e}")
-            is_sunflower = True  # On error, allow processing
+        # Skip classifier if SKIP_CLASSIFIER is set for faster processing
+        if SKIP_CLASSIFIER:
+            logger.info("Skipping classifier check (SKIP_CLASSIFIER enabled)")
+            is_sunflower = True
+        else:
+            try:
+                await _retry_tg("edit_text(check_sunflower)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
+            except:
+                pass
+                
+            try:
+                is_sunflower = is_sunflower_image(input_path)
+            except Exception as e:
+                logger.error(f"Error in classifier check: {e}")
+                is_sunflower = True  # On error, allow processing
             
         if not is_sunflower:
             try:
@@ -408,9 +419,12 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # ================= SAHI INFERENCE =================
         try:
-            await _retry_tg("edit_text(sahi)", lambda: status_msg.edit_text("🔄 Processing sunflower image... Please wait."))
+            await _retry_tg("edit_text(sahi)", lambda: status_msg.edit_text(f"🔄 Analyzing image with SAHI (slice: {SLICE_SIZE}px, device: {DEVICE})... This may take 30-90 seconds."))
         except:
             pass
+        
+        import time
+        start_time = time.time()
             
         try:
             result = get_sliced_prediction(
@@ -421,8 +435,11 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 overlap_height_ratio=OVERLAP,
                 overlap_width_ratio=OVERLAP,
                 postprocess_type="NMS",                 # merge duplicates
-                postprocess_match_threshold=NMS_IOU
+                postprocess_match_threshold=NMS_IOU,
+                verbose=0  # Reduce SAHI logging for speed
             )
+            elapsed_time = time.time() - start_time
+            logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
         except Exception as e:
             logger.error(f"Error in SAHI inference: {e}", exc_info=True)
             error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
@@ -608,9 +625,12 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # ================= SAHI INFERENCE =================
             try:
-                await _retry_tg("edit_text(sahi_doc)", lambda: status_msg.edit_text("🔄 Processing sunflower image... Please wait."))
+                await _retry_tg("edit_text(sahi_doc)", lambda: status_msg.edit_text(f"🔄 Analyzing image with SAHI (slice: {SLICE_SIZE}px, device: {DEVICE})... This may take 30-90 seconds."))
             except:
                 pass
+            
+            import time
+            start_time = time.time()
                 
             try:
                 result = get_sliced_prediction(
@@ -621,8 +641,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     overlap_height_ratio=OVERLAP,
                     overlap_width_ratio=OVERLAP,
                     postprocess_type="NMS",
-                    postprocess_match_threshold=NMS_IOU
+                    postprocess_match_threshold=NMS_IOU,
+                    verbose=0  # Reduce SAHI logging for speed
                 )
+                elapsed_time = time.time() - start_time
+                logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
             except Exception as e:
                 logger.error(f"Error in SAHI inference: {e}", exc_info=True)
                 error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
