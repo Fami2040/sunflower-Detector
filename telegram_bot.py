@@ -127,6 +127,7 @@ else:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
+    logger.info(f"Received /start command from user {update.effective_user.id} (@{update.effective_user.username})")
     welcome_message = (
         "🌻 **Sunflower Seed Counter Bot**\n\n"
         "Send me a sunflower image and I'll count:\n"
@@ -134,7 +135,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Unfertilized seeds\n\n"
         "Just send any image file to get started!"
     )
-    await update.message.reply_text(welcome_message, parse_mode='Markdown')
+    try:
+        await update.message.reply_text(welcome_message, parse_mode='Markdown')
+        logger.info(f"Successfully sent welcome message to user {update.effective_user.id}")
+    except Exception as e:
+        logger.error(f"Error sending welcome message: {e}", exc_info=True)
+        raise
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /help is issued."""
@@ -149,6 +155,14 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "**Note:** The bot will automatically check if your image is a sunflower before processing."
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text messages that are not commands."""
+    logger.info(f"Received text message: {update.message.text}")
+    await update.message.reply_text(
+        "👋 Please send me a sunflower image to analyze!\n\n"
+        "Use /help for more information."
+    )
 
 def compute_seed_counts(result):
     """
@@ -696,9 +710,33 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Failed to cleanup temp files: {e}")
 
+async def log_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Log all incoming updates for debugging."""
+    if update.message:
+        logger.info(f"📨 Received update: message_id={update.message.message_id}, "
+                   f"chat_id={update.message.chat.id}, "
+                   f"user_id={update.effective_user.id}, "
+                   f"text={update.message.text}, "
+                   f"has_photo={update.message.photo is not None}, "
+                   f"has_document={update.message.document is not None}")
+    elif update.callback_query:
+        logger.info(f"📨 Received callback_query: {update.callback_query.data}")
+    else:
+        logger.info(f"📨 Received update: {update}")
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle errors."""
     logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+    
+    # Try to send error message to user if possible
+    if update and hasattr(update, 'effective_chat'):
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="❌ An error occurred while processing your request. Please try again."
+            )
+        except:
+            pass
     
     # Handle conflict errors
     if isinstance(context.error, Exception) and "Conflict" in str(context.error):
@@ -763,12 +801,19 @@ def main():
         except Exception as e:
             logger.warning(f"Could not configure bot timeout settings: {e}")
         
-        # Register handlers
+        # Add pre-processing handler to log all updates
+        application.add_handler(MessageHandler(filters.ALL, log_update), group=-1)
+        
+        # Register handlers (order matters - more specific first)
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(MessageHandler(filters.PHOTO, process_image))
         application.add_handler(MessageHandler(filters.Document.IMAGE, handle_document))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
         logger.info("Handlers registered successfully")
+        
+        # Log handler count
+        logger.info(f"Total handlers registered: {len(application.handlers[0])}")
         
         # Add error handler
         application.add_error_handler(error_handler)
