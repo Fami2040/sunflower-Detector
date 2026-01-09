@@ -34,8 +34,8 @@ except:
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Optimized for speed: larger slices = fewer inferences = faster processing
 # Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = faster (was 800)
-OVERLAP = float(os.getenv("OVERLAP", "0.2"))       # reduced overlap = faster (was 0.25)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # larger slices = faster (was 800)
+OVERLAP = float(os.getenv("OVERLAP", "0.25"))       # reduced overlap = faster (was 0.25)
 
 # ---- Thresholds (LOW to reduce FN) ----
 CONF_THR = float(os.getenv("CONF_THR", "0.15"))    # allow almost everything
@@ -418,11 +418,6 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # ================= SAHI INFERENCE =================
-        try:
-            await _retry_tg("edit_text(sahi)", lambda: status_msg.edit_text(f"🔄 Analyzing image with SAHI (slice: {SLICE_SIZE}px, device: {DEVICE})... This may take 30-90 seconds."))
-        except:
-            pass
-        
         import time
         start_time = time.time()
             
