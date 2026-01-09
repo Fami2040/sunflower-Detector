@@ -18,10 +18,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Upgrade pip and install Python dependencies
-# Install CPU-only PyTorch first (much smaller and faster for Railway)
+# Note: PyTorch will install CPU version by default on Railway (no CUDA)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt --no-deps || \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
