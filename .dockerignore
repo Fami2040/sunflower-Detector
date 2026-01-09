@@ -1,0 +1,48 @@
+# Virtual environments
+venv/
+venv_gpu/
+env/
+ENV/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Deployment configs (not needed in container)
+render.yaml
+Procfile
+railway.json
+nixpacks.toml
+railway_build.sh
+*.bat
+*.ps1
+
+# Temporary files
+*.tmp
+*.log
+*.temp
+temp/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
