@@ -768,7 +768,27 @@ def main():
         error_msg = "❌ Error: BOT_TOKEN not found! Please set BOT_TOKEN environment variable or add it to .env file"
         logger.error(error_msg)
         print(error_msg)
-        print("\n💡 For Railway: Go to your project → Variables → Add BOT_TOKEN")
+        print("\n" + "=" * 60)
+        print("📋 HOW TO FIX ON RAILWAY:")
+        print("=" * 60)
+        print("1. Go to Railway Dashboard → Your Project → Your Service")
+        print("2. Click on 'Variables' tab (or 'Environment' / 'Config')")
+        print("3. Click '+ New Variable' button")
+        print("4. Variable Name: BOT_TOKEN")
+        print("5. Variable Value: 8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY")
+        print("6. Click 'Save' or 'Add'")
+        print("7. Go to 'Deployments' tab → Click 'Redeploy'")
+        print("8. Wait 2-3 minutes and check 'Logs' tab")
+        print("=" * 60)
+        
+        # Debug: Check all environment variables (for debugging, but don't print token)
+        logger.debug("Available environment variables:")
+        env_vars = [k for k in os.environ.keys() if 'BOT' in k.upper() or 'TOKEN' in k.upper()]
+        if env_vars:
+            logger.debug(f"Found BOT/TOKEN related env vars: {env_vars}")
+        else:
+            logger.debug("No BOT_TOKEN or similar variables found in environment")
+        
         return
     
     logger.info(f"BOT_TOKEN found: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
