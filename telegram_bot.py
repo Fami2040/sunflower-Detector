@@ -38,7 +38,7 @@ SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # larger slices = faster (was 
 OVERLAP = float(os.getenv("OVERLAP", "0.25"))       # reduced overlap = faster (was 0.25)
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.05"))    # allow almost everything
+CONF_THR = float(os.getenv("CONF_THR", "0.1"))    # allow almost everything
 NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))       # reasonable merge
 
 # ---- Telegram / performance ----
@@ -241,13 +241,13 @@ def format_results(total_seeds: int, fertilized_seeds: int, fertilization_percen
     
     # Choose emoji based on fertilization rate
     if fertilization_percentage >= 80:
-        rate_emoji = "🎉"  # Excellent
+        rate_emoji = "✅"  # Excellent
     elif fertilization_percentage >= 60:
         rate_emoji = "✅"  # Good
     elif fertilization_percentage >= 40:
-        rate_emoji = "⚠️"  # Moderate
+        rate_emoji = "✅"  # Moderate
     else:
-        rate_emoji = "📉"  # Low
+        rate_emoji = "✅"  # Low
     
     return (
         "🌻 **Sunflower Seed Analysis Results**\n\n"
