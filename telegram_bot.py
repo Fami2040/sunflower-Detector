@@ -24,18 +24,47 @@ load_dotenv()
 # ================= CONFIG =================
 MODEL_PATH = r"models/best2.pt"
 CLASSIFIER_PATH = r"models/classifier.pt"
-# Auto-detect device: use CUDA if available, otherwise CPU
+# Device selection: prefer CUDA for maximum speed
+# Set FORCE_DEVICE="cuda" to force CUDA (will fail if not available)
+# Set FORCE_DEVICE="cpu" to force CPU
 try:
     import torch
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-except:
+    FORCE_DEVICE = os.getenv("FORCE_DEVICE", "").lower()
+    
+    if FORCE_DEVICE == "cuda":
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+            print(f"✅ FORCE_DEVICE=cuda: Using CUDA (GPU) - {torch.cuda.get_device_name(0)}")
+        else:
+            print("❌ ERROR: FORCE_DEVICE=cuda but CUDA is not available!")
+            print("   CUDA is not available on this system. Falling back to CPU.")
+            print("   To use CPU, set FORCE_DEVICE=cpu or remove FORCE_DEVICE")
+            DEVICE = "cpu"
+    elif FORCE_DEVICE == "cpu":
+        DEVICE = "cpu"
+        print("ℹ️ FORCE_DEVICE=cpu: Using CPU (forced)")
+    else:
+        # Auto-detect: ALWAYS prefer CUDA if available for maximum speed
+        if torch.cuda.is_available():
+            DEVICE = "cuda"
+            gpu_name = torch.cuda.get_device_name(0)
+            gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+            print(f"✅ CUDA detected: Using GPU - {gpu_name} ({gpu_memory:.2f} GB)")
+            print(f"🚀 GPU mode: Processing will be 10-50x faster than CPU!")
+        else:
+            DEVICE = "cpu"
+            print("⚠️ CUDA not available: Using CPU (10-50x slower than GPU)")
+            print("   For maximum speed, use a GPU-enabled server or local machine with CUDA")
+            print("   Railway free tier only provides CPU. Consider Railway Pro or other GPU hosting.")
+except Exception as e:
     DEVICE = "cpu"
+    print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Optimized for speed: larger slices = fewer inferences = faster processing
 # Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # larger slices = faster (was 800)
-OVERLAP = float(os.getenv("OVERLAP", "0.25"))       # reduced overlap = faster (was 0.25)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = faster (optimized for speed)
+OVERLAP = float(os.getenv("OVERLAP", "0.2"))       # reduced overlap = faster (optimized)
 
 # ---- Thresholds (LOW to reduce FN) ----
 CONF_THR = float(os.getenv("CONF_THR", "0.15"))    # allow almost everything
@@ -99,7 +128,15 @@ def downscale_image_inplace(image_path: str, max_side: int = MAX_IMAGE_SIDE) -> 
     logger.info(f"Downscaled image from {w}x{h} -> {new_w}x{new_h} (scale: {scale:.3f}, saved {100*(1-scale**2):.1f}% pixels)")
 
 # ================= LOAD MODELS =================
-print(f"🔄 Loading detection model on {DEVICE}...")
+print(f"🔄 Loading detection model on {DEVICE.upper()}...")
+if DEVICE == "cuda":
+    try:
+        import torch
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        print(f"🚀 GPU: {gpu_name} ({gpu_memory:.2f} GB)")
+    except:
+        pass
 print(f"📁 Detection model path: {MODEL_PATH}")
 if not os.path.exists(MODEL_PATH):
     print(f"❌ ERROR: Detection model file not found at {MODEL_PATH}")
@@ -113,7 +150,7 @@ detection_model = AutoDetectionModel.from_pretrained(
 )
 print("✅ Detection model loaded successfully")
 
-print(f"🔄 Loading classifier model on {DEVICE}...")
+print(f"🔄 Loading classifier model on {DEVICE.upper()}...")
 print(f"📁 Classifier model path: {CLASSIFIER_PATH}")
 if not os.path.exists(CLASSIFIER_PATH):
     print(f"⚠️ WARNING: Classifier model file not found at {CLASSIFIER_PATH}")
