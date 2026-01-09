@@ -1,9 +1,10 @@
 [phases.setup]
-nixPkgs = ["python311", "pip"]
+nixPkgs = ["python311"]
 
 [phases.install]
 cmds = [
     "pip install --upgrade pip setuptools wheel",
+    "pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu",
     "pip install --no-cache-dir -r requirements.txt"
 ]
 
