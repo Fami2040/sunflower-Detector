@@ -1,0 +1,694 @@
+# =====================================================
+# SAHI — Slice, Predict ALL, Merge, and COUNT
+# Telegram Bot | Fertilized / Unfertilized Sunflower Seeds
+# =====================================================
+
+import cv2
+import os
+import tempfile
+import numpy as np
+import asyncio
+from pathlib import Path
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.error import TimedOut, NetworkError
+from sahi import AutoDetectionModel
+from sahi.predict import get_sliced_prediction
+import logging
+from dotenv import load_dotenv
+from ultralytics import YOLO
+
+# Load environment variables
+load_dotenv()
+
+# ================= CONFIG =================
+MODEL_PATH = r"models/best2.pt"
+CLASSIFIER_PATH = r"models/classifier.pt"
+# Auto-detect device: use CUDA if available, otherwise CPU
+try:
+    import torch
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+except:
+    DEVICE = "cpu"
+
+# ---- SAHI slicing (VERY IMPORTANT) ----
+SLICE_SIZE = 800       # smaller → more slices → more recall
+OVERLAP = 0.25         # overlap avoids border misses
+
+# ---- Thresholds (LOW to reduce FN) ----
+CONF_THR = 0.15        # allow almost everything
+NMS_IOU = 0.3          # reasonable merge
+
+# ---- Telegram / performance ----
+MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "2000"))  # downscale large images to avoid timeouts
+OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
+TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
+
+# ---- Classes ----
+CLASSES = ["Fertilized", "Unfertilized"]
+
+# Telegram Bot Token (set via environment variable, .env file, or uncomment below)
+# BOT_TOKEN = "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY")
+
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+def _is_timeout_error(e: Exception) -> bool:
+    msg = str(e).lower()
+    return "timed out" in msg or "timeout" in msg
+
+async def _retry_tg(op_name: str, fn, attempts: int = TG_RETRY_ATTEMPTS):
+    last_err = None
+    for i in range(attempts):
+        try:
+            return await fn()
+        except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+            last_err = e
+            delay = 1.0 * (2 ** i)
+            logger.warning(f"{op_name} timed out (attempt {i+1}/{attempts}): {e}. Retrying in {delay:.1f}s")
+            await asyncio.sleep(delay)
+    raise last_err if last_err else TimedOut(f"{op_name} timed out")
+
+def downscale_image_inplace(image_path: str, max_side: int = MAX_IMAGE_SIDE) -> None:
+    """Downscale big images to reduce processing time and Telegram upload timeouts."""
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError("Failed to read image (cv2.imread returned None)")
+    h, w = img.shape[:2]
+    m = max(h, w)
+    if m <= max_side:
+        return
+    scale = max_side / float(m)
+    new_w = max(1, int(w * scale))
+    new_h = max(1, int(h * scale))
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    # Save back as JPEG with decent quality
+    cv2.imwrite(image_path, resized, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
+    logger.info(f"Downscaled image from {w}x{h} -> {new_w}x{new_h}")
+
+# ================= LOAD MODELS =================
+print(f"🔄 Loading detection model on {DEVICE}...")
+print(f"📁 Detection model path: {MODEL_PATH}")
+if not os.path.exists(MODEL_PATH):
+    print(f"❌ ERROR: Detection model file not found at {MODEL_PATH}")
+    raise FileNotFoundError(f"Detection model file not found: {MODEL_PATH}")
+
+detection_model = AutoDetectionModel.from_pretrained(
+    model_type="ultralytics",
+    model_path=MODEL_PATH,
+    confidence_threshold=CONF_THR,
+    device=DEVICE
+)
+print("✅ Detection model loaded successfully")
+
+print(f"🔄 Loading classifier model on {DEVICE}...")
+print(f"📁 Classifier model path: {CLASSIFIER_PATH}")
+if not os.path.exists(CLASSIFIER_PATH):
+    print(f"⚠️ WARNING: Classifier model file not found at {CLASSIFIER_PATH}")
+    print("⚠️ Continuing without classifier validation...")
+    classifier_model = None
+else:
+    try:
+        classifier_model = YOLO(CLASSIFIER_PATH)
+        classifier_model.to(DEVICE)
+        print("✅ Classifier model loaded successfully")
+    except Exception as e:
+        print(f"⚠️ WARNING: Failed to load classifier model: {e}")
+        print("⚠️ Continuing without classifier validation...")
+        classifier_model = None
+
+# ================= TELEGRAM BOT HANDLERS =================
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a message when the command /start is issued."""
+    welcome_message = (
+        "🌻 **Sunflower Seed Counter Bot**\n\n"
+        "Send me a sunflower image and I'll count:\n"
+        "• Fertilized seeds\n"
+        "• Unfertilized seeds\n\n"
+        "Just send any image file to get started!"
+    )
+    await update.message.reply_text(welcome_message, parse_mode='Markdown')
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a message when the command /help is issued."""
+    help_text = (
+        "**How to use:**\n"
+        "1. Send me a sunflower image (JPG, PNG, etc.)\n"
+        "2. Wait for processing...\n"
+        "3. Receive counts and annotated image\n\n"
+        "**Commands:**\n"
+        "/start - Start the bot\n"
+        "/help - Show this help message\n\n"
+        "**Note:** The bot will automatically check if your image is a sunflower before processing."
+    )
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+def is_sunflower_image(image_path, threshold=0.5):
+    """Check if the image is a sunflower using classifier model.
+    
+    Classifier model classes:
+    - Class 0: "other" (not sunflower)
+    - Class 1: "sunflower"
+    
+    Returns True if the image is classified as a sunflower, False otherwise.
+    If classifier is not available or fails, returns True to allow processing.
+    """
+    if classifier_model is None:
+        # If classifier is not available, skip check and allow processing
+        logger.info("Classifier model not available, skipping validation")
+        return True
+    
+    try:
+        # Run classification
+        logger.info(f"Running classifier on image: {image_path}")
+        results = classifier_model(image_path, verbose=False)
+        
+        # Get the first result (single image)
+        result = results[0]
+        
+        # Check if it's a classification result (not detection)
+        if hasattr(result, 'probs'):
+            probs = result.probs
+            
+            # Get class names from the model
+            class_names = result.names if hasattr(result, 'names') else {0: 'other', 1: 'sunflower'}
+            logger.info(f"Classifier class names: {class_names}")
+            
+            # Get top prediction
+            top1_idx = int(probs.top1) if hasattr(probs, 'top1') else int(np.argmax(probs.data.cpu().numpy()))
+            top1_conf = float(probs.top1conf) if hasattr(probs, 'top1conf') else float(probs.data.cpu().numpy().max())
+            top1_name = class_names.get(top1_idx, str(top1_idx))
+            
+            logger.info(f"🔍 Classifier result: class={top1_idx} ({top1_name}), confidence={top1_conf:.3f}")
+            
+            # Check if it's classified as sunflower (class 1)
+            # The classifier has: 0='other', 1='sunflower'
+            is_sunflower = (top1_idx == 1 and top1_conf >= threshold)
+            
+            # Also check by name in case class indices are different
+            if not is_sunflower and "sunflower" in top1_name.lower():
+                is_sunflower = top1_conf >= threshold
+            
+            # If top class is "other", also check sunflower probability directly
+            if not is_sunflower:
+                # Get probability for sunflower class (class 1)
+                prob_data = probs.data.cpu().numpy() if hasattr(probs.data, 'cpu') else np.array(probs.data)
+                if len(prob_data) >= 2:
+                    sunflower_prob = float(prob_data[1])
+                    logger.info(f"Sunflower class probability: {sunflower_prob:.3f}")
+                    is_sunflower = sunflower_prob >= threshold
+            
+            if is_sunflower:
+                logger.info(f"✅ Image ACCEPTED as sunflower (class={top1_idx}, name={top1_name}, conf={top1_conf:.3f})")
+            else:
+                logger.info(f"❌ Image REJECTED: Not sunflower (class={top1_idx}, name={top1_name}, conf={top1_conf:.3f})")
+            
+            return is_sunflower
+        else:
+            # Not a classification model, allow processing
+            logger.warning("Classifier model does not appear to be a classification model (no probs attribute)")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error in classifier check: {e}", exc_info=True)
+        # On error, allow processing (don't block on classifier failure)
+        return True
+
+async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process sunflower image and return counts."""
+    temp_dir = None
+    status_msg = None
+    try:
+        # Send processing message
+        status_msg = await _retry_tg(
+            "reply_text(processing)",
+            lambda: update.message.reply_text("🔄 Processing image... Please wait.")
+        )
+        
+        # Download image with timeout handling
+        try:
+            photo_file = await _retry_tg("get_file(photo)", lambda: update.message.photo[-1].get_file())
+        except (TimedOut, NetworkError) as e:
+            logger.error(f"Error getting photo file: {e}")
+            await _retry_tg("edit_text(download_failed)", lambda: status_msg.edit_text("❌ Error downloading image. Please try again."))
+            return
+        
+        # Create temporary directory
+        temp_dir = tempfile.mkdtemp()
+        input_path = os.path.join(temp_dir, "input_image.jpg")
+        
+        # Download image to temp file with retry
+        try:
+            await _retry_tg("download_to_drive(photo)", lambda: photo_file.download_to_drive(input_path))
+        except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+            logger.error(f"Error downloading image to drive: {e}")
+            await _retry_tg("edit_text(download_failed2)", lambda: status_msg.edit_text("❌ Error downloading image. Please try again."))
+            try:
+                os.rmdir(temp_dir)
+            except:
+                pass
+            return
+        except Exception as e:
+            logger.error(f"Error downloading image: {e}")
+            await _retry_tg("edit_text(download_failed3)", lambda: status_msg.edit_text("❌ Error downloading image. Please try again."))
+            try:
+                os.rmdir(temp_dir)
+            except:
+                pass
+            return
+            
+        logger.info(f"Image downloaded to {input_path}")
+
+        # Downscale big images early (helps classifier + SAHI + upload)
+        try:
+            downscale_image_inplace(input_path)
+        except Exception as e:
+            logger.warning(f"Downscale skipped/failed: {e}")
+        
+        # ================= CHECK IF SUNFLOWER =================
+        try:
+            await _retry_tg("edit_text(check_sunflower)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
+        except:
+            pass
+            
+        try:
+            is_sunflower = is_sunflower_image(input_path)
+        except Exception as e:
+            logger.error(f"Error in classifier check: {e}")
+            is_sunflower = True  # On error, allow processing
+            
+        if not is_sunflower:
+            try:
+                await _retry_tg("delete(status)", lambda: status_msg.delete())
+            except:
+                pass
+            await _retry_tg(
+                "reply_text(not_sunflower)",
+                lambda: update.message.reply_text(
+                    "❌ **This image doesn't appear to be a sunflower.**\n\n"
+                    "Please send a sunflower image to count seeds.\n"
+                    "The bot only processes sunflower images.",
+                    parse_mode='Markdown'
+                )
+            )
+            # Clean up temp files
+            try:
+                os.remove(input_path)
+                os.rmdir(temp_dir)
+            except:
+                pass
+            return
+        
+        # ================= SAHI INFERENCE =================
+        try:
+            await _retry_tg("edit_text(sahi)", lambda: status_msg.edit_text("🔄 Processing sunflower image... Please wait."))
+        except:
+            pass
+            
+        try:
+            result = get_sliced_prediction(
+                image=input_path,
+                detection_model=detection_model,
+                slice_height=SLICE_SIZE,
+                slice_width=SLICE_SIZE,
+                overlap_height_ratio=OVERLAP,
+                overlap_width_ratio=OVERLAP,
+                postprocess_type="NMS",                 # merge duplicates
+                postprocess_match_threshold=NMS_IOU
+            )
+        except Exception as e:
+            logger.error(f"Error in SAHI inference: {e}", exc_info=True)
+            error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
+            try:
+                await status_msg.edit_text(error_msg)
+            except:
+                await update.message.reply_text(error_msg)
+            # Clean up
+            try:
+                os.remove(input_path)
+                os.rmdir(temp_dir)
+            except:
+                pass
+            return
+        
+        logger.info(f"Total raw detections collected: {len(result.object_prediction_list)}")
+        
+        # ================= COUNT SEEDS =================
+        await _retry_tg("edit_text(counting)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
+        
+        count = {0: 0, 1: 0}
+        
+        for p in result.object_prediction_list:
+            cls_id = int(p.category.id)
+            score = p.score.value
+            
+            # final safety filter (VERY LOW)
+            if score < CONF_THR:
+                continue
+            
+            count[cls_id] += 1
+        
+        total = count[0] + count[1]
+        
+        # ================= SEND RESULTS =================
+        result_text = (
+            f"📊 **FINAL COUNTS**\n\n"
+            f"🌻 **Fertilized**   : {count[0]}\n"
+            f"🌱 **Unfertilized** : {count[1]}\n"
+            f"📦 **TOTAL SEEDS**  : {total}"
+        )
+        
+        # Delete status message and send results
+        try:
+            await _retry_tg("delete(status2)", lambda: status_msg.delete())
+        except:
+            pass
+        
+        # Send text results only (no image)
+        await _retry_tg(
+            "reply_text(result)",
+            lambda: update.message.reply_text(
+                result_text,
+                parse_mode='Markdown'
+            )
+        )
+        
+        logger.info(f"Processed image: Fertilized={count[0]}, Unfertilized={count[1]}, Total={total}")
+        
+        # Clean up temp files
+        try:
+            if os.path.exists(input_path):
+                os.remove(input_path)
+            if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup temp files: {e}")
+            
+    except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+        error_msg = "❌ Request timed out. Please try again with a smaller image or check your connection."
+        logger.error(f"Timeout error: {e}", exc_info=True)
+        try:
+            if status_msg:
+                await _retry_tg("edit_text(timeout)", lambda: status_msg.edit_text(error_msg))
+            else:
+                await _retry_tg("reply_text(timeout)", lambda: update.message.reply_text(error_msg))
+        except:
+            try:
+                await update.message.reply_text(error_msg)
+            except:
+                pass
+    except Exception as e:
+        if _is_timeout_error(e):
+            error_msg = "❌ Request timed out. Please try again with a smaller image or check your connection."
+        else:
+            error_msg = f"❌ Error processing image: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        try:
+            if status_msg:
+                await _retry_tg("edit_text(error)", lambda: status_msg.edit_text(error_msg))
+            else:
+                await _retry_tg("reply_text(error)", lambda: update.message.reply_text(error_msg))
+        except:
+            try:
+                await update.message.reply_text(error_msg)
+            except:
+                pass
+    finally:
+        # Clean up temp files
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                if 'input_path' in locals() and os.path.exists(input_path):
+                    os.remove(input_path)
+                os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp files: {e}")
+
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle document (image file) uploads."""
+    temp_dir = None
+    status_msg = None
+    try:
+        document = update.message.document
+        
+        # Check if it's an image
+        if document.mime_type and document.mime_type.startswith('image/'):
+            # Send processing message
+            status_msg = await _retry_tg(
+                "reply_text(processing_doc)",
+                lambda: update.message.reply_text("🔄 Processing image... Please wait.")
+            )
+            
+            # Download document with timeout handling
+            try:
+                file = await _retry_tg("get_file(document)", lambda: document.get_file())
+            except (TimedOut, NetworkError) as e:
+                logger.error(f"Error getting file: {e}")
+                await _retry_tg("edit_text(doc_download_failed)", lambda: status_msg.edit_text("❌ Error downloading file. Please try again."))
+                return
+            
+            # Create temporary directory
+            temp_dir = tempfile.mkdtemp()
+            input_path = os.path.join(temp_dir, "input_image.jpg")
+            
+            # Download file to temp location with retry
+            try:
+                await _retry_tg("download_to_drive(doc)", lambda: file.download_to_drive(input_path))
+            except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+                logger.error(f"Error downloading file to drive: {e}")
+                await _retry_tg("edit_text(doc_download_failed2)", lambda: status_msg.edit_text("❌ Error downloading file. Please try again."))
+                try:
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+                return
+            except Exception as e:
+                logger.error(f"Error downloading file: {e}")
+                await _retry_tg("edit_text(doc_download_failed3)", lambda: status_msg.edit_text("❌ Error downloading file. Please try again."))
+                try:
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+                return
+                
+            logger.info(f"Document downloaded to {input_path}")
+
+            # Downscale big images early (helps classifier + SAHI + upload)
+            try:
+                downscale_image_inplace(input_path)
+            except Exception as e:
+                logger.warning(f"Downscale skipped/failed: {e}")
+            
+            # ================= CHECK IF SUNFLOWER =================
+            try:
+                await _retry_tg("edit_text(check_sunflower_doc)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
+            except:
+                pass
+                
+            try:
+                is_sunflower = is_sunflower_image(input_path)
+            except Exception as e:
+                logger.error(f"Error in classifier check: {e}")
+                is_sunflower = True  # On error, allow processing
+                
+            if not is_sunflower:
+                try:
+                    await _retry_tg("delete(status_doc)", lambda: status_msg.delete())
+                except:
+                    pass
+                await _retry_tg(
+                    "reply_text(not_sunflower_doc)",
+                    lambda: update.message.reply_text(
+                        "❌ **This image doesn't appear to be a sunflower.**\n\n"
+                        "Please send a sunflower image to count seeds.\n"
+                        "The bot only processes sunflower images.",
+                        parse_mode='Markdown'
+                    )
+                )
+                # Clean up temp files
+                try:
+                    os.remove(input_path)
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+                return
+            
+            # ================= SAHI INFERENCE =================
+            try:
+                await _retry_tg("edit_text(sahi_doc)", lambda: status_msg.edit_text("🔄 Processing sunflower image... Please wait."))
+            except:
+                pass
+                
+            try:
+                result = get_sliced_prediction(
+                    image=input_path,
+                    detection_model=detection_model,
+                    slice_height=SLICE_SIZE,
+                    slice_width=SLICE_SIZE,
+                    overlap_height_ratio=OVERLAP,
+                    overlap_width_ratio=OVERLAP,
+                    postprocess_type="NMS",
+                    postprocess_match_threshold=NMS_IOU
+                )
+            except Exception as e:
+                logger.error(f"Error in SAHI inference: {e}", exc_info=True)
+                error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
+                try:
+                    await status_msg.edit_text(error_msg)
+                except:
+                    await update.message.reply_text(error_msg)
+                # Clean up
+                try:
+                    os.remove(input_path)
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+                return
+            
+            logger.info(f"Total raw detections collected: {len(result.object_prediction_list)}")
+            
+            # ================= COUNT SEEDS =================
+            await _retry_tg("edit_text(counting_doc)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
+            
+            count = {0: 0, 1: 0}
+            
+            for p in result.object_prediction_list:
+                cls_id = int(p.category.id)
+                score = p.score.value
+                
+                if score < CONF_THR:
+                    continue
+                
+                count[cls_id] += 1
+            
+            total = count[0] + count[1]
+            
+            # ================= SEND RESULTS =================
+            result_text = (
+                f"📊 **FINAL COUNTS**\n\n"
+                f"🌻 **Fertilized**   : {count[0]}\n"
+                f"🌱 **Unfertilized** : {count[1]}\n"
+                f"📦 **TOTAL SEEDS**  : {total}"
+            )
+            
+            try:
+                await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
+            except:
+                pass
+            
+            # Send text results only (no image)
+            await _retry_tg(
+                "reply_text(result_doc)",
+                lambda: update.message.reply_text(
+                    result_text,
+                    parse_mode='Markdown'
+                )
+            )
+            
+            logger.info(f"Processed document: Fertilized={count[0]}, Unfertilized={count[1]}, Total={total}")
+            
+        else:
+            await update.message.reply_text("❌ Please send an image file (JPG, PNG, etc.)")
+            
+    except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+        error_msg = "❌ Request timed out. Please try again with a smaller image or check your connection."
+        logger.error(f"Timeout error: {e}", exc_info=True)
+        try:
+            if status_msg:
+                await _retry_tg("edit_text(timeout_doc)", lambda: status_msg.edit_text(error_msg))
+            else:
+                await _retry_tg("reply_text(timeout_doc)", lambda: update.message.reply_text(error_msg))
+        except:
+            try:
+                await update.message.reply_text(error_msg)
+            except:
+                pass
+    except Exception as e:
+        if _is_timeout_error(e):
+            error_msg = "❌ Request timed out. Please try again with a smaller image or check your connection."
+        else:
+            error_msg = f"❌ Error processing document: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        try:
+            if status_msg:
+                await _retry_tg("edit_text(error_doc)", lambda: status_msg.edit_text(error_msg))
+            else:
+                await _retry_tg("reply_text(error_doc)", lambda: update.message.reply_text(error_msg))
+        except:
+            try:
+                await update.message.reply_text(error_msg)
+            except:
+                pass
+    finally:
+        # Clean up temp files
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                if 'input_path' in locals() and os.path.exists(input_path):
+                    os.remove(input_path)
+                os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp files: {e}")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle errors."""
+    logger.error(f"Exception while handling an update: {context.error}", exc_info=context.error)
+    
+    # Handle conflict errors
+    if isinstance(context.error, Exception) and "Conflict" in str(context.error):
+        logger.error("Bot conflict detected - another instance may be running")
+        print("⚠️ WARNING: Bot conflict detected!")
+        print("Make sure only one bot instance is running.")
+        print("Stopping this instance...")
+        return
+
+def main():
+    """Start the bot."""
+    if not BOT_TOKEN:
+        print("❌ Error: BOT_TOKEN not found!")
+        print("Please set BOT_TOKEN environment variable or add it to .env file")
+        return
+    
+    # Create application with timeout settings
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Configure request timeout settings
+    # Increase timeouts for image processing (if supported)
+    try:
+        if hasattr(application.bot, 'request'):
+            application.bot.request.timeout = 120  # 2 minutes for requests
+            application.bot.request.connect_timeout = 30  # 30 seconds for connection
+            logger.info("Bot timeout settings configured: 120s request, 30s connect")
+    except Exception as e:
+        logger.warning(f"Could not configure bot timeout settings: {e}")
+    
+    # Register handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(MessageHandler(filters.PHOTO, process_image))
+    application.add_handler(MessageHandler(filters.Document.IMAGE, handle_document))
+    
+    # Add error handler
+    application.add_error_handler(error_handler)
+    
+    # Start bot
+    print("🤖 Bot is starting...")
+    print("Press Ctrl+C to stop")
+    try:
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True  # Drop pending updates to avoid conflicts
+        )
+    except KeyboardInterrupt:
+        print("\n🛑 Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        print(f"❌ Fatal error: {e}")
+
+if __name__ == '__main__':
+    main()
+
