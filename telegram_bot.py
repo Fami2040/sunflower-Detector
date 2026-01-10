@@ -11,7 +11,7 @@ import asyncio
 from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.error import TimedOut, NetworkError
+from telegram.error import TimedOut, NetworkError, Conflict
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 import logging
@@ -792,13 +792,23 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except:
             pass
     
-    # Handle conflict errors
-    if isinstance(context.error, Exception) and "Conflict" in str(context.error):
+    # Handle conflict errors - stop the bot if another instance is running
+    if isinstance(context.error, Conflict) or (isinstance(context.error, Exception) and "Conflict" in str(context.error)):
         logger.error("Bot conflict detected - another instance may be running")
+        logger.error("This usually means the bot is running both locally and on Railway (or multiple instances)")
+        print("\n" + "=" * 60)
         print("⚠️ WARNING: Bot conflict detected!")
-        print("Make sure only one bot instance is running.")
-        print("Stopping this instance...")
-        return
+        print("=" * 60)
+        print("Another bot instance is already running and polling for updates.")
+        print("Telegram only allows ONE bot instance to poll at a time.")
+        print("\nPossible solutions:")
+        print("1. Stop the bot on Railway (disable deployment) if running locally")
+        print("2. Stop the local bot if you want to use Railway")
+        print("3. Make sure only ONE instance is running")
+        print("=" * 60)
+        print("\nStopping this bot instance to avoid conflicts...")
+        import sys
+        sys.exit(1)
 
 async def verify_bot_connection(bot):
     """Verify bot can connect to Telegram API."""
@@ -895,14 +905,35 @@ def main():
         print("Press Ctrl+C to stop")
         
         # Run polling - this will handle connection verification internally
-        application.run_polling(
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True  # Drop pending updates to avoid conflicts
-        )
+        try:
+            application.run_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True  # Drop pending updates to avoid conflicts
+            )
+        except Conflict as e:
+            logger.error(f"Conflict error during polling: {e}")
+            print("\n" + "=" * 60)
+            print("⚠️ CONFLICT ERROR: Another bot instance is already polling!")
+            print("=" * 60)
+            print("This bot cannot start because another instance with the same")
+            print("BOT_TOKEN is already running and polling for updates.")
+            print("\nSolution:")
+            print("- If running locally: Stop/deploy the bot on Railway")
+            print("- If on Railway: Stop the local bot instance")
+            print("- Make sure only ONE bot instance is running")
+            print("=" * 60)
+            return
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
         print("\n🛑 Bot stopped by user")
+    except Conflict as e:
+        logger.error(f"Conflict error: {e}")
+        print("\n" + "=" * 60)
+        print("⚠️ CONFLICT ERROR: Another bot instance is already running!")
+        print("=" * 60)
+        print("Please stop the other instance before starting this one.")
+        print("=" * 60)
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         print(f"❌ Fatal error: {e}")
