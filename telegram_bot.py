@@ -63,8 +63,8 @@ except Exception as e:
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Optimized for speed: larger slices = fewer inferences = faster processing
 # Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # larger slices = faster (optimized for speed)
-OVERLAP = float(os.getenv("OVERLAP", "0.25"))       # reduced overlap = faster (optimized)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = fewer inferences = MUCH faster (optimized for CPU)
+OVERLAP = float(os.getenv("OVERLAP", "0.15"))       # reduced overlap = fewer slices = faster (optimized for CPU)
 
 # ---- Thresholds (LOW to reduce FN) ----
 CONF_THR = float(os.getenv("CONF_THR", "0.05"))    # allow almost everything
@@ -72,12 +72,14 @@ NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))       # reasonable merge
 
 # ---- Telegram / performance ----
 # Optimized for CPU: smaller max size = faster processing
-MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "1600"))  # reduced from 2000 for faster CPU processing
+MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "1200"))  # reduced to 1200 for MUCH faster CPU processing
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
 TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
 
 # ---- Performance optimizations ----
-SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "false").lower() == "true"  # Skip classifier for speed
+# Skip classifier for speed (classifier takes 15-25 seconds, SAHI takes 60-120 seconds on CPU)
+# Set to "true" to skip classifier and process all images (much faster!)
+SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "true").lower() == "true"  # Default: skip for speed
 
 # ---- Classes ----
 CLASSES = ["Fertilized", "Unfertilized"]
@@ -446,9 +448,9 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.warning(f"Downscale skipped/failed: {e}")
         
         # ================= CHECK IF SUNFLOWER =================
-        # Skip classifier if SKIP_CLASSIFIER is set for faster processing
+        # Skip classifier if SKIP_CLASSIFIER is set for faster processing (saves 20+ seconds!)
         if SKIP_CLASSIFIER:
-            logger.info("Skipping classifier check (SKIP_CLASSIFIER enabled)")
+            logger.info("⚡ Skipping classifier check (SKIP_CLASSIFIER enabled) - saving 20+ seconds!")
             is_sunflower = True
         else:
             try:
@@ -500,6 +502,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         try:
             logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
+            # Disable perform_standard_pred for speed (saves 20-40% processing time)
             result = get_sliced_prediction(
                 image=input_path,
                 detection_model=detection_model,
@@ -507,9 +510,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 slice_width=SLICE_SIZE,
                 overlap_height_ratio=OVERLAP,
                 overlap_width_ratio=OVERLAP,
-                postprocess_type="NMS",                 # merge duplicates
+                perform_standard_pred=False,  # Disable standard pred for speed
+                postprocess_type="NMS",       # merge duplicates
                 postprocess_match_threshold=NMS_IOU,
-                verbose=0  # Reduce SAHI logging for speed
+                verbose=1  # Show progress to see what's happening
             )
             elapsed_time = time.time() - start_time
             logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
