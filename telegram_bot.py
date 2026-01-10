@@ -209,59 +209,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def compute_seed_counts(result):
     """
     Post-process SAHI detection results to count seeds.
-    
-    Args:
-        result: SAHI prediction result object containing object_prediction_list
-        
-    Returns:
-        tuple: (total_seeds, fertilized_seeds)
-            - total_seeds (T): total number of detected seeds
-            - fertilized_seeds (F): number of seeds classified as fertilized (class 0)
+    Matches the original script style.
     """
-    count = {0: 0, 1: 0}  # 0 = Fertilized, 1 = Unfertilized
-    raw_count = len(result.object_prediction_list)
-    filtered_out = 0
-    class_breakdown = {0: 0, 1: 0, "unknown": 0}
-    
-    logger.info(f"🔍 Processing {raw_count} raw detections with CONF_THR={CONF_THR}")
+    count = {0: 0, 1: 0}
     
     for p in result.object_prediction_list:
-        try:
-            cls_id = int(p.category.id)
-            score = float(p.score.value)
-            
-            # Debug: Log if class ID is unexpected
-            if cls_id not in [0, 1]:
-                logger.warning(f"⚠️ Unexpected class ID: {cls_id} (expected 0 or 1), score={score:.3f}")
-                class_breakdown["unknown"] += 1
-            
-            # Final safety filter (VERY LOW threshold)
-            if score < CONF_THR:
-                filtered_out += 1
-                if filtered_out <= 3:  # Log first 3 filtered detections
-                    logger.debug(f"   Filtered out: class={cls_id}, score={score:.3f} < {CONF_THR}")
-                continue
-            
-            # Count valid detections
-            if cls_id in [0, 1]:
-                count[cls_id] += 1
-                class_breakdown[cls_id] += 1
-            else:
-                logger.warning(f"⚠️ Skipping detection with invalid class ID: {cls_id}")
-                
-        except Exception as e:
-            logger.error(f"❌ Error processing detection: {e}", exc_info=True)
+        cls_id = int(p.category.id)
+        score = p.score.value
+        
+        # Final safety filter (VERY LOW threshold)
+        if score < CONF_THR:
             continue
+        
+        count[cls_id] += 1
     
-    total_seeds = count[0] + count[1]  # T = total detected seeds
-    fertilized_seeds = count[0]  # F = fertilized seeds (class 0)
-    
-    logger.info(f"📊 Count summary: Raw={raw_count}, After filtering={total_seeds}, Filtered out={filtered_out}")
-    logger.info(f"   Class breakdown: Fertilized (0)={class_breakdown[0]}, Unfertilized (1)={class_breakdown[1]}, Unknown={class_breakdown['unknown']}")
-    
-    if raw_count > 0 and total_seeds == 0:
-        logger.warning(f"⚠️ WARNING: {raw_count} detections found but ALL were filtered out by CONF_THR={CONF_THR}!")
-        logger.warning(f"   Consider lowering CONF_THR or checking if model scores are too low.")
+    total_seeds = count[0] + count[1]
+    fertilized_seeds = count[0]
     
     return total_seeds, fertilized_seeds
 
@@ -724,7 +687,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
                 
             try:
-                # Disable perform_standard_pred for speed (saves 20-40% processing time on CPU)
                 result = get_sliced_prediction(
                     image=input_path,
                     detection_model=detection_model,
@@ -732,10 +694,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     slice_width=SLICE_SIZE,
                     overlap_height_ratio=OVERLAP,
                     overlap_width_ratio=OVERLAP,
-                    perform_standard_pred=False,  # Disable standard pred for speed
-                    postprocess_type="NMS",
-                    postprocess_match_threshold=NMS_IOU,
-                    verbose=1  # Show progress to see what's happening
+                    postprocess_type="NMS",                 # merge duplicates
+                    postprocess_match_threshold=NMS_IOU
                 )
                 elapsed_time = time.time() - start_time
                 logger.info(f"✅ SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
