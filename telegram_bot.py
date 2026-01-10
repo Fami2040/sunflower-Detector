@@ -63,11 +63,11 @@ except Exception as e:
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Optimized for speed: larger slices = fewer inferences = faster processing
 # Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = faster (optimized for speed)
-OVERLAP = float(os.getenv("OVERLAP", "0.2"))       # reduced overlap = faster (optimized)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # larger slices = faster (optimized for speed)
+OVERLAP = float(os.getenv("OVERLAP", "0.25"))       # reduced overlap = faster (optimized)
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.1"))    # allow almost everything
+CONF_THR = float(os.getenv("CONF_THR", "0.05"))    # allow almost everything
 NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))       # reasonable merge
 
 # ---- Telegram / performance ----
