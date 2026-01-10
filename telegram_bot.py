@@ -61,12 +61,12 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "900"))       # smaller → more slices → more recall
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "850"))       # smaller → more slices → more recall
 OVERLAP = float(os.getenv("OVERLAP", "0.25"))          # overlap avoids border misses
 
 # ---- Thresholds (LOW to reduce FN) ----
 CONF_THR = float(os.getenv("CONF_THR", "0.05"))        # allow almost everything
-NMS_IOU = float(os.getenv("NMS_IOU", "0.25"))           # reasonable merge
+NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))           # reasonable merge
 
 # ---- Telegram / performance ----
 # Optimized for CPU: smaller max size = faster processing
