@@ -69,8 +69,6 @@ CONF_THR = float(os.getenv("CONF_THR", "0.05"))        # allow almost everything
 NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))           # reasonable merge
 
 # ---- Telegram / performance ----
-# Optimized for CPU: smaller max size = faster processing
-MAX_IMAGE_SIDE = int(os.getenv("MAX_IMAGE_SIDE", "1200"))  # reduced to 1200 for MUCH faster CPU processing
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
 TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
 
@@ -108,23 +106,6 @@ async def _retry_tg(op_name: str, fn, attempts: int = TG_RETRY_ATTEMPTS):
             logger.warning(f"{op_name} timed out (attempt {i+1}/{attempts}): {e}. Retrying in {delay:.1f}s")
             await asyncio.sleep(delay)
     raise last_err if last_err else TimedOut(f"{op_name} timed out")
-
-def downscale_image_inplace(image_path: str, max_side: int = MAX_IMAGE_SIDE) -> None:
-    """Downscale big images to reduce processing time and Telegram upload timeouts."""
-    img = cv2.imread(image_path)
-    if img is None:
-        raise ValueError("Failed to read image (cv2.imread returned None)")
-    h, w = img.shape[:2]
-    m = max(h, w)
-    if m <= max_side:
-        return
-    scale = max_side / float(m)
-    new_w = max(1, int(w * scale))
-    new_h = max(1, int(h * scale))
-    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    # Save back as JPEG with decent quality
-    cv2.imwrite(image_path, resized, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
-    logger.info(f"Downscaled image from {w}x{h} -> {new_w}x{new_h} (scale: {scale:.3f}, saved {100*(1-scale**2):.1f}% pixels)")
 
 # ================= LOAD MODELS =================
 print(f"🔄 Loading detection model on {DEVICE.upper()}...")
@@ -401,12 +382,6 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         logger.info(f"Image downloaded to {input_path}")
 
-        # Downscale big images early (helps classifier + SAHI + upload)
-        try:
-            downscale_image_inplace(input_path)
-        except Exception as e:
-            logger.warning(f"Downscale skipped/failed: {e}")
-        
         # ================= CHECK IF SUNFLOWER =================
         # Skip classifier if SKIP_CLASSIFIER is set for faster processing (saves 20+ seconds!)
         if SKIP_CLASSIFIER:
@@ -628,12 +603,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
             logger.info(f"Document downloaded to {input_path}")
 
-            # Downscale big images early (helps classifier + SAHI + upload)
-            try:
-                downscale_image_inplace(input_path)
-            except Exception as e:
-                logger.warning(f"Downscale skipped/failed: {e}")
-            
             # ================= CHECK IF SUNFLOWER =================
             try:
                 await _retry_tg("edit_text(check_sunflower_doc)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
