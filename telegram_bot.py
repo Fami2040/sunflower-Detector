@@ -427,7 +427,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Update status message to show SAHI is starting
         try:
-            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running SAHI detection... This may take 30-90 seconds on CPU."))
+            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running detection... This may take 30-100 seconds."))
         except:
             pass
         
