@@ -61,14 +61,12 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-# Optimized for speed: larger slices = fewer inferences = faster processing
-# Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # slice size for SAHI processing
-OVERLAP = float(os.getenv("OVERLAP", "0.15"))       # reduced overlap = fewer slices = faster (optimized for CPU)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))       # smaller → more slices → more recall
+OVERLAP = float(os.getenv("OVERLAP", "0.25"))          # overlap avoids border misses
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.05"))    # allow almost everything
-NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))       # reasonable merge
+CONF_THR = float(os.getenv("CONF_THR", "0.05"))        # allow almost everything
+NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))           # reasonable merge
 
 # ---- Telegram / performance ----
 # Optimized for CPU: smaller max size = faster processing
@@ -77,9 +75,8 @@ OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller fil
 TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
 
 # ---- Performance optimizations ----
-# Skip classifier for speed (classifier takes 15-25 seconds, SAHI takes 60-120 seconds on CPU)
-# Set to "true" to skip classifier and process all images (much faster!)
-SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "true").lower() == "true"  # Default: skip for speed
+# Set SKIP_CLASSIFIER="true" to skip classifier for speed (saves 20+ seconds)
+SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "false").lower() == "true"  # Set to "true" to skip classifier
 
 # ---- Classes ----
 CLASSES = ["Fertilized", "Unfertilized"]
