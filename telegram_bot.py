@@ -462,7 +462,6 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         try:
             logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
-            # Disable perform_standard_pred for speed (saves 20-40% processing time)
             result = get_sliced_prediction(
                 image=input_path,
                 detection_model=detection_model,
@@ -470,10 +469,8 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 slice_width=SLICE_SIZE,
                 overlap_height_ratio=OVERLAP,
                 overlap_width_ratio=OVERLAP,
-                perform_standard_pred=False,  # Disable standard pred for speed
-                postprocess_type="NMS",       # merge duplicates
-                postprocess_match_threshold=NMS_IOU,
-                verbose=1  # Show progress to see what's happening
+                postprocess_type="NMS",                 # merge duplicates
+                postprocess_match_threshold=NMS_IOU
             )
             elapsed_time = time.time() - start_time
             logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
