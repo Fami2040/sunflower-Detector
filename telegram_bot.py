@@ -485,10 +485,21 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # ================= SAHI INFERENCE =================
+        logger.info("✅ Classifier accepted image, starting SAHI inference...")
+        logger.info(f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, CONF_THR={CONF_THR}, DEVICE={DEVICE}")
+        
+        # Update status message to show SAHI is starting
+        try:
+            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running SAHI detection... This may take 30-90 seconds on CPU."))
+        except:
+            pass
+        
         import time
         start_time = time.time()
+        logger.info(f"⏱️ SAHI inference started at {time.strftime('%H:%M:%S')}")
             
         try:
+            logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
             result = get_sliced_prediction(
                 image=input_path,
                 detection_model=detection_model,
@@ -697,8 +708,19 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             
             # ================= SAHI INFERENCE =================
+            logger.info("✅ Classifier accepted image, starting SAHI inference...")
+            logger.info(f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, CONF_THR={CONF_THR}, DEVICE={DEVICE}")
+            
+            # Update status message to show SAHI is starting
+            try:
+                await _retry_tg("edit_text(sahi_start_doc)", lambda: status_msg.edit_text("🔄 Running SAHI detection... This may take 30-90 seconds on CPU."))
+            except:
+                pass
+            
             import time
             start_time = time.time()
+            logger.info(f"⏱️ SAHI inference started at {time.strftime('%H:%M:%S')}")
+            logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
                 
             try:
                 result = get_sliced_prediction(
@@ -713,7 +735,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     verbose=0  # Reduce SAHI logging for speed
                 )
                 elapsed_time = time.time() - start_time
-                logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
+                logger.info(f"✅ SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
+                logger.info(f"⏱️ SAHI inference finished at {time.strftime('%H:%M:%S')}")
             except Exception as e:
                 logger.error(f"Error in SAHI inference: {e}", exc_info=True)
                 error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
