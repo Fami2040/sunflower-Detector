@@ -63,7 +63,7 @@ except Exception as e:
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # For seed detection (small objects): 640-800 gives best accuracy, 800 is best balance
 # 640 = maximum accuracy (slower), 800 = good balance (recommended), 900+ = faster but may miss seeds
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "950"))       # 950 = faster processing with good accuracy
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))       # 800 = best balance for seed detection accuracy
 OVERLAP = float(os.getenv("OVERLAP", "0.3"))           # 0.3 = better boundary coverage for small seeds (recommended)
 
 # ---- Thresholds (LOW to reduce FN) ----
