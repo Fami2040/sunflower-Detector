@@ -61,7 +61,7 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "850"))       # smaller → more slices → more recall
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))       # smaller → more slices → more recall
 OVERLAP = float(os.getenv("OVERLAP", "0.25"))          # overlap avoids border misses
 
 # ---- Thresholds (LOW to reduce FN) ----
