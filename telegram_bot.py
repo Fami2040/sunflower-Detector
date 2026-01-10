@@ -182,10 +182,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages that are not commands."""
     logger.info(f"Received text message: {update.message.text}")
-    await update.message.reply_text(
-        "👋 Please send me a sunflower image to analyze!\n\n"
+    welcome_text = (
+        "👋 **Welcome to Sunflower Seed Counter Bot!**\n\n"
+        "📸 Just send me a sunflower image and I'll automatically analyze it!\n\n"
+        "I'll count:\n"
+        "• ✅ Fertilized seeds\n"
+        "• 🌱 Unfertilized seeds\n"
+        "• 📊 Total seeds\n"
+        "• 📈 Fertilization percentage\n\n"
+        "**No /start needed** - just send an image anytime! 🚀\n\n"
         "Use /help for more information."
     )
+    await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
 def compute_seed_counts(result):
     """
@@ -792,24 +800,13 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         except:
             pass
     
-    # Handle conflict errors - stop the bot if another instance is running
+    # Handle conflict errors - log but don't exit (let polling retry automatically)
     if isinstance(context.error, Conflict) or (isinstance(context.error, Exception) and "Conflict" in str(context.error)):
-        logger.error("Bot conflict detected - another instance may be running")
-        logger.error("This usually means the bot is running both locally and on Railway (or multiple instances)")
-        print("\n" + "=" * 60)
-        print("⚠️ WARNING: Bot conflict detected!")
-        print("=" * 60)
-        print("Another bot instance is already running and polling for updates.")
-        print("Telegram only allows ONE bot instance to poll at a time.")
-        print("\nPossible solutions:")
-        print("1. Stop the bot on Railway (disable deployment) if running locally")
-        print("2. Stop the local bot if you want to use Railway")
-        print("3. Make sure only ONE instance is running")
-        print("=" * 60)
-        print("\nStopping this bot instance to avoid conflicts...")
-        print("\n⚠️ IMPORTANT: Wait 10 seconds after this instance stops before starting another!")
-        import sys
-        sys.exit(1)
+        logger.warning("Bot conflict detected - another instance may be running")
+        logger.warning("This bot will wait and retry automatically. Please stop the other instance.")
+        logger.warning("Telegram only allows ONE bot instance to poll at a time.")
+        # Don't exit - let the polling retry mechanism handle it
+        # The bot will automatically start working once the conflict is resolved
 
 
 def main():
@@ -893,28 +890,55 @@ def main():
         # Conflict detection will happen during polling via the error handler
         logger.info("Starting bot polling...")
         print("✅ Bot is ready and polling for messages...")
-        print("📱 Send /start to test the bot")
+        print("📸 Send any image to analyze (no /start needed!)")
+        print("📱 Use /help for commands")
         print("Press Ctrl+C to stop")
         
         # Run polling - this will handle connection verification internally
-        try:
-            application.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True  # Drop pending updates to avoid conflicts
-            )
-        except Conflict as e:
-            logger.error(f"Conflict error during polling: {e}")
-            print("\n" + "=" * 60)
-            print("⚠️ CONFLICT ERROR: Another bot instance is already polling!")
-            print("=" * 60)
-            print("This bot cannot start because another instance with the same")
-            print("BOT_TOKEN is already running and polling for updates.")
-            print("\nSolution:")
-            print("- If running locally: Stop/pause the Railway deployment")
-            print("- If on Railway: Stop the local bot instance")
-            print("- Make sure only ONE bot instance is running")
-            print("=" * 60)
-            return
+        # Use retry with exponential backoff for conflicts - bot will stay active and auto-resume
+        print("🔄 Bot will automatically retry if conflicts are detected...")
+        conflict_retries = 0
+        max_conflict_retries = 10
+        import time
+        
+        while conflict_retries < max_conflict_retries:
+            try:
+                application.run_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=True,  # Drop pending updates to avoid conflicts
+                    bootstrap_retries=3  # Retry bootstrap (includes conflict handling)
+                )
+                # If we get here, polling stopped normally (not a conflict)
+                break
+            except Conflict as e:
+                conflict_retries += 1
+                wait_time = min(5 * conflict_retries, 30)  # Exponential backoff, max 30s
+                logger.warning(f"Conflict detected (attempt {conflict_retries}/{max_conflict_retries}): {e}")
+                print(f"\n⚠️ Bot conflict detected - waiting {wait_time}s before retry...")
+                print("💡 Please stop the other bot instance (Railway or local).")
+                print("✅ This bot will automatically start working once the conflict is resolved.")
+                if conflict_retries < max_conflict_retries:
+                    time.sleep(wait_time)
+                    logger.info(f"Retrying after {wait_time}s wait (attempt {conflict_retries + 1}/{max_conflict_retries})...")
+                    # Rebuild application for retry (needed after run_polling() stops)
+                    application = Application.builder().token(BOT_TOKEN).build()
+                    if hasattr(application.bot, 'request'):
+                        application.bot.request.timeout = 120
+                        application.bot.request.connect_timeout = 30
+                    application.add_handler(MessageHandler(filters.ALL, log_update), group=-1)
+                    application.add_handler(CommandHandler("start", start))
+                    application.add_handler(CommandHandler("help", help_command))
+                    application.add_handler(MessageHandler(filters.PHOTO, process_image))
+                    application.add_handler(MessageHandler(filters.Document.IMAGE, handle_document))
+                    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+                    application.add_error_handler(error_handler)
+                    print("🔄 Retrying bot startup...")
+                else:
+                    logger.error("Max conflict retries reached. Please resolve the conflict manually.")
+                    print("\n❌ Max retries reached. Please stop the other bot instance and restart this one.")
+                    print("💡 To stop Railway bot: Go to Railway Dashboard → Settings → Delete/Pause service")
+                    print("💡 To stop local bot: Press Ctrl+C in the terminal")
+                    return
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
