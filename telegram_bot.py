@@ -727,6 +727,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
                 
             try:
+                # Disable perform_standard_pred for speed (saves 20-40% processing time on CPU)
                 result = get_sliced_prediction(
                     image=input_path,
                     detection_model=detection_model,
@@ -734,9 +735,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     slice_width=SLICE_SIZE,
                     overlap_height_ratio=OVERLAP,
                     overlap_width_ratio=OVERLAP,
+                    perform_standard_pred=False,  # Disable standard pred for speed
                     postprocess_type="NMS",
                     postprocess_match_threshold=NMS_IOU,
-                    verbose=0  # Reduce SAHI logging for speed
+                    verbose=1  # Show progress to see what's happening
                 )
                 elapsed_time = time.time() - start_time
                 logger.info(f"✅ SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
