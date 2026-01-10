@@ -220,19 +220,49 @@ def compute_seed_counts(result):
             - fertilized_seeds (F): number of seeds classified as fertilized (class 0)
     """
     count = {0: 0, 1: 0}  # 0 = Fertilized, 1 = Unfertilized
+    raw_count = len(result.object_prediction_list)
+    filtered_out = 0
+    class_breakdown = {0: 0, 1: 0, "unknown": 0}
+    
+    logger.info(f"🔍 Processing {raw_count} raw detections with CONF_THR={CONF_THR}")
     
     for p in result.object_prediction_list:
-        cls_id = int(p.category.id)
-        score = p.score.value
-        
-        # Final safety filter (VERY LOW threshold)
-        if score < CONF_THR:
+        try:
+            cls_id = int(p.category.id)
+            score = float(p.score.value)
+            
+            # Debug: Log if class ID is unexpected
+            if cls_id not in [0, 1]:
+                logger.warning(f"⚠️ Unexpected class ID: {cls_id} (expected 0 or 1), score={score:.3f}")
+                class_breakdown["unknown"] += 1
+            
+            # Final safety filter (VERY LOW threshold)
+            if score < CONF_THR:
+                filtered_out += 1
+                if filtered_out <= 3:  # Log first 3 filtered detections
+                    logger.debug(f"   Filtered out: class={cls_id}, score={score:.3f} < {CONF_THR}")
+                continue
+            
+            # Count valid detections
+            if cls_id in [0, 1]:
+                count[cls_id] += 1
+                class_breakdown[cls_id] += 1
+            else:
+                logger.warning(f"⚠️ Skipping detection with invalid class ID: {cls_id}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error processing detection: {e}", exc_info=True)
             continue
-        
-        count[cls_id] += 1
     
     total_seeds = count[0] + count[1]  # T = total detected seeds
     fertilized_seeds = count[0]  # F = fertilized seeds (class 0)
+    
+    logger.info(f"📊 Count summary: Raw={raw_count}, After filtering={total_seeds}, Filtered out={filtered_out}")
+    logger.info(f"   Class breakdown: Fertilized (0)={class_breakdown[0]}, Unfertilized (1)={class_breakdown[1]}, Unknown={class_breakdown['unknown']}")
+    
+    if raw_count > 0 and total_seeds == 0:
+        logger.warning(f"⚠️ WARNING: {raw_count} detections found but ALL were filtered out by CONF_THR={CONF_THR}!")
+        logger.warning(f"   Consider lowering CONF_THR or checking if model scores are too low.")
     
     return total_seeds, fertilized_seeds
 
@@ -489,11 +519,22 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         logger.info(f"Total raw detections collected: {len(result.object_prediction_list)}")
         
+        # Debug: Log detection details
+        if len(result.object_prediction_list) > 0:
+            logger.info(f"🔍 Sample detections (first 5):")
+            for i, p in enumerate(result.object_prediction_list[:5]):
+                logger.info(f"  Detection {i}: class={p.category.id}, score={p.score.value:.3f}, bbox={p.bbox}")
+        else:
+            logger.warning("⚠️ WARNING: No detections found by SAHI! Model may not be detecting seeds.")
+            logger.warning(f"   Image path: {input_path}")
+            logger.warning(f"   Using CONF_THR={CONF_THR}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}")
+        
         # ================= COUNT SEEDS =================
         await _retry_tg("edit_text(counting)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
         
         # Compute seed counts using modular function
         total_seeds, fertilized_seeds = compute_seed_counts(result)
+        logger.info(f"📊 Counted seeds: Total={total_seeds}, Fertilized={fertilized_seeds}, Unfertilized={total_seeds - fertilized_seeds}")
         
         # Calculate fertilization percentage
         fertilization_percentage = calculate_fertilization_percentage(fertilized_seeds, total_seeds)
@@ -690,11 +731,22 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             logger.info(f"Total raw detections collected: {len(result.object_prediction_list)}")
             
+            # Debug: Log detection details
+            if len(result.object_prediction_list) > 0:
+                logger.info(f"🔍 Sample detections (first 5):")
+                for i, p in enumerate(result.object_prediction_list[:5]):
+                    logger.info(f"  Detection {i}: class={p.category.id}, score={p.score.value:.3f}, bbox={p.bbox}")
+            else:
+                logger.warning("⚠️ WARNING: No detections found by SAHI! Model may not be detecting seeds.")
+                logger.warning(f"   Image path: {input_path}")
+                logger.warning(f"   Using CONF_THR={CONF_THR}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}")
+            
             # ================= COUNT SEEDS =================
             await _retry_tg("edit_text(counting_doc)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
             
             # Compute seed counts using modular function
             total_seeds, fertilized_seeds = compute_seed_counts(result)
+            logger.info(f"📊 Counted seeds: Total={total_seeds}, Fertilized={fertilized_seeds}, Unfertilized={total_seeds - fertilized_seeds}")
             
             # Calculate fertilization percentage
             fertilization_percentage = calculate_fertilization_percentage(fertilized_seeds, total_seeds)
