@@ -63,7 +63,7 @@ except Exception as e:
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Optimized for speed: larger slices = fewer inferences = faster processing
 # Trade-off: slightly less recall, but much faster
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "1280"))  # larger slices = fewer inferences = MUCH faster (optimized for CPU)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))  # slice size for SAHI processing
 OVERLAP = float(os.getenv("OVERLAP", "0.15"))       # reduced overlap = fewer slices = faster (optimized for CPU)
 
 # ---- Thresholds (LOW to reduce FN) ----
