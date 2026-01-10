@@ -811,12 +811,44 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         sys.exit(1)
 
 async def verify_bot_connection(bot):
-    """Verify bot can connect to Telegram API."""
+    """Verify bot can connect to Telegram API and check for conflicts."""
     try:
         bot_info = await bot.get_me()
         logger.info(f"✅ Bot connected successfully: @{bot_info.username} ({bot_info.first_name})")
         print(f"✅ Bot connected: @{bot_info.username}")
+        
+        # Pre-flight conflict check: try a quick get_updates call to detect if another instance is polling
+        try:
+            logger.info("Checking for bot conflicts...")
+            # Use a very short timeout (1 second) just to test if we can get updates
+            # If another instance is polling, we'll get a Conflict error immediately
+            await bot.get_updates(offset=-1, timeout=1, limit=1)
+            logger.info("✅ No conflicts detected - this instance can poll for updates")
+        except Conflict as e:
+            logger.error(f"❌ Conflict detected during pre-flight check: {e}")
+            print("\n" + "=" * 60)
+            print("⚠️ BOT CONFLICT DETECTED BEFORE STARTING!")
+            print("=" * 60)
+            print("Another bot instance is already polling for updates.")
+            print("This instance cannot start while another is active.")
+            print("\nTo fix this:")
+            print("1. If running locally: Stop/pause the Railway deployment")
+            print("2. If on Railway: Stop your local bot instance")
+            print("3. Wait 5-10 seconds for the other instance to fully stop")
+            print("4. Then restart this instance")
+            print("=" * 60)
+            raise  # Re-raise to stop the bot from starting
+        except (TimedOut, NetworkError):
+            # Timeout is expected with such a short timeout - means no conflict
+            logger.info("✅ Pre-flight check completed - no conflicts")
+        except Exception as e:
+            # Other errors during pre-flight check - log but don't fail
+            logger.warning(f"Pre-flight check had unexpected error (non-fatal): {e}")
+        
         return True
+    except Conflict:
+        # Re-raise Conflict to stop bot startup
+        raise
     except Exception as e:
         logger.error(f"❌ Failed to connect to Telegram API: {e}", exc_info=True)
         print(f"❌ Failed to connect to Telegram API: {e}")
@@ -898,6 +930,48 @@ def main():
         # Add error handler
         application.add_error_handler(error_handler)
         
+        # Pre-flight conflict check before starting polling
+        try:
+            logger.info("Performing pre-flight conflict check...")
+            import asyncio
+            
+            # Check if there's already an event loop running
+            try:
+                loop = asyncio.get_running_loop()
+                # If we get here, there's a running loop - can't use asyncio.run()
+                logger.warning("Event loop already running - skipping pre-flight check (will check during polling)")
+            except RuntimeError:
+                # No running loop - safe to use asyncio.run()
+                try:
+                    check_result = asyncio.run(verify_bot_connection(application.bot))
+                    if not check_result:
+                        logger.error("Bot connection verification failed")
+                        print("❌ Bot connection verification failed. Please check your BOT_TOKEN.")
+                        return
+                except Conflict as e:
+                    logger.error(f"Conflict detected during pre-flight check: {e}")
+                    print("\n" + "=" * 60)
+                    print("⚠️ CONFLICT DETECTED: Cannot start bot!")
+                    print("=" * 60)
+                    print("Another bot instance is already polling for updates.")
+                    print("\nSOLUTION:")
+                    print("1. Stop the other bot instance first")
+                    print("2. Wait 5-10 seconds")
+                    print("3. Then restart this bot")
+                    print("\nTo stop Railway bot:")
+                    print("- Go to Railway Dashboard → Your Service → Settings → Delete/Pause")
+                    print("\nTo stop local bot:")
+                    print("- Press Ctrl+C in the terminal where it's running")
+                    print("=" * 60)
+                    return
+                except Exception as e:
+                    logger.warning(f"Pre-flight check error (non-fatal): {e}")
+                    # Continue anyway, but we'll catch conflicts during polling
+        except Exception as e:
+            # Catch any unexpected errors during pre-flight check setup
+            logger.warning(f"Pre-flight check setup error (non-fatal): {e}")
+            # Continue anyway - will catch conflicts during polling
+        
         # Start bot
         logger.info("Starting bot polling...")
         print("✅ Bot is ready and polling for messages...")
@@ -918,7 +992,7 @@ def main():
             print("This bot cannot start because another instance with the same")
             print("BOT_TOKEN is already running and polling for updates.")
             print("\nSolution:")
-            print("- If running locally: Stop/deploy the bot on Railway")
+            print("- If running locally: Stop/pause the Railway deployment")
             print("- If on Railway: Stop the local bot instance")
             print("- Make sure only ONE bot instance is running")
             print("=" * 60)
