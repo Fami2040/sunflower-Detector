@@ -61,12 +61,12 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "850"))       # smaller → more slices → more recall
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "950"))       # smaller → more slices → more recall
 OVERLAP = float(os.getenv("OVERLAP", "0.25"))          # overlap avoids border misses
 
 # ---- Thresholds (LOW to reduce FN) ----
 CONF_THR = float(os.getenv("CONF_THR", "0.05"))        # allow almost everything
-NMS_IOU = float(os.getenv("NMS_IOU", "0.3"))           # reasonable merge
+NMS_IOU = float(os.getenv("NMS_IOU", "0.25"))           # reasonable merge
 
 # ---- Telegram / performance ----
 # Optimized for CPU: smaller max size = faster processing
@@ -452,7 +452,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Update status message to show SAHI is starting
         try:
-            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running SAHI detection... This may take 30-90 seconds on CPU."))
+            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running detection... This may take 30-100 seconds."))
         except:
             pass
         
