@@ -807,6 +807,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         print("3. Make sure only ONE instance is running")
         print("=" * 60)
         print("\nStopping this bot instance to avoid conflicts...")
+        print("\n⚠️ IMPORTANT: Wait 10 seconds after this instance stops before starting another!")
         import sys
         sys.exit(1)
 
