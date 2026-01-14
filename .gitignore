@@ -42,6 +42,7 @@ ENV/
 
 # Model files (too large for GitHub - use Git LFS if needed)
 models/*.pt
+!models/bes.pt
 models/*.onnx
 models/*.pth
 models/*.weights
