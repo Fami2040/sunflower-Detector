@@ -219,6 +219,152 @@ def compute_seed_counts(result):
     
     return total_seeds, fertilized_seeds
 
+def remove_background(image_path: str, output_path: str) -> bool:
+    """
+    Remove background from image using rembg or cv2 fallback.
+    
+    Args:
+        image_path: Path to input image
+        output_path: Path to save output image with removed background (PNG format)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Try using rembg library (best quality)
+        try:
+            from rembg import remove
+            with open(image_path, 'rb') as input_file:
+                input_data = input_file.read()
+                output_data = remove(input_data)
+            with open(output_path, 'wb') as output_file:
+                output_file.write(output_data)
+            logger.info("Background removed using rembg")
+            return True
+        except ImportError:
+            logger.warning("rembg not available, using cv2 fallback")
+        except Exception as e:
+            logger.warning(f"rembg failed: {e}, using cv2 fallback")
+        
+        # Fallback: Use cv2 with grabcut algorithm
+        img = cv2.imread(image_path)
+        if img is None:
+            logger.error(f"Failed to read image: {image_path}")
+            return False
+        
+        # Convert to RGB
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        height, width = img_rgb.shape[:2]
+        
+        # Create mask using grabcut (simple approach: assume center region is foreground)
+        mask = np.zeros((height, width), np.uint8)
+        bgd_model = np.zeros((1, 65), np.float64)
+        fgd_model = np.zeros((1, 65), np.float64)
+        
+        # Define rectangle (slightly smaller than image to avoid edges)
+        rect = (int(width * 0.1), int(height * 0.1), int(width * 0.8), int(height * 0.8))
+        
+        # Apply grabcut
+        cv2.grabCut(img_rgb, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+        
+        # Create mask where sure and likely foreground
+        mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+        
+        # Create 4-channel image (RGBA) with transparency
+        img_rgba = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2RGBA)
+        img_rgba[:, :, 3] = mask2 * 255
+        
+        # Save as PNG to preserve transparency
+        cv2.imwrite(output_path, cv2.cvtColor(img_rgba, cv2.COLOR_RGBA2BGRA))
+        logger.info("Background removed using cv2 grabcut")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error removing background: {e}", exc_info=True)
+        # If background removal fails, just copy original image
+        import shutil
+        shutil.copy2(image_path, output_path)
+        return False
+
+def draw_bounding_boxes_no_text(image_path: str, result, output_path: str):
+    """
+    Draw bounding boxes on image with different colors for fertilized and unfertilized seeds.
+    No text labels are drawn, only colored bounding boxes.
+    
+    Args:
+        image_path: Path to input image (can be PNG with transparency or JPG)
+        result: SAHI prediction result object
+        output_path: Path to save annotated image
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Read image (handles PNG with alpha channel)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            logger.error(f"Failed to read image: {image_path}")
+            return False
+        
+        # Handle images with alpha channel (PNG with transparency)
+        if img.shape[2] == 4:
+            # Convert RGBA to RGB by compositing on white background
+            alpha = img[:, :, 3] / 255.0
+            img_rgb = img[:, :, :3].astype(np.float32)
+            # Composite on white background
+            img_rgb = (img_rgb * alpha[:, :, np.newaxis] + 255.0 * (1 - alpha[:, :, np.newaxis])).astype(np.uint8)
+            img_rgb = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2RGB)
+        elif img.shape[2] == 3:
+            # Regular BGR image
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            logger.error(f"Unsupported image format: {img.shape}")
+            return False
+        
+        # Define colors (RGB format)
+        # Fertilized (class 0): Green
+        # Unfertilized (class 1): Red
+        COLOR_FERTILIZED = (0, 255, 0)      # Green
+        COLOR_UNFERTILIZED = (255, 0, 0)    # Red
+        
+        # Box thickness (adaptive based on image size)
+        box_thickness = max(2, int(min(img_rgb.shape[0], img_rgb.shape[1]) / 400))
+        
+        # Draw bounding boxes
+        for prediction in result.object_prediction_list:
+            cls_id = int(prediction.category.id)
+            score = prediction.score.value
+            
+            # Skip if below threshold
+            if score < CONF_THR:
+                continue
+            
+            # Get bounding box coordinates
+            bbox = prediction.bbox
+            x1, y1 = int(bbox.minx), int(bbox.miny)
+            x2, y2 = int(bbox.maxx), int(bbox.maxy)
+            
+            # Choose color based on class
+            if cls_id == 0:  # Fertilized
+                color = COLOR_FERTILIZED
+            else:  # Unfertilized (class 1)
+                color = COLOR_UNFERTILIZED
+            
+            # Draw rectangle (no text)
+            cv2.rectangle(img_rgb, (x1, y1), (x2, y2), color, box_thickness)
+        
+        # Convert RGB back to BGR for saving
+        img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        
+        # Save image
+        cv2.imwrite(output_path, img_bgr, [cv2.IMWRITE_JPEG_QUALITY, OUTPUT_JPEG_QUALITY])
+        logger.info(f"Annotated image saved to {output_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error drawing bounding boxes: {e}", exc_info=True)
+        return False
+
 def calculate_fertilization_percentage(fertilized_seeds: int, total_seeds: int) -> float:
     """
     Calculate fertilization percentage: (F/T) × 100
@@ -499,20 +645,44 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Format results
         result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
         
-        # Delete status message and send results
+        # ================= REMOVE BACKGROUND AND DRAW BOUNDING BOXES =================
+        await _retry_tg("edit_text(annotating)", lambda: status_msg.edit_text("🎨 Removing background and drawing bounding boxes..."))
+        
+        # Remove background
+        no_bg_path = os.path.join(temp_dir, "no_background.png")
+        remove_background(input_path, no_bg_path)
+        
+        # Draw bounding boxes on image with background removed
+        annotated_path = os.path.join(temp_dir, "annotated.jpg")
+        draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+        
+        # Delete status message
         try:
             await _retry_tg("delete(status2)", lambda: status_msg.delete())
         except:
             pass
         
-        # Send text results only (no image)
-        await _retry_tg(
-            "reply_text(result)",
-            lambda: update.message.reply_text(
-                result_text,
-                parse_mode='Markdown'
+        # Send annotated image with results
+        try:
+            caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
+            await _retry_tg(
+                "reply_photo(result)",
+                lambda: update.message.reply_photo(
+                    photo=open(annotated_path, 'rb'),
+                    caption=caption,
+                    parse_mode='Markdown'
+                )
             )
-        )
+        except Exception as e:
+            logger.error(f"Error sending annotated image: {e}", exc_info=True)
+            # Fallback: send text only if image fails
+            await _retry_tg(
+                "reply_text(result)",
+                lambda: update.message.reply_text(
+                    result_text,
+                    parse_mode='Markdown'
+                )
+            )
         
         logger.info(f"Processed image: Fertilized={fertilized_seeds}, Total={total_seeds}, Percentage={fertilization_percentage:.2f}%")
         
@@ -716,19 +886,43 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Format results
             result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
             
+            # ================= REMOVE BACKGROUND AND DRAW BOUNDING BOXES =================
+            await _retry_tg("edit_text(annotating_doc)", lambda: status_msg.edit_text("🎨 Removing background and drawing bounding boxes..."))
+            
+            # Remove background
+            no_bg_path = os.path.join(temp_dir, "no_background.png")
+            remove_background(input_path, no_bg_path)
+            
+            # Draw bounding boxes on image with background removed
+            annotated_path = os.path.join(temp_dir, "annotated.jpg")
+            draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+            
             try:
                 await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
             except:
                 pass
             
-            # Send text results only (no image)
-            await _retry_tg(
-                "reply_text(result_doc)",
-                lambda: update.message.reply_text(
-                    result_text,
-                    parse_mode='Markdown'
+            # Send annotated image with results
+            try:
+                caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
+                await _retry_tg(
+                    "reply_photo(result_doc)",
+                    lambda: update.message.reply_photo(
+                        photo=open(annotated_path, 'rb'),
+                        caption=caption,
+                        parse_mode='Markdown'
+                    )
                 )
-            )
+            except Exception as e:
+                logger.error(f"Error sending annotated image: {e}", exc_info=True)
+                # Fallback: send text only if image fails
+                await _retry_tg(
+                    "reply_text(result_doc)",
+                    lambda: update.message.reply_text(
+                        result_text,
+                        parse_mode='Markdown'
+                    )
+                )
             
             logger.info(f"Processed document: Fertilized={fertilized_seeds}, Total={total_seeds}, Percentage={fertilization_percentage:.2f}%")
             
