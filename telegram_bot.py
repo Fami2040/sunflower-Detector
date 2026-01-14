@@ -584,28 +584,86 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Update status message to show SAHI is starting
         try:
-            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running detection... This may take 30-100 seconds."))
+            await _retry_tg("edit_text(sahi_start)", lambda: status_msg.edit_text("🔄 Running detection... This may take 30-100 seconds on CPU."))
         except:
             pass
         
         import time
         start_time = time.time()
         logger.info(f"⏱️ SAHI inference started at {time.strftime('%H:%M:%S')}")
-            
+        
+        # Run SAHI inference in executor to avoid blocking
+        async def run_sahi_inference():
+            """Run SAHI inference in thread pool to avoid blocking."""
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None,
+                lambda: get_sliced_prediction(
+                    image=input_path,
+                    detection_model=detection_model,
+                    slice_height=SLICE_SIZE,
+                    slice_width=SLICE_SIZE,
+                    overlap_height_ratio=OVERLAP,
+                    overlap_width_ratio=OVERLAP,
+                    postprocess_type="NMS",                 # merge duplicates
+                    postprocess_match_threshold=NMS_IOU
+                )
+            )
+        
+        # Send periodic updates during long processing
+        async def send_progress_updates():
+            """Send periodic status updates during processing."""
+            elapsed = 0
+            while True:
+                await asyncio.sleep(15)  # Update every 15 seconds
+                elapsed += 15
+                try:
+                    if DEVICE == "cpu":
+                        await _retry_tg(
+                            "edit_text(progress)",
+                            lambda: status_msg.edit_text(f"🔄 Still processing... ({elapsed}s elapsed) This may take 30-100 seconds on CPU.")
+                        )
+                    else:
+                        await _retry_tg(
+                            "edit_text(progress)",
+                            lambda: status_msg.edit_text(f"🔄 Still processing... ({elapsed}s elapsed)")
+                        )
+                except:
+                    pass
+        
         try:
             logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
-            result = get_sliced_prediction(
-                image=input_path,
-                detection_model=detection_model,
-                slice_height=SLICE_SIZE,
-                slice_width=SLICE_SIZE,
-                overlap_height_ratio=OVERLAP,
-                overlap_width_ratio=OVERLAP,
-                postprocess_type="NMS",                 # merge duplicates
-                postprocess_match_threshold=NMS_IOU
-            )
+            # Start progress updates task
+            progress_task = asyncio.create_task(send_progress_updates())
+            
+            # Run inference with timeout (5 minutes max)
+            try:
+                result = await asyncio.wait_for(run_sahi_inference(), timeout=300.0)
+            except asyncio.TimeoutError:
+                progress_task.cancel()
+                error_msg = "❌ Processing timed out. The image might be too large. Please try again with a smaller image."
+                try:
+                    await status_msg.edit_text(error_msg)
+                except:
+                    await update.message.reply_text(error_msg)
+                logger.error("SAHI inference timed out after 5 minutes")
+                # Clean up
+                try:
+                    os.remove(input_path)
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+                return
+            
+            # Cancel progress updates
+            progress_task.cancel()
+            try:
+                await progress_task
+            except asyncio.CancelledError:
+                pass
+            
             elapsed_time = time.time() - start_time
-            logger.info(f"SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
+            logger.info(f"✅ SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
         except Exception as e:
             logger.error(f"Error in SAHI inference: {e}", exc_info=True)
             error_msg = "❌ Error processing image. The image might be too large or corrupted. Please try again with a smaller image."
@@ -836,26 +894,84 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Update status message to show SAHI is starting
             try:
-                await _retry_tg("edit_text(sahi_start_doc)", lambda: status_msg.edit_text("🔄 Running SAHI detection... This may take 30-90 seconds on CPU."))
+                await _retry_tg("edit_text(sahi_start_doc)", lambda: status_msg.edit_text("🔄 Running detection... This may take 30-100 seconds on CPU."))
             except:
                 pass
             
             import time
             start_time = time.time()
             logger.info(f"⏱️ SAHI inference started at {time.strftime('%H:%M:%S')}")
-            logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
-                
-            try:
-                result = get_sliced_prediction(
-                    image=input_path,
-                    detection_model=detection_model,
-                    slice_height=SLICE_SIZE,
-                    slice_width=SLICE_SIZE,
-                    overlap_height_ratio=OVERLAP,
-                    overlap_width_ratio=OVERLAP,
-                    postprocess_type="NMS",                 # merge duplicates
-                    postprocess_match_threshold=NMS_IOU
+            
+            # Run SAHI inference in executor to avoid blocking
+            async def run_sahi_inference_doc():
+                """Run SAHI inference in thread pool to avoid blocking."""
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: get_sliced_prediction(
+                        image=input_path,
+                        detection_model=detection_model,
+                        slice_height=SLICE_SIZE,
+                        slice_width=SLICE_SIZE,
+                        overlap_height_ratio=OVERLAP,
+                        overlap_width_ratio=OVERLAP,
+                        postprocess_type="NMS",                 # merge duplicates
+                        postprocess_match_threshold=NMS_IOU
+                    )
                 )
+            
+            # Send periodic updates during long processing
+            async def send_progress_updates_doc():
+                """Send periodic status updates during processing."""
+                elapsed = 0
+                while True:
+                    await asyncio.sleep(15)  # Update every 15 seconds
+                    elapsed += 15
+                    try:
+                        if DEVICE == "cpu":
+                            await _retry_tg(
+                                "edit_text(progress_doc)",
+                                lambda: status_msg.edit_text(f"🔄 Still processing... ({elapsed}s elapsed) This may take 30-100 seconds on CPU.")
+                            )
+                        else:
+                            await _retry_tg(
+                                "edit_text(progress_doc)",
+                                lambda: status_msg.edit_text(f"🔄 Still processing... ({elapsed}s elapsed)")
+                            )
+                    except:
+                        pass
+            
+            try:
+                logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
+                # Start progress updates task
+                progress_task = asyncio.create_task(send_progress_updates_doc())
+                
+                # Run inference with timeout (5 minutes max)
+                try:
+                    result = await asyncio.wait_for(run_sahi_inference_doc(), timeout=300.0)
+                except asyncio.TimeoutError:
+                    progress_task.cancel()
+                    error_msg = "❌ Processing timed out. The image might be too large. Please try again with a smaller image."
+                    try:
+                        await status_msg.edit_text(error_msg)
+                    except:
+                        await update.message.reply_text(error_msg)
+                    logger.error("SAHI inference timed out after 5 minutes")
+                    # Clean up
+                    try:
+                        os.remove(input_path)
+                        os.rmdir(temp_dir)
+                    except:
+                        pass
+                    return
+                
+                # Cancel progress updates
+                progress_task.cancel()
+                try:
+                    await progress_task
+                except asyncio.CancelledError:
+                    pass
+                
                 elapsed_time = time.time() - start_time
                 logger.info(f"✅ SAHI inference completed in {elapsed_time:.2f} seconds (device: {DEVICE}, slice_size: {SLICE_SIZE})")
                 logger.info(f"⏱️ SAHI inference finished at {time.strftime('%H:%M:%S')}")
