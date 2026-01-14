@@ -646,21 +646,12 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Format results
         result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
         
-        # ================= REMOVE BACKGROUND AND DRAW BOUNDING BOXES =================
-        await _retry_tg("edit_text(annotating)", lambda: status_msg.edit_text("🎨 Removing background and drawing bounding boxes..."))
+        # ================= DRAW BOUNDING BOXES =================
+        await _retry_tg("edit_text(annotating)", lambda: status_msg.edit_text("🎨 Drawing bounding boxes..."))
         
-        # Remove background
-        no_bg_path = os.path.join(temp_dir, "no_background.png")
-        bg_removed = remove_background(input_path, no_bg_path)
-        
-        # Draw bounding boxes on image with background removed
+        # Draw bounding boxes directly on original image
         annotated_path = os.path.join(temp_dir, "annotated.jpg")
-        if bg_removed and os.path.exists(no_bg_path):
-            boxes_drawn = draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
-        else:
-            # If background removal failed, draw on original image
-            logger.warning("Background removal failed, drawing boxes on original image")
-            boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+        boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
         
         # Delete status message
         try:
@@ -904,21 +895,12 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Format results
             result_text = format_results(total_seeds, fertilized_seeds, fertilization_percentage)
             
-            # ================= REMOVE BACKGROUND AND DRAW BOUNDING BOXES =================
-            await _retry_tg("edit_text(annotating_doc)", lambda: status_msg.edit_text("🎨 Removing background and drawing bounding boxes..."))
+            # ================= DRAW BOUNDING BOXES =================
+            await _retry_tg("edit_text(annotating_doc)", lambda: status_msg.edit_text("🎨 Drawing bounding boxes..."))
             
-            # Remove background
-            no_bg_path = os.path.join(temp_dir, "no_background.png")
-            bg_removed = remove_background(input_path, no_bg_path)
-            
-            # Draw bounding boxes on image with background removed
+            # Draw bounding boxes directly on original image
             annotated_path = os.path.join(temp_dir, "annotated.jpg")
-            if bg_removed and os.path.exists(no_bg_path):
-                boxes_drawn = draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
-            else:
-                # If background removal failed, draw on original image
-                logger.warning("Background removal failed, drawing boxes on original image")
-                boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+            boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
             
             try:
                 await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
