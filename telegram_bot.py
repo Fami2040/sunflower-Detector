@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import asyncio
 from pathlib import Path
+from io import BytesIO
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.error import TimedOut, NetworkError, Conflict
@@ -650,11 +651,16 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Remove background
         no_bg_path = os.path.join(temp_dir, "no_background.png")
-        remove_background(input_path, no_bg_path)
+        bg_removed = remove_background(input_path, no_bg_path)
         
         # Draw bounding boxes on image with background removed
         annotated_path = os.path.join(temp_dir, "annotated.jpg")
-        draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+        if bg_removed and os.path.exists(no_bg_path):
+            boxes_drawn = draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+        else:
+            # If background removal failed, draw on original image
+            logger.warning("Background removal failed, drawing boxes on original image")
+            boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
         
         # Delete status message
         try:
@@ -663,19 +669,31 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         
         # Send annotated image with results
-        try:
-            caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
-            await _retry_tg(
-                "reply_photo(result)",
-                lambda: update.message.reply_photo(
-                    photo=open(annotated_path, 'rb'),
-                    caption=caption,
-                    parse_mode='Markdown'
+        if boxes_drawn and os.path.exists(annotated_path):
+            try:
+                caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
+                # Use file path directly (telegram library handles file opening/closing)
+                await _retry_tg(
+                    "reply_photo(result)",
+                    lambda: update.message.reply_photo(
+                        photo=annotated_path,
+                        caption=caption,
+                        parse_mode='Markdown'
+                    )
                 )
-            )
-        except Exception as e:
-            logger.error(f"Error sending annotated image: {e}", exc_info=True)
-            # Fallback: send text only if image fails
+            except Exception as e:
+                logger.error(f"Error sending annotated image: {e}", exc_info=True)
+                # Fallback: send text only if image fails
+                await _retry_tg(
+                    "reply_text(result)",
+                    lambda: update.message.reply_text(
+                        result_text,
+                        parse_mode='Markdown'
+                    )
+                )
+        else:
+            # If annotation failed, just send text results
+            logger.warning("Failed to create annotated image, sending text only")
             await _retry_tg(
                 "reply_text(result)",
                 lambda: update.message.reply_text(
@@ -891,11 +909,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Remove background
             no_bg_path = os.path.join(temp_dir, "no_background.png")
-            remove_background(input_path, no_bg_path)
+            bg_removed = remove_background(input_path, no_bg_path)
             
             # Draw bounding boxes on image with background removed
             annotated_path = os.path.join(temp_dir, "annotated.jpg")
-            draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+            if bg_removed and os.path.exists(no_bg_path):
+                boxes_drawn = draw_bounding_boxes_no_text(no_bg_path, result, annotated_path)
+            else:
+                # If background removal failed, draw on original image
+                logger.warning("Background removal failed, drawing boxes on original image")
+                boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
             
             try:
                 await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
@@ -903,19 +926,31 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
             
             # Send annotated image with results
-            try:
-                caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
-                await _retry_tg(
-                    "reply_photo(result_doc)",
-                    lambda: update.message.reply_photo(
-                        photo=open(annotated_path, 'rb'),
-                        caption=caption,
-                        parse_mode='Markdown'
+            if boxes_drawn and os.path.exists(annotated_path):
+                try:
+                    caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
+                    # Use file path directly (telegram library handles file opening/closing)
+                    await _retry_tg(
+                        "reply_photo(result_doc)",
+                        lambda: update.message.reply_photo(
+                            photo=annotated_path,
+                            caption=caption,
+                            parse_mode='Markdown'
+                        )
                     )
-                )
-            except Exception as e:
-                logger.error(f"Error sending annotated image: {e}", exc_info=True)
-                # Fallback: send text only if image fails
+                except Exception as e:
+                    logger.error(f"Error sending annotated image: {e}", exc_info=True)
+                    # Fallback: send text only if image fails
+                    await _retry_tg(
+                        "reply_text(result_doc)",
+                        lambda: update.message.reply_text(
+                            result_text,
+                            parse_mode='Markdown'
+                        )
+                    )
+            else:
+                # If annotation failed, just send text results
+                logger.warning("Failed to create annotated image, sending text only")
                 await _retry_tg(
                     "reply_text(result_doc)",
                     lambda: update.message.reply_text(
