@@ -651,7 +651,9 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Draw bounding boxes directly on original image
         annotated_path = os.path.join(temp_dir, "annotated.jpg")
+        logger.info(f"Drawing bounding boxes on image: {input_path}")
         boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+        logger.info(f"Bounding boxes drawn: {boxes_drawn}, output path: {annotated_path}, exists: {os.path.exists(annotated_path) if boxes_drawn else False}")
         
         # Delete status message
         try:
@@ -662,6 +664,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send annotated image with results
         if boxes_drawn and os.path.exists(annotated_path):
             try:
+                logger.info(f"Sending annotated image: {annotated_path}")
                 caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
                 # Use file path directly (telegram library handles file opening/closing)
                 await _retry_tg(
@@ -672,6 +675,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         parse_mode='Markdown'
                     )
                 )
+                logger.info("✅ Annotated image sent successfully")
             except Exception as e:
                 logger.error(f"Error sending annotated image: {e}", exc_info=True)
                 # Fallback: send text only if image fails
@@ -900,7 +904,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Draw bounding boxes directly on original image
             annotated_path = os.path.join(temp_dir, "annotated.jpg")
+            logger.info(f"Drawing bounding boxes on image: {input_path}")
             boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+            logger.info(f"Bounding boxes drawn: {boxes_drawn}, output path: {annotated_path}, exists: {os.path.exists(annotated_path) if boxes_drawn else False}")
             
             try:
                 await _retry_tg("delete(status_doc2)", lambda: status_msg.delete())
@@ -910,6 +916,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Send annotated image with results
             if boxes_drawn and os.path.exists(annotated_path):
                 try:
+                    logger.info(f"Sending annotated image: {annotated_path}")
                     caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
                     # Use file path directly (telegram library handles file opening/closing)
                     await _retry_tg(
@@ -920,6 +927,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             parse_mode='Markdown'
                         )
                     )
+                    logger.info("✅ Annotated image sent successfully")
                 except Exception as e:
                     logger.error(f"Error sending annotated image: {e}", exc_info=True)
                     # Fallback: send text only if image fails
