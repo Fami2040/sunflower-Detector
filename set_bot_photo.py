@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w")
 
 def set_bot_photo_via_channel(photo_path: str, channel_username: str):
     """

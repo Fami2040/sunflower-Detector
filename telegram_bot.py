@@ -12,7 +12,7 @@ from pathlib import Path
 from io import BytesIO
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.error import TimedOut, NetworkError, Conflict
+from telegram.error import TimedOut, NetworkError, Conflict, InvalidToken
 from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 import logging
@@ -1206,7 +1206,7 @@ def main():
         print("2. Click on 'Variables' tab (or 'Environment' / 'Config')")
         print("3. Click '+ New Variable' button")
         print("4. Variable Name: BOT_TOKEN")
-        print("5. Variable Value: 8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY")
+        print("5. Variable Value: 8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w")
         print("6. Click 'Save' or 'Add'")
         print("7. Go to 'Deployments' tab → Click 'Redeploy'")
         print("8. Wait 2-3 minutes and check 'Logs' tab")
@@ -1299,6 +1299,15 @@ def main():
                 )
                 # If we get here, polling stopped normally (not a conflict)
                 break
+            except InvalidToken as e:
+                logger.error(f"Invalid token detected: {e}")
+                print("\n" + "=" * 60)
+                print("❌ INVALID BOT TOKEN!")
+                print("=" * 60)
+                print("The bot token is invalid/expired/revoked.")
+                print("You need to get a new token from @BotFather on Telegram.")
+                print("=" * 60)
+                raise  # Re-raise to be caught by outer handler
             except Conflict as e:
                 conflict_retries += 1
                 wait_time = min(5 * conflict_retries, 30)  # Exponential backoff, max 30s
@@ -1332,6 +1341,30 @@ def main():
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
         print("\n🛑 Bot stopped by user")
+    except InvalidToken as e:
+        logger.error(f"Invalid token error: {e}")
+        print("\n" + "=" * 60)
+        print("❌ INVALID BOT TOKEN ERROR!")
+        print("=" * 60)
+        print(f"The token `{BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}` was rejected by Telegram.")
+        print("")
+        print("📋 HOW TO FIX:")
+        print("=" * 60)
+        print("1. Open Telegram and search for @BotFather")
+        print("2. Send /start to BotFather")
+        print("3. Send /newbot to create a new bot (or /token to get existing bot token)")
+        print("4. Follow the instructions to get your bot token")
+        print("5. Copy the token (format: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)")
+        print("")
+        print("6. In Railway Dashboard:")
+        print("   - Go to Your Service → Variables tab")
+        print("   - Update BOT_TOKEN with your new token")
+        print("   - Click 'Save'")
+        print("   - Go to Deployments → Click 'Redeploy'")
+        print("")
+        print("⚠️  The current token is invalid/expired/revoked.")
+        print("    You MUST get a new token from @BotFather!")
+        print("=" * 60)
     except Conflict as e:
         logger.error(f"Conflict error: {e}")
         print("\n" + "=" * 60)

@@ -7,6 +7,6 @@ services:
     plan: free
     envVars:
       - key: BOT_TOKEN
-        value: 8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY
+        value: 8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w
         sync: false
 

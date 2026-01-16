@@ -3,7 +3,7 @@ Write-Host "🌻 Starting Sunflower Seed Counter Telegram Bot..." -ForegroundCol
 Write-Host ""
 
 # Set bot token
-$env:BOT_TOKEN = "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+$env:BOT_TOKEN = "8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w"
 
 # Use venv_gpu Python (has all packages and CUDA support)
 $pythonPath = "c:/Cursor Project/venv_gpu/Scripts/python.exe"
