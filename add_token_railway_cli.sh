@@ -1,7 +1,7 @@
 #!/bin/bash
 # Quick script to add BOT_TOKEN to Railway using Railway CLI
 
-BOT_TOKEN="8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+BOT_TOKEN="8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w"
 
 echo "============================================================"
 echo "🚀 Adding BOT_TOKEN to Railway"

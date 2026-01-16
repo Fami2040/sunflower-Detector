@@ -37,7 +37,7 @@ echo ""
 
 # Set BOT_TOKEN
 echo "📝 Setting BOT_TOKEN variable..."
-BOT_TOKEN="8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+BOT_TOKEN="8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w"
 
 railway variables set BOT_TOKEN="$BOT_TOKEN"
 

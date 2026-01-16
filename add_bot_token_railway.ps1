@@ -46,7 +46,7 @@ Write-Host ""
 
 # Set BOT_TOKEN
 Write-Host "📝 Setting BOT_TOKEN variable..." -ForegroundColor Cyan
-$BOT_TOKEN = "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+$BOT_TOKEN = "8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w"
 
 railway variables set "BOT_TOKEN=$BOT_TOKEN"
 

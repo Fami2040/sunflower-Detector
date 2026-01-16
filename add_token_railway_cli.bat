@@ -1,7 +1,7 @@
 @echo off
 REM Quick script to add BOT_TOKEN to Railway using Railway CLI (Windows)
 
-set BOT_TOKEN=8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY
+set BOT_TOKEN=8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w
 
 echo ============================================================
 echo 🚀 Adding BOT_TOKEN to Railway

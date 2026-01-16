@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 
-BOT_TOKEN = "8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY"
+BOT_TOKEN = "8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w"
 
 def check_railway_cli():
     """Check if Railway CLI is installed."""
