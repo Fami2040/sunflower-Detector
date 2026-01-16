@@ -18,6 +18,7 @@ from sahi.predict import get_sliced_prediction
 import logging
 from dotenv import load_dotenv
 from ultralytics import YOLO
+from aiohttp import web
 
 # Load environment variables
 load_dotenv()
@@ -1145,6 +1146,48 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         # Don't exit - let the polling retry mechanism handle it
         # The bot will automatically start working once the conflict is resolved
 
+async def health_check_handler(request):
+    """Simple health check endpoint for Railway."""
+    return web.Response(text="OK", status=200)
+
+def run_health_server():
+    """Start a simple HTTP server for Railway health checks (runs in background thread)."""
+    async def start_server():
+        try:
+            app = web.Application()
+            app.router.add_get('/health', health_check_handler)
+            app.router.add_get('/', health_check_handler)  # Also respond to root
+            
+            # Get port from Railway environment variable, default to 8080
+            port = int(os.getenv('PORT', '8080'))
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', port)
+            await site.start()
+            logger.info(f"✅ Health check server started on port {port}")
+            print(f"✅ Health check server running on port {port} (for Railway)")
+            
+            # Keep running
+            while True:
+                await asyncio.sleep(3600)  # Sleep for 1 hour, then check again
+        except Exception as e:
+            logger.warning(f"Could not start health check server: {e}")
+            print(f"⚠️ Health check server failed (non-critical): {e}")
+    
+    # Run in new event loop in background thread
+    def run_in_thread():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(start_server())
+        except Exception as e:
+            logger.warning(f"Health server thread error: {e}")
+    
+    import threading
+    thread = threading.Thread(target=run_in_thread, daemon=True)
+    thread.start()
+    return thread
+
 
 def main():
     """Start the bot."""
@@ -1222,6 +1265,15 @@ def main():
         # Add error handler
         application.add_error_handler(error_handler)
         
+        # Start health check server for Railway (runs in background thread)
+        health_thread = None
+        try:
+            health_thread = run_health_server()
+            import time
+            time.sleep(1)  # Give health server a moment to start
+        except Exception as e:
+            logger.warning(f"Could not start health check server: {e}")
+        
         # Start bot
         # Note: We skip pre-flight conflict checks to avoid event loop conflicts
         # Conflict detection will happen during polling via the error handler
@@ -1292,6 +1344,9 @@ def main():
         print(f"❌ Fatal error: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        # Health server runs as daemon thread, will exit automatically
+        pass
 
 if __name__ == '__main__':
     main()
