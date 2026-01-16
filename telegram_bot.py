@@ -1163,7 +1163,7 @@ def main():
         print("2. Click on 'Variables' tab (or 'Environment' / 'Config')")
         print("3. Click '+ New Variable' button")
         print("4. Variable Name: BOT_TOKEN")
-        print("5. Variable Value: 8527984904:AAEZSOQ25RMpyRcsYEy1TWxiYeEbZfzDqHY")
+        print("5. Variable Value: 8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w")
         print("6. Click 'Save' or 'Add'")
         print("7. Go to 'Deployments' tab → Click 'Redeploy'")
         print("8. Wait 2-3 minutes and check 'Logs' tab")
