@@ -69,7 +69,7 @@ SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))       # 800 = best balance for 
 OVERLAP = float(os.getenv("OVERLAP", "0.15"))          # default overlap
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.05"))
+CONF_THR = float(os.getenv("CONF_THR", "0.1"))
 NMS_IOU = float(os.getenv("NMS_IOU", "0.6"))
 
 # ---- Telegram / performance ----
