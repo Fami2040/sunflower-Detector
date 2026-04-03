@@ -1,5 +1,4 @@
 # =====================================================
-# SAHI — Slice, Predict ALL, Merge, and COUNT
 # Telegram Bot | Fertilized / Unfertilized Sunflower Seeds
 # =====================================================
 
