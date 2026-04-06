@@ -1,9 +1,0 @@
-@echo off
-echo Starting Telegram Bot...
-echo Setting BOT_TOKEN...
-set BOT_TOKEN=8490011366:AAGsDtjayDyWhf_wXFAqWVDkg5X3kOmx81w
-echo Using venv_gpu Python...
-"c:/Cursor Project/venv_gpu/Scripts/python.exe" telegram_bot.py
-pause
-
-
