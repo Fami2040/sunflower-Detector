@@ -48,6 +48,9 @@ models/*.pth
 models/*.weights
 !models/.gitkeep
 
+# Local tuning images (not for repo)
+test_sunflower_tune.png
+
 # Temporary files
 *.tmp
 *.log

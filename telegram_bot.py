@@ -62,14 +62,14 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-# For seed detection (small objects): 640-800 gives best accuracy, 800 is best balance
-# 640 = maximum accuracy (slower), 800 = good balance (recommended), 900+ = faster but may miss seeds
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "800"))       # 800 = best balance for seed detection accuracy
-OVERLAP = float(os.getenv("OVERLAP", "0.15"))          # default overlap
+# Tuned vs manual counts (F=417, U=420) on a dense sunflower head; see tune_sahi_params.py
+# Smaller slices + more overlap improve recall on tiny seeds (slower on CPU)
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "560"))
+OVERLAP = float(os.getenv("OVERLAP", "0.3"))
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.12"))
-NMS_IOU = float(os.getenv("NMS_IOU", "0.4"))
+CONF_THR = float(os.getenv("CONF_THR", "0.06"))
+NMS_IOU = float(os.getenv("NMS_IOU", "0.55"))
 
 # ---- Telegram / performance ----
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
