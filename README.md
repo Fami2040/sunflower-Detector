@@ -1,10 +1,9 @@
 # 🌻 Sunflower Seed Counter Telegram Bot
 
-A Telegram bot that uses SAHI (Slice, Predict ALL, Merge, and COUNT) to analyze sunflower images and count fertilized and unfertilized seeds.
+A Telegram bot that uses Deep learning Model to analyze sunflower images and count fertilized and unfertilized seeds.
 
 ## Features
 
-- **SAHI Processing**: Slices images into smaller pieces for better detection accuracy
 - **Automatic Counting**: Counts fertilized and unfertilized sunflower seeds
 - **Image Classification**: Validates that uploaded images are sunflowers before processing
 - **Real-time Status Updates**: Shows processing progress with status messages
