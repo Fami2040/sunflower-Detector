@@ -94,7 +94,7 @@ SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "false").lower() == "true"  # Set
 
 # ---- Normalize incoming images (approx. phone-editor sliders, -100..100 scale) ----
 # Defaults match: brightness -26, exposure 100, contrast 100, shadows -100, warmth -100, tint 100, sharpness 100
-PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "true").lower() == "true"
+PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "false").lower() == "true"
 PP_BRIGHTNESS = float(os.getenv("PP_BRIGHTNESS", "-26"))
 PP_EXPOSURE = float(os.getenv("PP_EXPOSURE", "100"))
 PP_CONTRAST = float(os.getenv("PP_CONTRAST", "100"))

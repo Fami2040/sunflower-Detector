@@ -48,7 +48,7 @@ CONF_THR_MODEL_MIN = min(CONF_THR_FERTILIZED, CONF_THR_UNFERTILIZED)
 NMS_IOU = float(os.getenv("NMS_IOU", "0.50"))
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))
 
-PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "true").lower() == "true"
+PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "false").lower() == "true"
 PP_BRIGHTNESS = float(os.getenv("PP_BRIGHTNESS", "-26"))
 PP_EXPOSURE = float(os.getenv("PP_EXPOSURE", "100"))
 PP_CONTRAST = float(os.getenv("PP_CONTRAST", "100"))
