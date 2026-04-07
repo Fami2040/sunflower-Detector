@@ -85,7 +85,7 @@ CONF_THR = CONF_THR_FERTILIZED  # backward compat for logs / external refs
 NMS_IOU = float(os.getenv("NMS_IOU", "0.50"))
 # Extra de-dup for class 1 (unfertilized) to prevent dense red double-counts.
 UNFERT_DEDUP = os.getenv("UNFERT_DEDUP", "true").lower() == "true"
-UNFERT_DEDUP_CENTER_RATIO = float(os.getenv("UNFERT_DEDUP_CENTER_RATIO", "1.0"))
+UNFERT_DEDUP_CENTER_RATIO = float(os.getenv("UNFERT_DEDUP_CENTER_RATIO", "1.4"))
 UNFERT_DEDUP_MIN_PIX = float(os.getenv("UNFERT_DEDUP_MIN_PIX", "2.0"))
 
 # ---- Telegram / performance ----
