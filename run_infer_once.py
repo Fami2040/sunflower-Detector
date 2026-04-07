@@ -50,6 +50,13 @@ OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))
 UNFERT_DEDUP = os.getenv("UNFERT_DEDUP", "true").lower() == "true"
 UNFERT_DEDUP_CENTER_RATIO = float(os.getenv("UNFERT_DEDUP_CENTER_RATIO", "1.4"))
 UNFERT_DEDUP_MIN_PIX = float(os.getenv("UNFERT_DEDUP_MIN_PIX", "2.0"))
+UNFERT_VS_FERT_SUPPRESS = os.getenv("UNFERT_VS_FERT_SUPPRESS", "true").lower() == "true"
+UNFERT_VS_FERT_IOU = float(os.getenv("UNFERT_VS_FERT_IOU", "0.99"))
+UNFERT_TIP_ON_SEED_SUPPRESS = (
+    os.getenv("UNFERT_TIP_ON_SEED_SUPPRESS", "true").lower() == "true"
+)
+UNFERT_FERT_AREA_RATIO_MIN = float(os.getenv("UNFERT_FERT_AREA_RATIO_MIN", "1.35"))
+UNFERT_FERT_EXPAND_PX = float(os.getenv("UNFERT_FERT_EXPAND_PX", "4"))
 
 PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "false").lower() == "true"
 PP_BRIGHTNESS = float(os.getenv("PP_BRIGHTNESS", "-26"))
@@ -131,8 +138,55 @@ def apply_normalize_look(src_path: str, dst_path: str) -> bool:
         return False
 
 
+def _bbox_iou(pred_a, pred_b) -> float:
+    a, b = pred_a.bbox, pred_b.bbox
+    ax1, ay1, ax2, ay2 = float(a.minx), float(a.miny), float(a.maxx), float(a.maxy)
+    bx1, by1, bx2, by2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
+    inter = iw * ih
+    if inter <= 0:
+        return 0.0
+    aa = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    bb = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = aa + bb - inter
+    return inter / union if union > 0 else 0.0
+
+
+def _bbox_area(pred) -> float:
+    b = pred.bbox
+    return max(
+        1e-6,
+        (float(b.maxx) - float(b.minx)) * (float(b.maxy) - float(b.miny)),
+    )
+
+
+def _unfert_center_inside_fert(unfert_pred, fert_pred, expand_px: float = 0.0) -> bool:
+    u, f = unfert_pred.bbox, fert_pred.bbox
+    cx = (float(u.minx) + float(u.maxx)) * 0.5
+    cy = (float(u.miny) + float(u.maxy)) * 0.5
+    ex = float(expand_px)
+    return (float(f.minx) - ex) <= cx <= (float(f.maxx) + ex) and (float(f.miny) - ex) <= cy <= (
+        float(f.maxy) + ex
+    )
+
+
+def _suppress_unfert_vs_fert(unfert_pred, fert_pred) -> bool:
+    if _bbox_iou(unfert_pred, fert_pred) >= UNFERT_VS_FERT_IOU:
+        return True
+    if UNFERT_TIP_ON_SEED_SUPPRESS:
+        af = _bbox_area(fert_pred)
+        au = _bbox_area(unfert_pred)
+        if af >= au * UNFERT_FERT_AREA_RATIO_MIN and _unfert_center_inside_fert(
+            unfert_pred, fert_pred, UNFERT_FERT_EXPAND_PX
+        ):
+            return True
+    return False
+
+
 def filter_predictions(preds):
-    kept = []
+    fert_list = []
     unfert_candidates = []
     for p in preds:
         cls_id = int(p.category.id)
@@ -140,11 +194,24 @@ def filter_predictions(preds):
         thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
         if score < thr:
             continue
-        if cls_id == 1 and UNFERT_DEDUP:
-            unfert_candidates.append(p)
+        if cls_id == 0:
+            fert_list.append(p)
         else:
-            kept.append(p)
+            unfert_candidates.append(p)
 
+    if UNFERT_VS_FERT_SUPPRESS and fert_list and unfert_candidates:
+        kept_unfert = []
+        for u in unfert_candidates:
+            drop = False
+            for f in fert_list:
+                if _suppress_unfert_vs_fert(u, f):
+                    drop = True
+                    break
+            if not drop:
+                kept_unfert.append(u)
+        unfert_candidates = kept_unfert
+
+    kept = fert_list
     if not UNFERT_DEDUP or not unfert_candidates:
         return kept + unfert_candidates
 
