@@ -62,14 +62,27 @@ except Exception as e:
     print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
-# Tuned vs manual counts (F=417, U=420) on a dense sunflower head; see tune_sahi_params.py
-# Smaller slices + more overlap improve recall on tiny seeds (slower on CPU)
-SLICE_SIZE = int(os.getenv("SLICE_SIZE", "560"))
-OVERLAP = float(os.getenv("OVERLAP", "0.3"))
+# Defaults tuned on sample heads: 500 / 0.35 / 0.50 improves center (unfertilized) recall vs 560/0.3/0.55
+# Override with SLICE_SIZE, OVERLAP, NMS_IOU env vars
+SLICE_SIZE = int(os.getenv("SLICE_SIZE", "500"))
+OVERLAP = float(os.getenv("OVERLAP", "0.35"))
 
 # ---- Thresholds (LOW to reduce FN) ----
-CONF_THR = float(os.getenv("CONF_THR", "0.06"))
-NMS_IOU = float(os.getenv("NMS_IOU", "0.55"))
+# Per-class: lower CONF_THR_UNFERTILIZED helps sterile/center detections without loosening fertilized.
+# Model uses min() so weak class-1 boxes are not dropped before post-filter.
+_conf_legacy = os.getenv("CONF_THR", "").strip()
+CONF_THR_FERTILIZED = float(
+    os.getenv("CONF_THR_FERTILIZED", _conf_legacy if _conf_legacy else "0.06")
+)
+CONF_THR_UNFERTILIZED = float(
+    os.getenv(
+        "CONF_THR_UNFERTILIZED",
+        _conf_legacy if _conf_legacy else "0.04",
+    )
+)
+CONF_THR_MODEL_MIN = min(CONF_THR_FERTILIZED, CONF_THR_UNFERTILIZED)
+CONF_THR = CONF_THR_FERTILIZED  # backward compat for logs / external refs
+NMS_IOU = float(os.getenv("NMS_IOU", "0.50"))
 
 # ---- Telegram / performance ----
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
@@ -78,6 +91,17 @@ TG_RETRY_ATTEMPTS = int(os.getenv("TG_RETRY_ATTEMPTS", "3"))
 # ---- Performance optimizations ----
 # Set SKIP_CLASSIFIER="true" to skip classifier for speed (saves 20+ seconds)
 SKIP_CLASSIFIER = os.getenv("SKIP_CLASSIFIER", "false").lower() == "true"  # Set to "true" to skip classifier
+
+# ---- Normalize incoming images (approx. phone-editor sliders, -100..100 scale) ----
+# Defaults match: brightness -26, exposure 100, contrast 100, shadows -100, warmth -100, tint 100, sharpness 100
+PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "true").lower() == "true"
+PP_BRIGHTNESS = float(os.getenv("PP_BRIGHTNESS", "-26"))
+PP_EXPOSURE = float(os.getenv("PP_EXPOSURE", "100"))
+PP_CONTRAST = float(os.getenv("PP_CONTRAST", "100"))
+PP_SHADOWS = float(os.getenv("PP_SHADOWS", "-100"))
+PP_WARMTH = float(os.getenv("PP_WARMTH", "-100"))
+PP_TINT = float(os.getenv("PP_TINT", "100"))
+PP_SHARPNESS = float(os.getenv("PP_SHARPNESS", "100"))
 
 # ---- Classes ----
 CLASSES = ["Fertilized", "Unfertilized"]
@@ -128,10 +152,14 @@ if not os.path.exists(MODEL_PATH):
 detection_model = AutoDetectionModel.from_pretrained(
     model_type="ultralytics",
     model_path=MODEL_PATH,
-    confidence_threshold=CONF_THR,
+    confidence_threshold=CONF_THR_MODEL_MIN,
     device=DEVICE
 )
 print("✅ Detection model loaded successfully")
+print(
+    f"   Confidence: fert>={CONF_THR_FERTILIZED}, unfert>={CONF_THR_UNFERTILIZED}, "
+    f"model_min={CONF_THR_MODEL_MIN}"
+)
 
 print(f"🔄 Loading classifier model on {DEVICE.upper()}...")
 print(f"📁 Classifier model path: {CLASSIFIER_PATH}")
@@ -201,24 +229,123 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def compute_seed_counts(result):
     """
     Post-process SAHI detection results to count seeds.
-    Matches the original script style.
+    Per-class confidence: class 0 = CONF_THR_FERTILIZED, class 1 = CONF_THR_UNFERTILIZED.
     """
     count = {0: 0, 1: 0}
-    
+
     for p in result.object_prediction_list:
         cls_id = int(p.category.id)
         score = p.score.value
-        
-        # Final safety filter (VERY LOW threshold)
-        if score < CONF_THR:
+        thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
+        if score < thr:
             continue
-        
+
         count[cls_id] += 1
-    
+
     total_seeds = count[0] + count[1]
     fertilized_seeds = count[0]
-    
+
     return total_seeds, fertilized_seeds
+
+
+def apply_normalize_look(src_path: str, dst_path: str) -> bool:
+    """
+    Map typical editor sliders (-100..100) to OpenCV LAB + unsharp mask.
+    Order: exposure -> shadows -> brightness -> contrast -> warmth/tint (LAB A/B) -> sharpness.
+    """
+    try:
+        img = cv2.imread(src_path)
+        if img is None:
+            logger.error(f"normalize: could not read {src_path}")
+            return False
+
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        L, A, Bch = cv2.split(lab)
+        Lf = L.astype(np.float32)
+        lo = L.astype(np.float32)
+
+        # Exposure: multiply luminance (100 ~= strong lift)
+        exp_gain = 1.0 + (PP_EXPOSURE / 100.0) * 1.5
+        Lf = Lf * exp_gain
+
+        # Shadows: negative = darken shadow regions
+        shadow_w = np.clip((118.0 - lo) / 118.0, 0.0, 1.0) ** 1.15
+        shadow_factor = 1.0 + (PP_SHADOWS / 100.0) * 0.55
+        Lf = Lf * (1.0 - shadow_w) + Lf * shadow_w * shadow_factor
+
+        # Brightness: offset on L
+        Lf = Lf + (PP_BRIGHTNESS / 100.0) * 52.0
+
+        # Contrast around mid gray
+        c = 1.0 + (PP_CONTRAST / 100.0) * 1.2
+        mid = 128.0
+        Lf = (Lf - mid) * c + mid
+        Lf = np.clip(Lf, 0, 255)
+
+        Af = A.astype(np.float32)
+        Bf = Bch.astype(np.float32)
+
+        # Warmth: negative = cool (lower LAB b toward blue in OpenCV)
+        w = PP_WARMTH / 100.0
+        Bf = Bf + w * 20.0
+        Af = Af - w * 5.0
+
+        # Tint: shift green-magenta on A (higher A ~ more magenta/red)
+        Bf = Bf + (PP_TINT / 100.0) * 4.0
+        Af = Af + (PP_TINT / 100.0) * 22.0
+
+        L2 = Lf.astype(np.uint8)
+        A2 = np.clip(Af, 0, 255).astype(np.uint8)
+        B2 = np.clip(Bf, 0, 255).astype(np.uint8)
+        lab2 = cv2.merge((L2, A2, B2))
+        bgr = cv2.cvtColor(lab2, cv2.COLOR_LAB2BGR)
+
+        # Sharpness: unsharp mask
+        s = PP_SHARPNESS / 100.0
+        if s > 0.02:
+            u8 = bgr
+            sigma = 1.0 + s * 1.8
+            blur = cv2.GaussianBlur(u8, (0, 0), sigmaX=sigma)
+            amount = 0.75 + s * 1.35
+            bgr = cv2.addWeighted(u8, 1.0 + amount, blur, -amount, 0)
+
+        ok = cv2.imwrite(dst_path, bgr, [cv2.IMWRITE_JPEG_QUALITY, OUTPUT_JPEG_QUALITY])
+        if not ok:
+            logger.error("normalize: cv2.imwrite failed")
+            return False
+        logger.info(
+            "Applied PREPROCESS_NORMALIZE (editor-style): "
+            f"brightness={PP_BRIGHTNESS} exposure={PP_EXPOSURE} contrast={PP_CONTRAST} "
+            f"shadows={PP_SHADOWS} warmth={PP_WARMTH} tint={PP_TINT} sharpness={PP_SHARPNESS}"
+        )
+        return True
+    except Exception as e:
+        logger.error(f"apply_normalize_look failed: {e}", exc_info=True)
+        return False
+
+
+def prepare_pipeline_image(temp_dir: str, input_path: str) -> str:
+    """Classifier + detection + boxes use this path (normalized JPEG or original)."""
+    if not PREPROCESS_NORMALIZE:
+        return input_path
+    dst = os.path.join(temp_dir, "normalized.jpg")
+    if apply_normalize_look(input_path, dst):
+        return dst
+    logger.warning("Normalization failed; using original download")
+    return input_path
+
+
+def cleanup_temp_images(input_path: str, work_path=None) -> None:
+    paths = {input_path}
+    if work_path:
+        paths.add(work_path)
+    for p in paths:
+        try:
+            if p and os.path.exists(p):
+                os.remove(p)
+        except OSError as e:
+            logger.warning(f"Could not remove temp file {p}: {e}")
+
 
 def remove_background(image_path: str, output_path: str) -> bool:
     """
@@ -335,16 +462,15 @@ def draw_bounding_boxes_no_text(image_path: str, result, output_path: str):
         for prediction in result.object_prediction_list:
             cls_id = int(prediction.category.id)
             score = prediction.score.value
-            
-            # Skip if below threshold
-            if score < CONF_THR:
+            thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
+            if score < thr:
                 continue
-            
+
             # Get bounding box coordinates
             bbox = prediction.bbox
             x1, y1 = int(bbox.minx), int(bbox.miny)
             x2, y2 = int(bbox.maxx), int(bbox.maxy)
-            
+
             # Choose color based on class
             if cls_id == 0:  # Fertilized
                 color = COLOR_FERTILIZED
@@ -539,6 +665,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         logger.info(f"Image downloaded to {input_path}")
 
+        work_path = prepare_pipeline_image(temp_dir, input_path)
+        if work_path != input_path:
+            logger.info(f"Using normalized image for pipeline: {work_path}")
+
         # ================= CHECK IF SUNFLOWER =================
         # Skip classifier if SKIP_CLASSIFIER is set for faster processing (saves 20+ seconds!)
         if SKIP_CLASSIFIER:
@@ -551,7 +681,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
                 
             try:
-                is_sunflower = is_sunflower_image(input_path)
+                is_sunflower = is_sunflower_image(work_path)
             except Exception as e:
                 logger.error(f"Error in classifier check: {e}")
                 is_sunflower = True  # On error, allow processing
@@ -572,7 +702,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             # Clean up temp files
             try:
-                os.remove(input_path)
+                cleanup_temp_images(input_path, work_path)
                 os.rmdir(temp_dir)
             except:
                 pass
@@ -580,7 +710,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # ================= SAHI INFERENCE =================
         logger.info("✅ Classifier accepted image, starting SAHI inference...")
-        logger.info(f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, CONF_THR={CONF_THR}, DEVICE={DEVICE}")
+        logger.info(
+            f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, "
+            f"CONF_FERT={CONF_THR_FERTILIZED} CONF_UNFERT={CONF_THR_UNFERTILIZED} model_min={CONF_THR_MODEL_MIN}, DEVICE={DEVICE}"
+        )
         
         # Update status message to show SAHI is starting
         try:
@@ -596,10 +729,11 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         async def run_sahi_inference():
             """Run SAHI inference in thread pool to avoid blocking."""
             loop = asyncio.get_event_loop()
+            wp = work_path
             return await loop.run_in_executor(
                 None,
                 lambda: get_sliced_prediction(
-                    image=input_path,
+                    image=wp,
                     detection_model=detection_model,
                     slice_height=SLICE_SIZE,
                     slice_width=SLICE_SIZE,
@@ -632,7 +766,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     pass
         
         try:
-            logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
+            logger.info(f"📥 Calling get_sliced_prediction with image={work_path}")
             # Start progress updates task
             progress_task = asyncio.create_task(send_progress_updates())
             
@@ -649,7 +783,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.error("SAHI inference timed out after 5 minutes")
                 # Clean up
                 try:
-                    os.remove(input_path)
+                    cleanup_temp_images(input_path, work_path)
                     os.rmdir(temp_dir)
                 except:
                     pass
@@ -673,7 +807,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(error_msg)
             # Clean up
             try:
-                os.remove(input_path)
+                cleanup_temp_images(input_path, work_path)
                 os.rmdir(temp_dir)
             except:
                 pass
@@ -688,8 +822,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"  Detection {i}: class={p.category.id}, score={p.score.value:.3f}, bbox={p.bbox}")
         else:
             logger.warning("⚠️ WARNING: No detections found by SAHI! Model may not be detecting seeds.")
-            logger.warning(f"   Image path: {input_path}")
-            logger.warning(f"   Using CONF_THR={CONF_THR}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}")
+            logger.warning(f"   Image path: {work_path}")
+            logger.warning(
+                f"   Using CONF_FERT={CONF_THR_FERTILIZED} CONF_UNFERT={CONF_THR_UNFERTILIZED}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}"
+            )
         
         # ================= COUNT SEEDS =================
         await _retry_tg("edit_text(counting)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
@@ -707,10 +843,10 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # ================= DRAW BOUNDING BOXES =================
         await _retry_tg("edit_text(annotating)", lambda: status_msg.edit_text("🎨 Drawing bounding boxes..."))
         
-        # Draw bounding boxes directly on original image
+        # Draw on same pixels the detector saw (normalized if enabled)
         annotated_path = os.path.join(temp_dir, "annotated.jpg")
-        logger.info(f"Drawing bounding boxes on image: {input_path}")
-        boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+        logger.info(f"Drawing bounding boxes on image: {work_path}")
+        boxes_drawn = draw_bounding_boxes_no_text(work_path, result, annotated_path)
         logger.info(f"Bounding boxes drawn: {boxes_drawn}, output path: {annotated_path}, exists: {os.path.exists(annotated_path) if boxes_drawn else False}")
         
         # Delete status message
@@ -759,8 +895,9 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Clean up temp files
         try:
-            if os.path.exists(input_path):
-                os.remove(input_path)
+            cleanup_temp_images(input_path, work_path)
+            if os.path.exists(annotated_path):
+                os.remove(annotated_path)
             if os.path.exists(temp_dir):
                 os.rmdir(temp_dir)
         except Exception as e:
@@ -796,11 +933,13 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 pass
     finally:
-        # Clean up temp files
         if temp_dir and os.path.exists(temp_dir):
             try:
-                if 'input_path' in locals() and os.path.exists(input_path):
-                    os.remove(input_path)
+                if "input_path" in locals():
+                    cleanup_temp_images(input_path, locals().get("work_path"))
+                ann = os.path.join(temp_dir, "annotated.jpg")
+                if os.path.exists(ann):
+                    os.remove(ann)
                 os.rmdir(temp_dir)
             except Exception as e:
                 logger.warning(f"Failed to cleanup temp files: {e}")
@@ -854,6 +993,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
             logger.info(f"Document downloaded to {input_path}")
 
+            work_path = prepare_pipeline_image(temp_dir, input_path)
+            if work_path != input_path:
+                logger.info(f"Using normalized image for pipeline: {work_path}")
+
             # ================= CHECK IF SUNFLOWER =================
             try:
                 await _retry_tg("edit_text(check_sunflower_doc)", lambda: status_msg.edit_text("🔍 Checking if image is a sunflower..."))
@@ -861,7 +1004,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
                 
             try:
-                is_sunflower = is_sunflower_image(input_path)
+                is_sunflower = is_sunflower_image(work_path)
             except Exception as e:
                 logger.error(f"Error in classifier check: {e}")
                 is_sunflower = True  # On error, allow processing
@@ -882,7 +1025,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 # Clean up temp files
                 try:
-                    os.remove(input_path)
+                    cleanup_temp_images(input_path, work_path)
                     os.rmdir(temp_dir)
                 except:
                     pass
@@ -890,7 +1033,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # ================= SAHI INFERENCE =================
             logger.info("✅ Classifier accepted image, starting SAHI inference...")
-            logger.info(f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, CONF_THR={CONF_THR}, DEVICE={DEVICE}")
+            logger.info(
+            f"   SAHI config: SLICE_SIZE={SLICE_SIZE}, OVERLAP={OVERLAP}, "
+            f"CONF_FERT={CONF_THR_FERTILIZED} CONF_UNFERT={CONF_THR_UNFERTILIZED} model_min={CONF_THR_MODEL_MIN}, DEVICE={DEVICE}"
+        )
             
             # Update status message to show SAHI is starting
             try:
@@ -906,10 +1052,11 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             async def run_sahi_inference_doc():
                 """Run SAHI inference in thread pool to avoid blocking."""
                 loop = asyncio.get_event_loop()
+                wp = work_path
                 return await loop.run_in_executor(
                     None,
                     lambda: get_sliced_prediction(
-                        image=input_path,
+                        image=wp,
                         detection_model=detection_model,
                         slice_height=SLICE_SIZE,
                         slice_width=SLICE_SIZE,
@@ -942,7 +1089,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         pass
             
             try:
-                logger.info(f"📥 Calling get_sliced_prediction with image={input_path}")
+                logger.info(f"📥 Calling get_sliced_prediction with image={work_path}")
                 # Start progress updates task
                 progress_task = asyncio.create_task(send_progress_updates_doc())
                 
@@ -959,7 +1106,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.error("SAHI inference timed out after 5 minutes")
                     # Clean up
                     try:
-                        os.remove(input_path)
+                        cleanup_temp_images(input_path, work_path)
                         os.rmdir(temp_dir)
                     except:
                         pass
@@ -984,7 +1131,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_text(error_msg)
                 # Clean up
                 try:
-                    os.remove(input_path)
+                    cleanup_temp_images(input_path, work_path)
                     os.rmdir(temp_dir)
                 except:
                     pass
@@ -999,8 +1146,10 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.info(f"  Detection {i}: class={p.category.id}, score={p.score.value:.3f}, bbox={p.bbox}")
             else:
                 logger.warning("⚠️ WARNING: No detections found by SAHI! Model may not be detecting seeds.")
-                logger.warning(f"   Image path: {input_path}")
-                logger.warning(f"   Using CONF_THR={CONF_THR}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}")
+                logger.warning(f"   Image path: {work_path}")
+                logger.warning(
+                f"   Using CONF_FERT={CONF_THR_FERTILIZED} CONF_UNFERT={CONF_THR_UNFERTILIZED}, SLICE_SIZE={SLICE_SIZE}, DEVICE={DEVICE}"
+            )
             
             # ================= COUNT SEEDS =================
             await _retry_tg("edit_text(counting_doc)", lambda: status_msg.edit_text("🔢 Counting seeds..."))
@@ -1018,10 +1167,9 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # ================= DRAW BOUNDING BOXES =================
             await _retry_tg("edit_text(annotating_doc)", lambda: status_msg.edit_text("🎨 Drawing bounding boxes..."))
             
-            # Draw bounding boxes directly on original image
             annotated_path = os.path.join(temp_dir, "annotated.jpg")
-            logger.info(f"Drawing bounding boxes on image: {input_path}")
-            boxes_drawn = draw_bounding_boxes_no_text(input_path, result, annotated_path)
+            logger.info(f"Drawing bounding boxes on image: {work_path}")
+            boxes_drawn = draw_bounding_boxes_no_text(work_path, result, annotated_path)
             logger.info(f"Bounding boxes drawn: {boxes_drawn}, output path: {annotated_path}, exists: {os.path.exists(annotated_path) if boxes_drawn else False}")
             
             try:
@@ -1066,6 +1214,14 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             
             logger.info(f"Processed document: Fertilized={fertilized_seeds}, Total={total_seeds}, Percentage={fertilization_percentage:.2f}%")
+
+            try:
+                cleanup_temp_images(input_path, work_path)
+                if os.path.exists(annotated_path):
+                    os.remove(annotated_path)
+                os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to cleanup temp files: {e}")
             
         else:
             await update.message.reply_text("❌ Please send an image file (JPG, PNG, etc.)")
@@ -1100,11 +1256,13 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except:
                 pass
     finally:
-        # Clean up temp files
         if temp_dir and os.path.exists(temp_dir):
             try:
-                if 'input_path' in locals() and os.path.exists(input_path):
-                    os.remove(input_path)
+                if "input_path" in locals():
+                    cleanup_temp_images(input_path, locals().get("work_path"))
+                ann = os.path.join(temp_dir, "annotated.jpg")
+                if os.path.exists(ann):
+                    os.remove(ann)
                 os.rmdir(temp_dir)
             except Exception as e:
                 logger.warning(f"Failed to cleanup temp files: {e}")

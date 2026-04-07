@@ -36,12 +36,13 @@ from sahi import AutoDetectionModel
 from sahi.predict import get_sliced_prediction
 
 
-def compute_counts(result, conf_thr: float) -> tuple[int, int]:
+def compute_counts(result, conf_fert: float, conf_unfert: float) -> tuple[int, int]:
     count = {0: 0, 1: 0}
     for p in result.object_prediction_list:
         cls_id = int(p.category.id)
         score = p.score.value
-        if score < conf_thr:
+        thr = conf_fert if cls_id == 0 else conf_unfert
+        if score < thr:
             continue
         count[cls_id] += 1
     return count[0], count[1]
@@ -63,7 +64,7 @@ def run_once(detection_model, image: str, sl: int, ov: float, cf: float, nms: fl
         postprocess_type="NMS",
         postprocess_match_threshold=nms,
     )
-    f, u = compute_counts(result, cf)
+    f, u = compute_counts(result, cf, cf)
     elapsed = time.time() - t1
     del result
     gc.collect()
