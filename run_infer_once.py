@@ -47,6 +47,9 @@ CONF_THR_UNFERTILIZED = float(
 CONF_THR_MODEL_MIN = min(CONF_THR_FERTILIZED, CONF_THR_UNFERTILIZED)
 NMS_IOU = float(os.getenv("NMS_IOU", "0.50"))
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))
+UNFERT_DEDUP = os.getenv("UNFERT_DEDUP", "true").lower() == "true"
+UNFERT_DEDUP_CENTER_RATIO = float(os.getenv("UNFERT_DEDUP_CENTER_RATIO", "1.0"))
+UNFERT_DEDUP_MIN_PIX = float(os.getenv("UNFERT_DEDUP_MIN_PIX", "2.0"))
 
 PREPROCESS_NORMALIZE = os.getenv("PREPROCESS_NORMALIZE", "false").lower() == "true"
 PP_BRIGHTNESS = float(os.getenv("PP_BRIGHTNESS", "-26"))
@@ -128,6 +131,49 @@ def apply_normalize_look(src_path: str, dst_path: str) -> bool:
         return False
 
 
+def filter_predictions(preds):
+    kept = []
+    unfert_candidates = []
+    for p in preds:
+        cls_id = int(p.category.id)
+        score = p.score.value
+        thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
+        if score < thr:
+            continue
+        if cls_id == 1 and UNFERT_DEDUP:
+            unfert_candidates.append(p)
+        else:
+            kept.append(p)
+
+    if not UNFERT_DEDUP or not unfert_candidates:
+        return kept + unfert_candidates
+
+    def _center_and_size(pred):
+        b = pred.bbox
+        x1, y1, x2, y2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
+        w = max(1.0, x2 - x1)
+        h = max(1.0, y2 - y1)
+        cx = (x1 + x2) * 0.5
+        cy = (y1 + y2) * 0.5
+        return cx, cy, w, h
+
+    deduped = []
+    for p in sorted(unfert_candidates, key=lambda x: x.score.value, reverse=True):
+        cx, cy, w, h = _center_and_size(p)
+        is_dup = False
+        for k in deduped:
+            kx, ky, kw, kh = _center_and_size(k)
+            scale = min(w, h, kw, kh)
+            radius = max(UNFERT_DEDUP_MIN_PIX, UNFERT_DEDUP_CENTER_RATIO * scale)
+            if ((cx - kx) ** 2 + (cy - ky) ** 2) ** 0.5 <= radius:
+                is_dup = True
+                break
+        if not is_dup:
+            deduped.append(p)
+
+    return kept + deduped
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: python run_infer_once.py <image>")
@@ -186,12 +232,9 @@ def main() -> None:
     )
 
     fert = unf = 0
-    for p in result.object_prediction_list:
+    filtered_preds = filter_predictions(result.object_prediction_list)
+    for p in filtered_preds:
         cls_id = int(p.category.id)
-        score = p.score.value
-        thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
-        if score < thr:
-            continue
         if cls_id == 0:
             fert += 1
         else:

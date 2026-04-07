@@ -83,6 +83,10 @@ CONF_THR_UNFERTILIZED = float(
 CONF_THR_MODEL_MIN = min(CONF_THR_FERTILIZED, CONF_THR_UNFERTILIZED)
 CONF_THR = CONF_THR_FERTILIZED  # backward compat for logs / external refs
 NMS_IOU = float(os.getenv("NMS_IOU", "0.50"))
+# Extra de-dup for class 1 (unfertilized) to prevent dense red double-counts.
+UNFERT_DEDUP = os.getenv("UNFERT_DEDUP", "true").lower() == "true"
+UNFERT_DEDUP_CENTER_RATIO = float(os.getenv("UNFERT_DEDUP_CENTER_RATIO", "1.0"))
+UNFERT_DEDUP_MIN_PIX = float(os.getenv("UNFERT_DEDUP_MIN_PIX", "2.0"))
 
 # ---- Telegram / performance ----
 OUTPUT_JPEG_QUALITY = int(os.getenv("OUTPUT_JPEG_QUALITY", "85"))  # smaller file uploads faster
@@ -226,12 +230,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
-def compute_seed_counts(result):
-    """
-    Post-process SAHI detection results to count seeds.
-    Per-class confidence: class 0 = CONF_THR_FERTILIZED, class 1 = CONF_THR_UNFERTILIZED.
-    """
-    count = {0: 0, 1: 0}
+def _filter_predictions(result):
+    """Apply per-class threshold + optional unfertilized center-distance de-dup."""
+    kept = []
+    unfert_candidates = []
 
     for p in result.object_prediction_list:
         cls_id = int(p.category.id)
@@ -239,7 +241,49 @@ def compute_seed_counts(result):
         thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
         if score < thr:
             continue
+        if cls_id == 1 and UNFERT_DEDUP:
+            unfert_candidates.append(p)
+        else:
+            kept.append(p)
 
+    if not UNFERT_DEDUP or not unfert_candidates:
+        return kept + unfert_candidates
+
+    def _center_and_size(pred):
+        b = pred.bbox
+        x1, y1, x2, y2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
+        w = max(1.0, x2 - x1)
+        h = max(1.0, y2 - y1)
+        cx = (x1 + x2) * 0.5
+        cy = (y1 + y2) * 0.5
+        return cx, cy, w, h
+
+    deduped = []
+    for p in sorted(unfert_candidates, key=lambda x: x.score.value, reverse=True):
+        cx, cy, w, h = _center_and_size(p)
+        is_dup = False
+        for k in deduped:
+            kx, ky, kw, kh = _center_and_size(k)
+            scale = min(w, h, kw, kh)
+            radius = max(UNFERT_DEDUP_MIN_PIX, UNFERT_DEDUP_CENTER_RATIO * scale)
+            if ((cx - kx) ** 2 + (cy - ky) ** 2) ** 0.5 <= radius:
+                is_dup = True
+                break
+        if not is_dup:
+            deduped.append(p)
+
+    return kept + deduped
+
+
+def compute_seed_counts(result):
+    """
+    Post-process SAHI detection results to count seeds.
+    Per-class confidence: class 0 = CONF_THR_FERTILIZED, class 1 = CONF_THR_UNFERTILIZED.
+    """
+    count = {0: 0, 1: 0}
+    filtered_preds = _filter_predictions(result)
+    for p in filtered_preds:
+        cls_id = int(p.category.id)
         count[cls_id] += 1
 
     total_seeds = count[0] + count[1]
@@ -458,13 +502,9 @@ def draw_bounding_boxes_no_text(image_path: str, result, output_path: str):
         # Box thickness (adaptive based on image size)
         box_thickness = max(2, int(min(img_rgb.shape[0], img_rgb.shape[1]) / 400))
         
-        # Draw bounding boxes
-        for prediction in result.object_prediction_list:
+        # Draw bounding boxes after same filtering used for counts.
+        for prediction in _filter_predictions(result):
             cls_id = int(prediction.category.id)
-            score = prediction.score.value
-            thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
-            if score < thr:
-                continue
 
             # Get bounding box coordinates
             bbox = prediction.bbox
