@@ -32,6 +32,13 @@ ENV/
 .env.local
 .env.*.local
 
+# Local deploy notes / helpers that must not contain real tokens (never commit)
+RAILWAY_TOKEN_UPDATE_STEPS.txt
+RAILWAY_DEPLOY.md
+EXACT_STEPS*.md
+add_bot_token_railway.py
+add_token_railway_cli.bat
+
 # IDE
 .vscode/
 .idea/
