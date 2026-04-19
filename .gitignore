@@ -55,6 +55,9 @@ models/*.pth
 models/*.weights
 !models/.gitkeep
 
+# Separate training repo (its own git root); do not track inside sunflower-Detector
+yolo-sunflower-seed-detector/
+
 # Local tuning images (not for repo)
 test_sunflower_tune.png
 
