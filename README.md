@@ -1,58 +1,55 @@
-🌻 Sunflower Seed Counter (Telegram Bot)
+# 🌻 Sunflower Seed Counter (Telegram Bot)
 
-A deep learning–powered system for automatic analysis of sunflower head images, designed to count fertilized and unfertilized seeds with high accuracy.
+A deep learning–powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds** with high accuracy.
 
-👉 Try the system directly via Telegram:
-https://t.me/sunflower_detector1_bot
+👉 **Try the system directly via Telegram:**  
+https://t.me/sunflower_detector1_bot  
 
-👉 Annotated dataset (CVAT, 2500 images):
-https://izba-memes.ru/share/y9xGFqCW
+👉 **Annotated dataset (CVAT, 2500 images):**  
+https://izba-memes.ru/share/y9xGFqCW  
 
-🚀 Overview
+---
 
-This project provides an end-to-end pipeline for digital phenotyping of sunflower heads, combining:
+## 🚀 Overview
 
-Deep learning–based seed detection (YOLO)
-Image validation (sunflower vs non-sunflower)
-Telegram bot interface for easy access
+This project provides an end-to-end pipeline for **digital phenotyping of sunflower heads**, combining:
+
+- Deep learning–based seed detection (YOLO)  
+- Image validation (sunflower vs non-sunflower)  
+- Telegram bot interface for easy access  
 
 The system is designed for research and breeding applications, enabling fast and objective seed counting.
 
-✨ Features
-🌱 Seed Counting – Detects and counts fertilized & unfertilized seeds
-🧠 Image Validation – Filters non-sunflower images automatically
-⚡ Fast Processing – Optimized with slicing (SAHI) for high-resolution images
-📱 Telegram Bot Interface – No setup needed for end users
-📊 Clean Output – Returns structured count statistics (text-only)
-🧠 Model Details
-Detection Model (YOLO)
-Class 0 → Fertilized seeds
-Class 1 → Unfertilized seeds
-Classifier Model (YOLO Classification)
-Class 0 → Non-sunflower
-Class 1 → Sunflower
-⚙️ Installation
+---
+
+## ✨ Features
+
+- 🌱 **Seed Counting** – Detects and counts fertilized & unfertilized seeds  
+- 🧠 **Image Validation** – Filters non-sunflower images automatically  
+- ⚡ **Fast Processing** – Optimized with slicing (SAHI) for high-resolution images  
+- 📱 **Telegram Bot Interface** – Easy to use  
+- 📊 **Clean Output** – Returns structured count statistics (text-only)  
+
+---
+
+## 🧠 Model Details
+
+**Detection Model (YOLO)**  
+- Class 0 → Fertilized seeds  
+- Class 1 → Unfertilized seeds  
+
+**Classifier Model (YOLO Classification)**  
+- Class 0 → Non-sunflower  
+- Class 1 → Sunflower  
+
+
+
+## ⚙️ Installation
+
+```bash
 git clone <your-repo-url>
 cd <your-project>
 pip install -r requirements.txt
-Environment setup
-cp .env.example .env
-
-Add your Telegram bot token:
-
-BOT_TOKEN=your_telegram_bot_token_here
-▶️ Usage
-
-Run the bot:
-
-python telegram_bot.py
-
-Then in Telegram:
-
-Open your bot
-Send /start
-Upload a sunflower image
-Receive seed counts instantly
 
 
 
