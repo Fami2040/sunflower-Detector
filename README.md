@@ -1,118 +1,89 @@
-# 🌻 Sunflower Seed Counter Telegram Bot
+🌻 Sunflower Seed Counter (Telegram Bot)
 
-A Telegram bot that uses Deep learning Model to analyze sunflower images and count fertilized and unfertilized seeds.
+A deep learning–powered system for automatic analysis of sunflower head images, designed to count fertilized and unfertilized seeds with high accuracy.
 
-## Features
+👉 Try the system directly via Telegram:
+https://t.me/sunflower_detector1_bot
 
-- **Automatic Counting**: Counts fertilized and unfertilized sunflower seeds
-- **Image Classification**: Validates that uploaded images are sunflowers before processing
-- **Real-time Status Updates**: Shows processing progress with status messages
-- **Text-only Results**: Returns clean count statistics (no annotated images)
-- **Telegram Integration**: Easy-to-use Telegram bot interface
+👉 Annotated dataset (CVAT, 2500 images):
+https://izba-memes.ru/share/y9xGFqCW
 
-## Prerequisites
+🚀 Overview
 
-- Python 3.8 or higher
-- CUDA-capable GPU (optional, but recommended for faster processing)
-- Telegram Bot Token (obtain from [@BotFather](https://t.me/BotFather))
+This project provides an end-to-end pipeline for digital phenotyping of sunflower heads, combining:
 
-## Installation
+Deep learning–based seed detection (YOLO)
+Image validation (sunflower vs non-sunflower)
+Telegram bot interface for easy access
 
-1. **Clone or navigate to the project directory**
+The system is designed for research and breeding applications, enabling fast and objective seed counting.
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+✨ Features
+🌱 Seed Counting – Detects and counts fertilized & unfertilized seeds
+🧠 Image Validation – Filters non-sunflower images automatically
+⚡ Fast Processing – Optimized with slicing (SAHI) for high-resolution images
+📱 Telegram Bot Interface – No setup needed for end users
+📊 Clean Output – Returns structured count statistics (text-only)
+🧠 Model Details
+Detection Model (YOLO)
+Class 0 → Fertilized seeds
+Class 1 → Unfertilized seeds
+Classifier Model (YOLO Classification)
+Class 0 → Non-sunflower
+Class 1 → Sunflower
+⚙️ Installation
+git clone <your-repo-url>
+cd <your-project>
+pip install -r requirements.txt
+Environment setup
+cp .env.example .env
 
-3. **Set up environment variables:**
-   - Copy `.env.example` to `.env`
-   - Edit `.env` and add your Telegram bot token:
-     ```
-     BOT_TOKEN=your_telegram_bot_token_here
-     ```
+Add your Telegram bot token:
 
-4. **Ensure model files are in place:**
-   - The bot expects `models/best.pt` (or `models/best2.pt`) for seed detection
-   - The bot expects `models/classifier.pt` for sunflower validation
-   - Place your trained YOLO models in the `models/` directory
+BOT_TOKEN=your_telegram_bot_token_here
+▶️ Usage
 
-## Configuration
+Run the bot:
 
-You can modify these settings in `telegram_bot.py`:
+python telegram_bot.py
 
-```python
-# SAHI slicing parameters
-SLICE_SIZE = 800       # smaller → more slices → more recall
-OVERLAP = 0.25         # overlap avoids border misses
+Then in Telegram:
 
-# Detection thresholds
-CONF_THR = 0.15        # confidence threshold (lower = more detections)
-NMS_IOU = 0.3          # non-maximum suppression IOU threshold
-
-# Device
-DEVICE = "cuda"        # use "cpu" if CUDA not available
-```
-
-## Usage
-
-1. **Start the bot:**
-   ```bash
-   python telegram_bot.py
-   ```
-
-2. **In Telegram:**
-   - Start a conversation with your bot
-   - Send `/start` to see welcome message
-   - Send a sunflower image (as photo or document)
-   - Watch the processing status messages:
-     - 🔍 Checking if image is a sunflower...
-     - 🔄 Processing sunflower image...
-     - 🔢 Counting seeds...
-   - Receive text results with seed counts
-
-## Bot Commands
-
-- `/start` - Start the bot and see welcome message
-- `/help` - Show help information
-
-## Output
-
-The bot returns text-only results with count statistics:
-- **Fertilized seeds**: Count of class 0
-- **Unfertilized seeds**: Count of class 1
-- **Total seeds**: Sum of both classes
-
-If a non-sunflower image is uploaded, the bot will reject it with a clear message.
-
-## Model Information
-
-- **Detection Model**: YOLO (Ultralytics) - `models/best.pt` or `models/best2.pt`
-  - Class 0: Fertilized seeds
-  - Class 1: Unfertilized seeds
-- **Classifier Model**: YOLO Classification - `models/classifier.pt`
-  - Class 0: Other (not sunflower)
-  - Class 1: Sunflower
-
-## Troubleshooting
-
-1. **Model not found error:**
-   - Ensure `models/best.pt` exists in the project directory
-   - Check that the model file is a valid YOLO model
-
-2. **CUDA errors:**
-   - Change `DEVICE = "cpu"` in `telegram_bot.py` if you don't have CUDA
-
-3. **Import errors:**
-   - Make sure all dependencies are installed: `pip install -r requirements.txt`
-
-4. **Bot token error:**
-   - Verify your bot token is correct in `.env` file
-   - Make sure `.env` file exists (copy from `.env.example`)
-
-## License
-
-This project is provided as-is for educational and research purposes.
+Open your bot
+Send /start
+Upload a sunflower image
+Receive seed counts instantly
 
 
 
+
+The bot returns:
+
+Fertilized seeds
+Total seeds
+
+Non-sunflower images are automatically rejected.
+
+📦 Project Structure
+models/
+  ├── best.pt
+  ├── best2.pt
+  └── classifier.pt
+
+telegram_bot.py
+requirements.txt
+🧪 Dataset
+Annotated using CVAT
+~2500 labeled sunflower images
+Includes seed-level annotations for detection tasks
+
+📎 Download:
+https://izba-memes.ru/share/y9xGFqCW
+
+⚠️ Notes
+GPU (CUDA) is recommended for faster inference
+Ensure model files are placed in the models/ directory
+Designed for research and prototyping purposes
+📄 License
+
+This project is provided for research and educational use.
