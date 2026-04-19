@@ -1,0 +1,8 @@
+# Copy to sunflower.yaml and fix paths to your dataset.
+path: ../datasets/sunflower
+train: images/train
+val: images/val
+nc: 2
+names:
+  0: fertilized
+  1: unfertilized
