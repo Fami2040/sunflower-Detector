@@ -192,7 +192,7 @@ else:
         print("⚠️ Continuing without classifier validation...")
         classifier_model = None
 
-# ================= TELEGRAM BOT HANDLERS =================
+# ================= TELEGRAM BOT HANDLERS developed and aborted seeds.=================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a message when the command /start is issued."""
@@ -200,8 +200,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
         "🌻 **Sunflower Seed Counter Bot**\n\n"
         "Send me a sunflower image and I'll count:\n"
-        "• Fertilized seeds\n"
-        "• Unfertilized seeds\n\n"
+        "• developed seeds\n"
+        "• aborted seeds\n\n"
         "Just send any image file to get started!"
     )
     try:
@@ -232,8 +232,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👋 **Welcome to Sunflower Seed Counter Bot!**\n\n"
         "📸 Just send me a sunflower image and I'll automatically analyze it!\n\n"
         "I'll count:\n"
-        "• ✅ Fertilized seeds\n"
-        "• 🌱 Unfertilized seeds\n"
+        "• ✅ Developed seeds\n"
+        "• 🌱 aborted seeds\n"
         "• 📊 Total seeds\n"
         "• 📈 Fertilization percentage\n\n"
         "**No /start needed** - just send an image anytime! 🚀\n\n"
@@ -658,7 +658,7 @@ def format_results(total_seeds: int, fertilized_seeds: int, fertilization_percen
     return (
         "🌻 **Sunflower Seed Analysis Results**\n\n"
         f"📊 Total seeds detected: {total_seeds}\n"
-        f"✅ Fertilized seeds: {fertilized_seeds}\n"
+        f"✅ Developed seeds: {fertilized_seeds}\n"
         f"📈 Fertilization rate: {fertilization_percentage:.2f}% {rate_emoji}"
     )
 
