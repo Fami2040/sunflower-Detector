@@ -88,6 +88,9 @@ https://izba-memes.ru/share/y9xGFqCW
 GPU (CUDA) is recommended for faster inference
 Ensure model files are placed in the models/ directory
 Designed for research and prototyping purposes
+
+This work was supported by the Ministry of Science and Higher Education of the Russian Federation (Federal Scientific and Technical Program for Development of Genetic Technologies for 2019-2030, Agreement No. 075-15-2025-528 dated May 29, 2025).
+
 📄 License
 
 This project is provided for research and educational use.
