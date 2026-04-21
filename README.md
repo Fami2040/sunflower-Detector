@@ -1,6 +1,13 @@
 # 🌻 Sunflower Seed Counter (Telegram Bot)
 
-A deep learning–powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds** with high accuracy.
+A deep learning-powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds** with high accuracy.
+
+## HARCHOC
+
+**HARCHOC** stands for **Helianthus annuus rapid classification heuristics for capitula**.
+It is the practical workflow in this repository for fast sunflower head analysis, combining classification checks and dense seed detection.
+
+![HARCHOC concept](assets/harchoc.png)
 
 👉 **Try the system directly via Telegram:**  
 https://t.me/sunflower_detector1_bot  
