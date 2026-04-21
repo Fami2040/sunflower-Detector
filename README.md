@@ -1,6 +1,6 @@
 # 🌻 Sunflower Seed Counter (Telegram Bot)
 
-A deep learning-powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds** with high accuracy.
+A deep learning-powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds**.
 
 ## HARCHOC
 
