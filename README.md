@@ -7,7 +7,7 @@ A deep learning-powered system for automatic analysis of sunflower head images, 
 **HARCHOC** stands for **Helianthus annuus rapid classification heuristics for capitula**.
 It is the practical workflow in this repository for fast sunflower head analysis, combining classification checks and dense seed detection.
 
-![HARCHOC concept](assets/harchoc.png)
+![HARCHOC concept](HARCHOC1.png)
 
 👉 **Try the system directly via Telegram:**  
 https://t.me/sunflower_detector1_bot  
