@@ -1,6 +1,6 @@
 # 🌻 Sunflower Seed Counter 
 
-A deep learning-powered system for automatic analysis of sunflower head images, designed to count **fertilized** and **unfertilized seeds**.
+A deep learning-powered system for automatic analysis of sunflower head images, designed to count **developed** and **aborted seeds**.
 
 ## HARCHOC
 
@@ -31,7 +31,7 @@ The system is designed for research and breeding applications, enabling fast and
 
 ## ✨ Features
 
-- 🌱 **Seed Counting** – Detects and counts fertilized & unfertilized seeds  
+- 🌱 **Seed Counting** – Detects and counts developed & aborted seeds  
 - 🧠 **Image Validation** – Filters non-sunflower images automatically  
 - ⚡ **Fast Processing** – Optimized with slicing (SAHI) for high-resolution images  
 - 📱 **Telegram Bot Interface** – Easy to use  
@@ -42,8 +42,8 @@ The system is designed for research and breeding applications, enabling fast and
 ## 🧠 Model Details
 
 **Detection Model (YOLO)**  
-- Class 0 → Fertilized seeds  
-- Class 1 → Unfertilized seeds  
+- Class 0 → developed seeds  
+- Class 1 → aborted seeds  
 
 **Classifier Model (YOLO Classification)**  
 - Class 0 → Non-sunflower  
@@ -63,7 +63,7 @@ pip install -r requirements.txt
 
 The bot returns:
 
-Fertilized seeds
+developed seeds
 Total seeds
 
 Non-sunflower images are automatically rejected.
