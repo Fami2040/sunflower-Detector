@@ -972,7 +972,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if boxes_drawn and os.path.exists(annotated_path):
             try:
                 logger.info(f"Sending annotated image: {annotated_path}")
-                caption = result_text + "\n\n🟢 Green boxes = Fertilized\n🔴 Red boxes = Unfertilized"
+                caption = result_text + "\n\n🟢 Green boxes = Developed\n🔴 Red boxes = Aborted"
                 # Use file path directly (telegram library handles file opening/closing)
                 await _retry_tg(
                     "reply_photo(result)",
