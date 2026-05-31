@@ -1,0 +1,40 @@
+---
+description: Import bootstrap for scripts (scripts._path)
+alwaysApply: true
+---
+
+# Repo import bootstrap
+
+## New `scripts/*.py` files
+
+Every new top-level script under `scripts/` must bootstrap imports before other repo modules.
+
+**Preferred (migrated entrypoints):** one-liner via [`harchoc/script_entry.py`](../../harchoc/script_entry.py) — prepends repo root when needed, then imports `scripts._path`:
+
+```python
+import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+```
+
+When `PYTHONPATH=.` or `python -m scripts.foo` already has the repo root on `sys.path`, you may use the shorter form:
+
+```python
+from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+```
+
+**Still valid:** direct `try` / `import _path` block (unchanged behavior):
+
+```python
+try:
+    from scripts import _path  # type: ignore # noqa: F401
+except Exception:
+    import _path  # type: ignore # noqa: F401
+```
+
+Alternatively run as `python -m scripts.foo` from the repository root (package import sets up the path).
+
+## Running locally vs CI
+
+- **Local / docs:** prefer `python scripts/<name>.py` from the repo root — no `PYTHONPATH=.` prefix when `_path` is present.
+- **CI:** `.github/workflows/ci.yml` sets `PYTHONPATH: .` for `unittest` and `compileall`; do not duplicate that in every doc example.
+
+Exceptions: `scripts/bootstrap_env.py` (env installer only) and `scripts/_path.py` itself.

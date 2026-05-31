@@ -1,0 +1,65 @@
+---
+description: GPU machine env + dataset location conventions
+alwaysApply: true
+---
+
+# GPU environment and dataset conventions
+
+## Environments (mamba)
+
+- **All GPU/torch work** uses `mamba run -n harchoc python ...` (or `conda activate harchoc`). **Never** conclude "no GPU" or "no torch" from bare `python` on base — re-exec via `harchoc/ml_env.py` / `scripts/check_gpu.py` / `scripts/rtdetr_smoke.py`.
+- Env name override: `HARCHOC_MAMBA_ENV` (default `harchoc`). CI unittest only: `HARCHOC_ALLOW_BASE_PYTHON=1`.
+- Prefer a single minimal env `envs/mamba.yml` (python+pip), then install Torch + deps via `scripts/bootstrap_env.py`.
+- Use `envs/mamba-cpu.yml` only for CPU-only deployment targets if you want to avoid any GPU autodetection.
+- When running mamba from automation, prefer non-interactive mode to avoid hangs:
+  - `mamba env create -f envs/mamba.yml -y`
+
+## PyTorch/CUDA
+
+- Prefer installing GPU PyTorch via `scripts/bootstrap_env.py` which selects a compatible build for the detected GPU SM.
+- Avoid relying on pip auto-selecting CUDA wheels unless explicitly intended.
+- If mixing conda torch + pip installs, keep `torch`/`torchvision` versions compatible (mismatch often shows up as missing `torchvision::nms`).
+- GPU sanity check entrypoint:
+  - `python scripts/check_gpu.py` (should report `cuda_available: true` and run a small CUDA matmul).
+  - JSON report: `python scripts/check_gpu.py --json-out reports/gpu_check.json` (uses `harchoc.gpu_probe`).
+  - If `GPU matmul failed: no kernel image is available`, your torch build does not support your GPU’s SM; switch env.
+
+## Dataset location (local, not committed)
+
+- Raw datasets live under `data/` which is git-ignored.
+- Use `data/manifest.json` (tracked) as the source of truth for dataset roots.
+- Scripts should accept overrides via env vars:
+  - `DATASET_ROOT` (highest priority)
+  - `YOLO_DATA_YAML` (if `data.yaml` is not at dataset root)
+  - `DATASET_NAME` (to select entry in the manifest)
+- Prefer generating explicit split lists under `data/splits/` (tracked) to avoid confusion between val/test.
+- **Classes:** id `0` = **developed**, id `1` = **aborted** only (`harchoc/sunflower_dataset.py`, `data/README.md`).
+- **Layout:** `DATASET_ROOT/images/` + `labels/` (YOLO `class_id cx cy w h` per line); modeling splits in `data/splits/*.txt`.
+
+## Generated artifacts (local)
+
+- `reports/` and `figures/` are intended for outputs and are git-ignored (except `README.md`/`.gitkeep`).
+- Ultralytics writes to `runs/` by default; keep it git-ignored.
+
+## CI expectations
+
+- CI is intentionally lightweight and may not install heavy ML deps (torch/ultralytics/opencv/sahi).
+- Keep heavy imports deferred behind `main()`/runtime paths so modules remain importable in CI.
+- **CI only:** unittest sets `HARCHOC_ALLOW_BASE_PYTHON=1` (see `backlog.md`, `.github/workflows/ci.yml`). **Local GPU agents** use strict runtime — see `ml-strict-runtime.mdc` (no silent empty ML artifacts on manuscript/HSP paths).
+
+## Working in a non-main branch
+
+- When developing, always work in a feature branch rather than directly on `main`.
+- Detect your branch name with:
+  ```bash
+  git rev-parse --abbrev-ref HEAD
+  ```
+- If your branch is not `main`, you should:
+  - Review your branch's diffs versus `main` **at least once per hour**:
+    ```bash
+    git fetch origin
+    git diff origin/main...
+    ```
+  - Refactor your solution regularly—strive for DRY (Don't Repeat Yourself) code by removing duplicated logic and consolidating common patterns.
+- Before merging to `main`, ensure your feature branch's code is reviewed, up-to-date with `main`, and adheres to DRY principles.
+

@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "image_id": "example_0001",
+      "file_name": "images/val/example_0001.jpg",
+      "annotations": [
+        {
+          "bbox": [10.0, 20.0, 50.0, 60.0],
+          "category_id": 0
+        }
+      ]
+    }
+  ]
+}

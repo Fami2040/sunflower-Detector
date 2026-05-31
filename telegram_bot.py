@@ -2,64 +2,89 @@
 # Telegram Bot | Fertilized / Unfertilized Sunflower Seeds
 # =====================================================
 
-import cv2
+from __future__ import annotations
+
 import os
 import tempfile
-import numpy as np
 import asyncio
 from pathlib import Path
 from io import BytesIO
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.error import TimedOut, NetworkError, Conflict, InvalidToken
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
 import logging
-from dotenv import load_dotenv
-from ultralytics import YOLO
-from aiohttp import web
+from typing import TYPE_CHECKING, Any
 
-# Load environment variables
-load_dotenv()
+if TYPE_CHECKING:  # pragma: no cover
+    import cv2  # noqa: F401
+    import numpy as np  # noqa: F401
+    from telegram import Update  # noqa: F401
+    from telegram.ext import ContextTypes  # noqa: F401
+
+
+def _lazy_import_runtime() -> dict[str, Any]:
+    """
+    Heavy deps are intentionally imported only at runtime so CI can
+    import/compile this module without torch/sahi/opencv/telegram installed.
+    """
+    import cv2
+    import numpy as np
+    from dotenv import load_dotenv
+    from sahi import AutoDetectionModel
+    from telegram import Update
+    from telegram.error import Conflict, InvalidToken, NetworkError, TimedOut
+    from telegram.ext import (
+        Application,
+        CommandHandler,
+        ContextTypes,
+        MessageHandler,
+        filters,
+    )
+    from ultralytics import YOLO
+    from aiohttp import web
+
+    load_dotenv()
+    return {
+        "cv2": cv2,
+        "np": np,
+        "AutoDetectionModel": AutoDetectionModel,
+        "Update": Update,
+        "TimedOut": TimedOut,
+        "NetworkError": NetworkError,
+        "Conflict": Conflict,
+        "InvalidToken": InvalidToken,
+        "Application": Application,
+        "CommandHandler": CommandHandler,
+        "MessageHandler": MessageHandler,
+        "filters": filters,
+        "ContextTypes": ContextTypes,
+        "YOLO": YOLO,
+        "web": web,
+    }
 
 # ================= CONFIG =================
-MODEL_PATH = r"models/best2.pt"
+import sys as _sys
+
+_repo_root = Path(__file__).resolve().parent
+if str(_repo_root) not in _sys.path:
+    _sys.path.insert(0, str(_repo_root))
+from harchoc.hsp_weights import resolve_detection_weights
+
+MODEL_PATH = str(resolve_detection_weights())
 CLASSIFIER_PATH = r"models/classifier.pt"
-# Device selection: prefer CUDA for maximum speed
-# Set FORCE_DEVICE="cuda" to force CUDA (will fail if not available)
-# Set FORCE_DEVICE="cpu" to force CPU
-try:
-    import torch
-    FORCE_DEVICE = os.getenv("FORCE_DEVICE", "").lower()
-    
-    if FORCE_DEVICE == "cuda":
-        if torch.cuda.is_available():
-            DEVICE = "cuda"
-            print(f"✅ FORCE_DEVICE=cuda: Using CUDA (GPU) - {torch.cuda.get_device_name(0)}")
-        else:
-            print("❌ ERROR: FORCE_DEVICE=cuda but CUDA is not available!")
-            print("   CUDA is not available on this system. Falling back to CPU.")
-            print("   To use CPU, set FORCE_DEVICE=cpu or remove FORCE_DEVICE")
-            DEVICE = "cpu"
-    elif FORCE_DEVICE == "cpu":
-        DEVICE = "cpu"
-        print("ℹ️ FORCE_DEVICE=cpu: Using CPU (forced)")
-    else:
-        # Auto-detect: ALWAYS prefer CUDA if available for maximum speed
-        if torch.cuda.is_available():
-            DEVICE = "cuda"
-            gpu_name = torch.cuda.get_device_name(0)
-            gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-            print(f"✅ CUDA detected: Using GPU - {gpu_name} ({gpu_memory:.2f} GB)")
-            print(f"🚀 GPU mode: Processing will be 10-50x faster than CPU!")
-        else:
-            DEVICE = "cpu"
-            print("⚠️ CUDA not available: Using CPU (10-50x slower than GPU)")
-            print("   For maximum speed, use a GPU-enabled server or local machine with CUDA")
-            print("   Railway free tier only provides CPU. Consider Railway Pro or other GPU hosting.")
-except Exception as e:
-    DEVICE = "cpu"
-    print(f"⚠️ Error detecting device: {e}, defaulting to CPU")
+DEVICE = "cpu"  # populated at runtime
+
+
+def _select_device() -> str:
+    # Device selection: prefer CUDA for maximum speed.
+    try:
+        import torch
+
+        force = os.getenv("FORCE_DEVICE", "").lower()
+        if force == "cuda":
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        if force == "cpu":
+            return "cpu"
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
 
 # ---- SAHI slicing (VERY IMPORTANT) ----
 # Defaults tuned on sample heads: 500 / 0.35 / 0.50 improves center (unfertilized) recall vs 560/0.3/0.55
@@ -142,55 +167,104 @@ async def _retry_tg(op_name: str, fn, attempts: int = TG_RETRY_ATTEMPTS):
     for i in range(attempts):
         try:
             return await fn()
-        except (TimedOut, NetworkError, asyncio.TimeoutError, TimeoutError) as e:
+        except Exception as e:
+            # Keep this helper import-safe: telegram exceptions may not be
+            # available until runtime initialization in main().
+            if not isinstance(e, (asyncio.TimeoutError, TimeoutError)) and _RUNTIME:
+                te = _RUNTIME.get("TimedOut")
+                ne = _RUNTIME.get("NetworkError")
+                if te and isinstance(e, te):
+                    pass
+                elif ne and isinstance(e, ne):
+                    pass
+                else:
+                    raise
             last_err = e
             delay = 1.0 * (2 ** i)
             logger.warning(f"{op_name} timed out (attempt {i+1}/{attempts}): {e}. Retrying in {delay:.1f}s")
             await asyncio.sleep(delay)
-    raise last_err if last_err else TimedOut(f"{op_name} timed out")
+    if last_err:
+        raise last_err
+    raise TimeoutError(f"{op_name} timed out")
 
-# ================= LOAD MODELS =================
-print(f"🔄 Loading detection model on {DEVICE.upper()}...")
-if DEVICE == "cuda":
-    try:
-        import torch
-        gpu_name = torch.cuda.get_device_name(0)
-        gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3
-        print(f"🚀 GPU: {gpu_name} ({gpu_memory:.2f} GB)")
-    except:
-        pass
-print(f"📁 Detection model path: {MODEL_PATH}")
-if not os.path.exists(MODEL_PATH):
-    print(f"❌ ERROR: Detection model file not found at {MODEL_PATH}")
-    raise FileNotFoundError(f"Detection model file not found: {MODEL_PATH}")
+# ================= RUNTIME INIT (lazy heavy deps) =================
+_RUNTIME: dict[str, Any] | None = None
+cv2 = None
+np = None
+AutoDetectionModel = None
+Update = None
+ContextTypes = None
+TimedOut = None
+NetworkError = None
+Conflict = None
+InvalidToken = None
+Application = None
+CommandHandler = None
+MessageHandler = None
+filters = None
+YOLO = None
+web = None
 
-detection_model = AutoDetectionModel.from_pretrained(
-    model_type="ultralytics",
-    model_path=MODEL_PATH,
-    confidence_threshold=CONF_THR_MODEL_MIN,
-    device=DEVICE
-)
-print("✅ Detection model loaded successfully")
-print(
-    f"   Confidence: fert>={CONF_THR_FERTILIZED}, unfert>={CONF_THR_UNFERTILIZED}, "
-    f"model_min={CONF_THR_MODEL_MIN}"
-)
+detection_model = None
+classifier_model = None
 
-print(f"🔄 Loading classifier model on {DEVICE.upper()}...")
-print(f"📁 Classifier model path: {CLASSIFIER_PATH}")
-if not os.path.exists(CLASSIFIER_PATH):
-    print(f"⚠️ WARNING: Classifier model file not found at {CLASSIFIER_PATH}")
-    print("⚠️ Continuing without classifier validation...")
-    classifier_model = None
-else:
-    try:
-        classifier_model = YOLO(CLASSIFIER_PATH)
-        classifier_model.to(DEVICE)
-        print("✅ Classifier model loaded successfully")
-    except Exception as e:
-        print(f"⚠️ WARNING: Failed to load classifier model: {e}")
+
+def _init_runtime_or_die() -> None:
+    global _RUNTIME, cv2, np, AutoDetectionModel
+    global Update, ContextTypes, TimedOut, NetworkError, Conflict, InvalidToken
+    global Application, CommandHandler, MessageHandler, filters, YOLO, web
+    global detection_model, classifier_model, DEVICE
+
+    if _RUNTIME is None:
+        _RUNTIME = _lazy_import_runtime()
+        cv2 = _RUNTIME["cv2"]
+        np = _RUNTIME["np"]
+        AutoDetectionModel = _RUNTIME["AutoDetectionModel"]
+        Update = _RUNTIME["Update"]
+        TimedOut = _RUNTIME["TimedOut"]
+        NetworkError = _RUNTIME["NetworkError"]
+        Conflict = _RUNTIME["Conflict"]
+        InvalidToken = _RUNTIME["InvalidToken"]
+        Application = _RUNTIME["Application"]
+        CommandHandler = _RUNTIME["CommandHandler"]
+        MessageHandler = _RUNTIME["MessageHandler"]
+        filters = _RUNTIME["filters"]
+        ContextTypes = _RUNTIME["ContextTypes"]
+        YOLO = _RUNTIME["YOLO"]
+        web = _RUNTIME["web"]
+
+    DEVICE = _select_device()
+
+    print(f"🔄 Loading detection model on {DEVICE.upper()}...")
+    print(f"📁 Detection model path: {MODEL_PATH}")
+    if not os.path.exists(MODEL_PATH):
+        print(f"❌ ERROR: Detection model file not found at {MODEL_PATH}")
+        raise FileNotFoundError(f"Detection model file not found: {MODEL_PATH}")
+
+    from harchoc.sahi_infer import load_ultralytics_detection_model
+
+    detection_model = load_ultralytics_detection_model(
+        MODEL_PATH,
+        device=DEVICE,
+        confidence_threshold=CONF_THR_MODEL_MIN,
+    )
+    print("✅ Detection model loaded successfully")
+
+    print(f"🔄 Loading classifier model on {DEVICE.upper()}...")
+    print(f"📁 Classifier model path: {CLASSIFIER_PATH}")
+    if not os.path.exists(CLASSIFIER_PATH):
+        print(f"⚠️ WARNING: Classifier model file not found at {CLASSIFIER_PATH}")
         print("⚠️ Continuing without classifier validation...")
         classifier_model = None
+    else:
+        try:
+            classifier_model = YOLO(CLASSIFIER_PATH)
+            classifier_model.to(DEVICE)
+            print("✅ Classifier model loaded successfully")
+        except Exception as e:
+            print(f"⚠️ WARNING: Failed to load classifier model: {e}")
+            print("⚠️ Continuing without classifier validation...")
+            classifier_model = None
 
 # ================= TELEGRAM BOT HANDLERS developed and aborted seeds.=================
 
@@ -241,111 +315,24 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
-def _bbox_iou(pred_a, pred_b) -> float:
-    a, b = pred_a.bbox, pred_b.bbox
-    ax1, ay1, ax2, ay2 = float(a.minx), float(a.miny), float(a.maxx), float(a.maxy)
-    bx1, by1, bx2, by2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
-    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
-    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
-    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
-    inter = iw * ih
-    if inter <= 0:
-        return 0.0
-    aa = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
-    bb = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
-    union = aa + bb - inter
-    return inter / union if union > 0 else 0.0
-
-
-def _bbox_area(pred) -> float:
-    b = pred.bbox
-    return max(
-        1e-6,
-        (float(b.maxx) - float(b.minx)) * (float(b.maxy) - float(b.miny)),
-    )
-
-
-def _unfert_center_inside_fert(unfert_pred, fert_pred, expand_px: float = 0.0) -> bool:
-    """True if center of unfertilized box lies inside fertilized box (tip-on-seed case)."""
-    u, f = unfert_pred.bbox, fert_pred.bbox
-    cx = (float(u.minx) + float(u.maxx)) * 0.5
-    cy = (float(u.miny) + float(u.maxy)) * 0.5
-    ex = float(expand_px)
-    return (float(f.minx) - ex) <= cx <= (float(f.maxx) + ex) and (float(f.miny) - ex) <= cy <= (
-        float(f.maxy) + ex
-    )
-
-
-def _suppress_unfert_vs_fert(unfert_pred, fert_pred) -> bool:
-    """True -> drop unfertilized (prefer fertilized for same seed)."""
-    if _bbox_iou(unfert_pred, fert_pred) >= UNFERT_VS_FERT_IOU:
-        return True
-    if UNFERT_TIP_ON_SEED_SUPPRESS:
-        af = _bbox_area(fert_pred)
-        au = _bbox_area(unfert_pred)
-        if af >= au * UNFERT_FERT_AREA_RATIO_MIN and _unfert_center_inside_fert(
-            unfert_pred, fert_pred, UNFERT_FERT_EXPAND_PX
-        ):
-            return True
-    return False
-
-
 def _filter_predictions(result):
     """Per-class threshold, suppress unfert vs fert overlap, then unfert de-dup."""
-    fert_list = []
-    unfert_candidates = []
+    from harchoc.deploy_filters import DeployFilterConfig, filter_object_predictions
 
-    for p in result.object_prediction_list:
-        cls_id = int(p.category.id)
-        score = p.score.value
-        thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
-        if score < thr:
-            continue
-        if cls_id == 0:
-            fert_list.append(p)
-        else:
-            unfert_candidates.append(p)
+    return filter_object_predictions(
+        result.object_prediction_list,
+        DeployFilterConfig.resolve(),
+    )
 
-    if UNFERT_VS_FERT_SUPPRESS and fert_list and unfert_candidates:
-        kept_unfert = []
-        for u in unfert_candidates:
-            drop = False
-            for f in fert_list:
-                if _suppress_unfert_vs_fert(u, f):
-                    drop = True
-                    break
-            if not drop:
-                kept_unfert.append(u)
-        unfert_candidates = kept_unfert
 
-    kept = fert_list
-    if not UNFERT_DEDUP or not unfert_candidates:
-        return kept + unfert_candidates
+def _run_sahi_sliced(work_path: str):
+    from harchoc.sahi_infer import SahiSliceConfig, run_sliced_prediction
 
-    def _center_and_size(pred):
-        b = pred.bbox
-        x1, y1, x2, y2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
-        w = max(1.0, x2 - x1)
-        h = max(1.0, y2 - y1)
-        cx = (x1 + x2) * 0.5
-        cy = (y1 + y2) * 0.5
-        return cx, cy, w, h
-
-    deduped = []
-    for p in sorted(unfert_candidates, key=lambda x: x.score.value, reverse=True):
-        cx, cy, w, h = _center_and_size(p)
-        is_dup = False
-        for k in deduped:
-            kx, ky, kw, kh = _center_and_size(k)
-            scale = min(w, h, kw, kh)
-            radius = max(UNFERT_DEDUP_MIN_PIX, UNFERT_DEDUP_CENTER_RATIO * scale)
-            if ((cx - kx) ** 2 + (cy - ky) ** 2) ** 0.5 <= radius:
-                is_dup = True
-                break
-        if not is_dup:
-            deduped.append(p)
-
-    return kept + deduped
+    return run_sliced_prediction(
+        work_path,
+        detection_model,
+        SahiSliceConfig(slice_size=SLICE_SIZE, overlap=OVERLAP, nms_iou=NMS_IOU),
+    )
 
 
 def compute_seed_counts(result):
@@ -845,16 +832,7 @@ async def process_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             wp = work_path
             return await loop.run_in_executor(
                 None,
-                lambda: get_sliced_prediction(
-                    image=wp,
-                    detection_model=detection_model,
-                    slice_height=SLICE_SIZE,
-                    slice_width=SLICE_SIZE,
-                    overlap_height_ratio=OVERLAP,
-                    overlap_width_ratio=OVERLAP,
-                    postprocess_type="NMS",                 # merge duplicates
-                    postprocess_match_threshold=NMS_IOU
-                )
+                lambda: _run_sahi_sliced(wp)
             )
         
         # Send periodic updates during long processing
@@ -1168,16 +1146,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 wp = work_path
                 return await loop.run_in_executor(
                     None,
-                    lambda: get_sliced_prediction(
-                        image=wp,
-                        detection_model=detection_model,
-                        slice_height=SLICE_SIZE,
-                        slice_width=SLICE_SIZE,
-                        overlap_height_ratio=OVERLAP,
-                        overlap_width_ratio=OVERLAP,
-                        postprocess_type="NMS",                 # merge duplicates
-                        postprocess_match_threshold=NMS_IOU
-                    )
+                    lambda: _run_sahi_sliced(wp),
                 )
             
             # Send periodic updates during long processing
@@ -1492,6 +1461,8 @@ def main():
         
         return
     
+    _init_runtime_or_die()
+
     logger.info(f"BOT_TOKEN found: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
     print("🤖 Bot is starting...")
     

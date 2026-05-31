@@ -1,0 +1,12 @@
+name: harchoc-cpu
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.11
+  - pip
+  # CPU PyTorch: prefer explicit CPU wheels (see Dockerfile),
+  # or install torch/torchvision with conda CPU variants if desired.
+  - pip:
+      - -r ../requirements.txt
+

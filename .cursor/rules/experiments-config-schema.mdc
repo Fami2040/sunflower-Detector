@@ -1,0 +1,19 @@
+---
+description: Experiment config styles (experiments.v1 vs train JSON vs bench YAML)
+globs: configs/**/*
+alwaysApply: false
+---
+
+# Experiment config schema
+
+When adding or editing experiment configuration, use an existing style — do not invent a fourth format.
+
+| Style | Location | Entrypoint |
+|-------|----------|------------|
+| **`experiments.v1`** | `configs/experiments/*.json` with `"schema_version": "experiments.v1"` | `scripts/experiment.py` |
+| **Flat train JSON** | `configs/experiments/train_*.json` (no `schema_version`) | `scripts/train.py` |
+| **Bench YAML** | `configs/bench/*.yaml` | `scripts/benchmark_matrix.py` |
+
+Full decision tree, merge rules, and examples: [configs/experiments/README.md](../../configs/experiments/README.md).
+
+Related paths only (not separate schemas): `configs/aug/`, `configs/ablation/`, `configs/transfer/` — referenced by path from train or scaffold scripts.

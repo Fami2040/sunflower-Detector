@@ -42,8 +42,10 @@ The system is designed for research and breeding applications, enabling fast and
 ## 🧠 Model Details
 
 **Detection Model (YOLO)**  
-- Class 0 → developed seeds  
-- Class 1 → aborted seeds  
+- Class 0 → **developed** seeds  
+- Class 1 → **aborted** seeds  
+
+**Dataset layout** — CVAT share lists **~2500** annotated images; the frozen modeling pool is **1093** head images with YOLO labels (~875 / 109 / 109 train/val/test). See [`data/README.md`](data/README.md). Install `cp data/data.yaml.example "$DATASET_ROOT/data.yaml"`.
 
 **Classifier Model (YOLO Classification)**  
 - Class 0 → Non-sunflower  
@@ -57,9 +59,54 @@ The system is designed for research and breeding applications, enabling fast and
 git clone <your-repo-url>
 cd <your-project>
 pip install -r requirements.txt
+```
 
+### Optional: model zoo backends
 
+Some scripts support optional ML backends, but **CI does not require them** (imports are lazy and dry-runs stay stdlib-only).
 
+- **Ultralytics (YOLOv8/10/11, RT-DETR)**: install `ultralytics`
+- **SuperGradients (YOLO-NAS)**: install `super-gradients` (import module `super_gradients`)
+
+### Weights cache (no downloads)
+
+This repo’s benchmark harness records deterministic weight resolution but **does not download weights**.
+
+- **Default cache dir**: `data/weights/` (gitignored)
+- **Override**: `WEIGHTS_CACHE_DIR=/path/to/cache`
+
+See `docs/EXPERIMENTS.md` for the exact rules used by `scripts/benchmark_matrix.py`.
+
+Verify the cache before a sweep (no downloads):
+
+```bash
+PYTHONPATH=. python scripts/check_weights_cache.py
+```
+
+### Validation-only budget caps (benchmark plan)
+
+Export `HARCHOC_MAX_EPOCHS`, `HARCHOC_MAX_IMGSZ`, and `HARCHOC_MAX_BATCH` before sweeps so oversized configs fail during plan validation. See [`docs/training_budget.md`](docs/training_budget.md).
+
+## Reproducible experiment entrypoints
+
+These scripts are designed to be **CI-safe** via `--dry-run` and to use the repo’s dataset resolution conventions.
+
+Generate a benchmark plan (no heavy imports):
+
+```bash
+export DATASET_ROOT=/path/to/dataset
+export PYTHONPATH=.
+python scripts/benchmark_matrix.py --out reports/benchmarks/matrix.json
+```
+
+Ops notes (disk, run naming `{model}_e{N}_s{seed}`, feature-branch training): see `docs/EXPERIMENTS.md`. Budget caps: `docs/training_budget.md`.
+
+Compute train/val/test drift proxies (stdlib):
+
+```bash
+DATASET_ROOT=/path/to/dataset \
+python scripts/split_drift.py --out reports/split_drift/report.json
+```
 
 The bot returns:
 
@@ -77,9 +124,9 @@ models/
 telegram_bot.py
 requirements.txt
 🧪 Dataset
-Annotated using CVAT
-~2500 labeled sunflower images
-Includes seed-level annotations for detection tasks
+Annotated using CVAT (~2500 images in the public share)
+**1093** images in the frozen modeling pool with seed-level YOLO labels
+See [`data/README.md`](data/README.md) for CVAT export vs modeling splits
 
 📎 Download:
 https://izba-memes.ru/share/y9xGFqCW

@@ -5,6 +5,13 @@ ultralytics>=8.0.0
 torch>=2.0.0
 torchvision>=0.15.0
 numpy>=1.24.0
+scipy>=1.10.0
 pillow>=10.0.0
 python-dotenv>=1.0.0
 aiohttp>=3.9.0
+
+#
+# Optional / heavyweight dependencies (NOT installed in CI by default).
+#
+# YOLO-NAS backend (SuperGradients)
+super-gradients

@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DATASET_NAME=sunflower-cvat-2500 \
+    DATASET_ROOT= \
+    YOLO_DATA_YAML=
 
 # Upgrade pip first
 RUN pip install --upgrade pip setuptools wheel
@@ -25,17 +28,7 @@ RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/c
 
 # Copy and install other requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt || true
-
-# Reinstall packages that might conflict
-RUN pip install --no-cache-dir \
-    python-telegram-bot>=22.5 \
-    sahi>=0.11.18 \
-    opencv-python-headless>=4.8.0 \
-    ultralytics>=8.0.0 \
-    numpy>=1.24.0 \
-    pillow>=10.0.0 \
-    python-dotenv>=1.0.0
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .

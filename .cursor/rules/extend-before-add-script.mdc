@@ -1,0 +1,17 @@
+---
+description: Extend experiment.py and harchoc before adding new scripts
+alwaysApply: true
+---
+
+# Extend before add script
+
+Before creating a new top-level `scripts/*.py`:
+
+1. **Prefer existing entrypoints:** `scripts/experiment.py` subcommands, flags on `train.py` / `eval.py` / `benchmark_matrix.py`.
+2. **Extract shared logic into `harchoc/*`:** parsers, matching, dataset resolution, config merge — not copy-paste across scripts.
+3. **Reuse CLI helpers:** `scripts/_common_cli.py` (`add_dataset_args`, `add_dry_run_arg`, `write_json`).
+4. **Bootstrap imports:** new scripts must import `scripts._path` (see `repo-import-bootstrap.mdc`).
+
+Add a new script only when the workflow is genuinely standalone **and** extending existing entrypoints would harm clarity. Document why in the PR or plan.
+
+See [dry-refactor-plan.md](../../docs/plans/dry-refactor-plan.md) for phased consolidations.

@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
@@ -16,21 +17,23 @@ try:
 except ImportError:
     pass
 
-import cv2
-import numpy as np
+from harchoc.hsp_weights import resolve_detection_weights
 
-try:
-    import torch
+def _detect_device() -> str:
+    try:
+        import torch
 
-    fd = os.getenv("FORCE_DEVICE", "").lower()
-    if fd == "cuda" and torch.cuda.is_available():
-        DEVICE = "cuda"
-    elif fd == "cpu":
-        DEVICE = "cpu"
-    else:
-        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-except Exception:
-    DEVICE = "cpu"
+        fd = os.getenv("FORCE_DEVICE", "").lower()
+        if fd == "cuda" and torch.cuda.is_available():
+            return "cuda"
+        if fd == "cpu":
+            return "cpu"
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
+
+
+DEVICE = _detect_device()
 
 SLICE_SIZE = int(os.getenv("SLICE_SIZE", "500"))
 OVERLAP = float(os.getenv("OVERLAP", "0.35"))
@@ -67,15 +70,15 @@ PP_WARMTH = float(os.getenv("PP_WARMTH", "-100"))
 PP_TINT = float(os.getenv("PP_TINT", "100"))
 PP_SHARPNESS = float(os.getenv("PP_SHARPNESS", "100"))
 
-_rel = os.getenv("DETECTION_MODEL", "models/best2.pt")
-MODEL_PATH = _rel if os.path.isabs(_rel) else os.path.join(ROOT, _rel.replace("/", os.sep))
-
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
+_wpath = resolve_detection_weights()
+MODEL_PATH = str(_wpath if _wpath.is_absolute() else Path(ROOT) / _wpath)
 
 
 def apply_normalize_look(src_path: str, dst_path: str) -> bool:
     try:
+        import cv2
+        import numpy as np
+
         img = cv2.imread(src_path)
         if img is None:
             print(f"normalize: could not read {src_path}")
@@ -138,114 +141,92 @@ def apply_normalize_look(src_path: str, dst_path: str) -> bool:
         return False
 
 
-def _bbox_iou(pred_a, pred_b) -> float:
-    a, b = pred_a.bbox, pred_b.bbox
-    ax1, ay1, ax2, ay2 = float(a.minx), float(a.miny), float(a.maxx), float(a.maxy)
-    bx1, by1, bx2, by2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
-    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
-    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
-    iw, ih = max(0.0, ix2 - ix1), max(0.0, iy2 - iy1)
-    inter = iw * ih
-    if inter <= 0:
-        return 0.0
-    aa = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
-    bb = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
-    union = aa + bb - inter
-    return inter / union if union > 0 else 0.0
-
-
-def _bbox_area(pred) -> float:
-    b = pred.bbox
-    return max(
-        1e-6,
-        (float(b.maxx) - float(b.minx)) * (float(b.maxy) - float(b.miny)),
-    )
-
-
-def _unfert_center_inside_fert(unfert_pred, fert_pred, expand_px: float = 0.0) -> bool:
-    u, f = unfert_pred.bbox, fert_pred.bbox
-    cx = (float(u.minx) + float(u.maxx)) * 0.5
-    cy = (float(u.miny) + float(u.maxy)) * 0.5
-    ex = float(expand_px)
-    return (float(f.minx) - ex) <= cx <= (float(f.maxx) + ex) and (float(f.miny) - ex) <= cy <= (
-        float(f.maxy) + ex
-    )
-
-
-def _suppress_unfert_vs_fert(unfert_pred, fert_pred) -> bool:
-    if _bbox_iou(unfert_pred, fert_pred) >= UNFERT_VS_FERT_IOU:
-        return True
-    if UNFERT_TIP_ON_SEED_SUPPRESS:
-        af = _bbox_area(fert_pred)
-        au = _bbox_area(unfert_pred)
-        if af >= au * UNFERT_FERT_AREA_RATIO_MIN and _unfert_center_inside_fert(
-            unfert_pred, fert_pred, UNFERT_FERT_EXPAND_PX
-        ):
-            return True
-    return False
-
-
 def filter_predictions(preds):
-    fert_list = []
-    unfert_candidates = []
-    for p in preds:
-        cls_id = int(p.category.id)
-        score = p.score.value
-        thr = CONF_THR_FERTILIZED if cls_id == 0 else CONF_THR_UNFERTILIZED
-        if score < thr:
-            continue
-        if cls_id == 0:
-            fert_list.append(p)
-        else:
-            unfert_candidates.append(p)
+    from harchoc.deploy_filters import DeployFilterConfig, filter_object_predictions
 
-    if UNFERT_VS_FERT_SUPPRESS and fert_list and unfert_candidates:
-        kept_unfert = []
-        for u in unfert_candidates:
-            drop = False
-            for f in fert_list:
-                if _suppress_unfert_vs_fert(u, f):
-                    drop = True
-                    break
-            if not drop:
-                kept_unfert.append(u)
-        unfert_candidates = kept_unfert
+    return filter_object_predictions(preds, DeployFilterConfig.resolve())
 
-    kept = fert_list
-    if not UNFERT_DEDUP or not unfert_candidates:
-        return kept + unfert_candidates
 
-    def _center_and_size(pred):
-        b = pred.bbox
-        x1, y1, x2, y2 = float(b.minx), float(b.miny), float(b.maxx), float(b.maxy)
-        w = max(1.0, x2 - x1)
-        h = max(1.0, y2 - y1)
-        cx = (x1 + x2) * 0.5
-        cy = (y1 + y2) * 0.5
-        return cx, cy, w, h
+def _run_fullframe_export(
+    image: str,
+    *,
+    locked_conf_from: str,
+    dataset_root: str | None,
+) -> int:
+    """Full-frame HSP-style export at locked conf (parity debug; not SAHI)."""
+    import json
+    from pathlib import Path
 
-    deduped = []
-    for p in sorted(unfert_candidates, key=lambda x: x.score.value, reverse=True):
-        cx, cy, w, h = _center_and_size(p)
-        is_dup = False
-        for k in deduped:
-            kx, ky, kw, kh = _center_and_size(k)
-            scale = min(w, h, kw, kh)
-            radius = max(UNFERT_DEDUP_MIN_PIX, UNFERT_DEDUP_CENTER_RATIO * scale)
-            if ((cx - kx) ** 2 + (cy - ky) ** 2) ** 0.5 <= radius:
-                is_dup = True
+    root = Path(dataset_root or os.environ.get("DATASET_ROOT", ROOT)).resolve()
+    if not root.is_dir():
+        print(f"Dataset root not found: {root}")
+        return 1
+    locked_path = Path(locked_conf_from)
+    if not locked_path.is_file():
+        locked_path = Path(ROOT) / locked_conf_from
+    from harchoc.threshold_lock import load_locked_conf
+
+    conf = float(load_locked_conf(locked_path))
+    rel = os.path.relpath(image, root) if image.startswith(str(root)) else None
+    if rel is None:
+        for cand in ("images/test", "images/val", "images/train"):
+            p = root / cand / os.path.basename(image)
+            if p.is_file():
+                rel = f"{cand}/{os.path.basename(image)}"
                 break
-        if not is_dup:
-            deduped.append(p)
+    if rel is None:
+        print("Could not resolve image path relative to DATASET_ROOT")
+        return 1
 
-    return kept + deduped
+    import tempfile
+
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tf:
+        tf.write(rel.replace("\\", "/") + "\n")
+        split_path = Path(tf.name)
+
+    out_dir = Path(ROOT) / "reports" / "deploy_parity"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    preds_out = out_dir / "fullframe_preds.json"
+    gt_out = out_dir / "fullframe_gt.json"
+
+    from harchoc.eval_export import export_gt_preds_json
+
+    summary = export_gt_preds_json(
+        split_file=split_path,
+        dataset_root=root,
+        weights=Path(MODEL_PATH),
+        gt_out=gt_out,
+        preds_out=preds_out,
+        conf=conf,
+        device=DEVICE,
+    )
+    split_path.unlink(missing_ok=True)
+    print(json.dumps(summary, indent=2))
+    return 0
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        print("Usage: python run_infer_once.py <image>")
+    import argparse
+
+    ap = argparse.ArgumentParser(description="One-shot SAHI infer (telegram_bot parity).")
+    ap.add_argument("image", nargs="?", help="Input image path")
+    ap.add_argument(
+        "--fullframe-export",
+        action="store_true",
+        help="Also run full-frame eval_export at locked conf (HSP parity debug).",
+    )
+    ap.add_argument(
+        "--locked-conf-from",
+        default="reports/hsp/threshold_val.json",
+        help="Threshold JSON for --fullframe-export.",
+    )
+    ap.add_argument("--dataset-root", default="", help="Dataset root for fullframe export.")
+    ns = ap.parse_args()
+
+    if not ns.image:
+        print("Usage: python run_infer_once.py <image> [--fullframe-export]")
         sys.exit(1)
-    image = os.path.abspath(sys.argv[1])
+    image = os.path.abspath(ns.image)
     if not os.path.isfile(image):
         print(f"Not found: {image}")
         sys.exit(1)
@@ -277,25 +258,25 @@ def main() -> None:
         f"CONF_UNFERT={CONF_THR_UNFERTILIZED} model_min={CONF_THR_MODEL_MIN} NMS_IOU={NMS_IOU}\n"
     )
 
+    from harchoc.sahi_infer import (
+        SahiSliceConfig,
+        load_ultralytics_detection_model,
+        run_sliced_prediction,
+    )
+
     t0 = time.time()
-    detection_model = AutoDetectionModel.from_pretrained(
-        model_type="ultralytics",
-        model_path=MODEL_PATH,
-        confidence_threshold=CONF_THR_MODEL_MIN,
+    detection_model = load_ultralytics_detection_model(
+        MODEL_PATH,
         device=DEVICE,
+        confidence_threshold=CONF_THR_MODEL_MIN,
     )
     print(f"Model loaded in {time.time() - t0:.1f}s")
 
     t1 = time.time()
-    result = get_sliced_prediction(
-        image=work_image,
-        detection_model=detection_model,
-        slice_height=SLICE_SIZE,
-        slice_width=SLICE_SIZE,
-        overlap_height_ratio=OVERLAP,
-        overlap_width_ratio=OVERLAP,
-        postprocess_type="NMS",
-        postprocess_match_threshold=NMS_IOU,
+    result = run_sliced_prediction(
+        work_image,
+        detection_model,
+        SahiSliceConfig(slice_size=SLICE_SIZE, overlap=OVERLAP, nms_iou=NMS_IOU),
     )
 
     fert = unf = 0
@@ -308,9 +289,18 @@ def main() -> None:
             unf += 1
 
     print(f"Inference: {time.time() - t1:.1f}s\n")
-    print(f"Fertilized (class 0): {fert}")
-    print(f"Unfertilized (class 1): {unf}")
+    print(f"Developed (class 0): {fert}")
+    print(f"Aborted (class 1): {unf}")
     print(f"Total: {fert + unf}")
+
+    if bool(ns.fullframe_export):
+        rc_ff = _run_fullframe_export(
+            image,
+            locked_conf_from=str(ns.locked_conf_from),
+            dataset_root=str(ns.dataset_root) or None,
+        )
+        if rc_ff != 0:
+            sys.exit(rc_ff)
 
     if pre_path and os.path.exists(pre_path):
         try:

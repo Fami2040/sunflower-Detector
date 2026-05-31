@@ -1,0 +1,70 @@
+---
+description: Strict ML runtime for GPU agents — mandatory harchoc env, no silent empty artifacts
+alwaysApply: true
+---
+
+# ML strict runtime (local / GPU agents)
+
+This rule applies to **Cursor agents on a GPU dev machine** (not GitHub Actions CI). Dataset and env file paths: see `gpu-env-and-dataset.mdc`.
+
+## Mandatory environment
+
+- **All GPU / torch / Ultralytics / SAHI / OpenCV-heavy work** runs as:
+  ```bash
+  mamba run -n harchoc python ...
+  ```
+  (or `conda activate harchoc` first). Override env name with `HARCHOC_MAMBA_ENV` (default `harchoc`).
+- **Never** conclude "no torch", "no CUDA", or "no GPU" from bare `python` on base/system Python. Base is expected to lack torch; that is not evidence about this machine.
+- **CUDA and torch are available** in the `harchoc` env on this machine unless `check_gpu` proves otherwise (driver/SM mismatch, broken env).
+
+## Verify before claiming ML is unavailable
+
+Run (from repo root):
+
+```bash
+mamba run -n harchoc python scripts/check_gpu.py
+```
+
+Expect `cuda_available: true` and a successful small CUDA matmul. JSON artifact:
+
+```bash
+mamba run -n harchoc python scripts/check_gpu.py --json-out reports/gpu_check.json
+```
+
+If matmul fails with `no kernel image is available`, fix the torch build for the GPU SM (`scripts/bootstrap_env.py`) — do not fall back to CPU-only "best effort" for manuscript/HSP work.
+
+Helpers that re-exec into mamba when needed: `harchoc/ml_env.py`, `scripts/rtdetr_smoke.py`.
+
+## Optional pip installs (agents)
+
+When a well-known dependency is missing **inside `harchoc` only**:
+
+```bash
+mamba run -n harchoc pip install <package>
+```
+
+Prefer established packages (Ultralytics ecosystem, SAHI, standard scientific stack). For torch/torchvision, use `scripts/bootstrap_env.py` — do not pip-install conflicting CUDA wheels ad hoc.
+
+## Strict mode — no silent empty ML results
+
+On this machine, **do not** use "CI lightweight import" or deferred-import patterns as an excuse to skip real execution when the user asks for ML outputs.
+
+| Context | Behavior |
+|---------|----------|
+| **Manuscript / HSP paths** (`reports/hsp/`, threshold sweeps, dual-metric, matrix train, test mAP, exports) | **Loud failure** if torch/GPU/data/weights are missing. No placeholder JSON, no dry-run masquerading as real results, no "import-only success". |
+| **Training / eval / benchmark** | Run under `mamba run -n harchoc`; surface stderr and non-zero exit codes. |
+| **Unit tests in CI** | See below — different contract. |
+
+If a script supports `--dry-run`, use it only when the user explicitly wants a plan/preview — not to satisfy a request for trained weights or evaluation metrics.
+
+## CI vs local (do not conflate)
+
+| | CI (GitHub Actions) | Local / GPU agents |
+|--|---------------------|-------------------|
+| Python | `PYTHONPATH=.` + `HARCHOC_ALLOW_BASE_PYTHON=1` for `unittest` | `mamba run -n harchoc python ...` |
+| Heavy deps | Often not installed; modules import via deferred `main()` paths | Installed in `harchoc`; run for real |
+| Failures | Import/smoke tests must pass without GPU | ML artifact requests must fail loudly, not silently |
+
+**Keep** deferred heavy imports in library code so CI can import modules — that is correct for CI. **Do not** apply that leniency on this machine when producing `reports/hsp/*`, matrix JSON, or other ML artifacts.
+
+Human-oriented summary: [`docs/EXPERIMENTS.md` § Agent runtime](../docs/EXPERIMENTS.md#agent-runtime-cursor-agents).
