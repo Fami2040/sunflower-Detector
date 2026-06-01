@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_AUG_SMOKE_TRAIN_BASE = "configs/experiments/train_smoke_rank_15ep.json"
+TRAIN_AUG_MOSAIC_SWEEP_TEMPLATE = (
+    "configs/experiments/archive/templates/train_aug_mosaic_sweep_template.json"
+)
 AUG_SMOKE_GENERATED_DIR = "configs/experiments/.aug_smoke_generated"
 
 # Committed train JSON exceptions (non-default extends / model / schedule).
@@ -334,14 +337,18 @@ def validate_aug_smoke_configs(
                 errors.append(f"equivalence smoke_ids entry {eid!r} unknown")
 
     for stem in sorted(AUG_SMOKE_COMMITTED_TRAIN_STEMS):
-        if stem.startswith("train_aug_s") and stem.endswith("_smoke"):
+        if stem == "train_aug_mosaic_sweep_template":
+            path = root / TRAIN_AUG_MOSAIC_SWEEP_TEMPLATE
+        elif stem.startswith("train_aug_s") and stem.endswith("_smoke"):
             path = exp_dir / f"{stem}.json"
-            if path.is_file():
-                try:
-                    from harchoc.train_config import load_train_config_json
+        else:
+            path = exp_dir / f"{stem}.json"
+        if path.is_file():
+            try:
+                from harchoc.train_config import load_train_config_json
 
-                    load_train_config_json(path, repo_root=root)
-                except (FileNotFoundError, ValueError, TypeError) as exc:
-                    errors.append(f"committed {stem}: load failed: {exc}")
+                load_train_config_json(path, repo_root=root)
+            except (FileNotFoundError, ValueError, TypeError) as exc:
+                errors.append(f"committed {stem}: load failed: {exc}")
 
     return errors

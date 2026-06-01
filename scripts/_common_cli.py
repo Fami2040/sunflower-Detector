@@ -55,6 +55,17 @@ def add_dataset_args(p: argparse.ArgumentParser, *, suppress_defaults: bool = Fa
     _add(p, suppress_defaults=suppress_defaults)
 
 
+def add_locked_conf_args(
+    p: argparse.ArgumentParser,
+    *,
+    suppress_defaults: bool = False,
+    default_from: str = "",
+) -> None:
+    from harchoc.experiment_cli import add_locked_conf_args as _add
+
+    _add(p, suppress_defaults=suppress_defaults, default_from=default_from)
+
+
 def extend_dataset_argv(
     argv: list[str],
     *,

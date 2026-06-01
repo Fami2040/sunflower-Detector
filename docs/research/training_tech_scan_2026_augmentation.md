@@ -124,7 +124,7 @@ Peer-reviewed and official sources supporting mosaic-off and `close_mosaic` abla
 | **S4** | 0.1 | 3 | Same mosaic prob as S0 (control) |
 | **S5** | 0.3 | 3 | Upper-bound mosaic sweep arm |
 
-Sweep constants and smoke scaling: `harchoc.train_config` (`MOSAIC_SWEEP_VALUES`, `CLOSE_MOSAIC_SWEEP_100EP`, `scale_close_mosaic_for_epochs`). 100-ep template: [`train_aug_mosaic_sweep_template.json`](../../configs/experiments/train_aug_mosaic_sweep_template.json).
+Sweep constants and smoke scaling: `harchoc.train_config` (`MOSAIC_SWEEP_VALUES`, `CLOSE_MOSAIC_SWEEP_100EP`, `scale_close_mosaic_for_epochs`). 100-ep template (archived): [`train_aug_mosaic_sweep_template.json`](../../configs/experiments/archive/templates/train_aug_mosaic_sweep_template.json); winner: [`train_aug_winner_100ep.json`](../../configs/experiments/train_aug_winner_100ep.json).
 
 **Decision rule:** If **S2** (or **S3** photometric-only) beats **S0/S4/S5** on test count MAE at val-locked conf → promote mosaic=0 (or photometric-only) to 100-ep; otherwise run full mosaic / `close_mosaic` sweeps from the template.
 

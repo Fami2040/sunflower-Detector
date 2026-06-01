@@ -131,7 +131,8 @@ Full checklist: [`docs/plans/dry-refactor-plan.md`](../plans/dry-refactor-plan.m
 | Scripts / CLI | **Done** — [`scripts/README.md`](../../scripts/README.md); `harchoc.experiment_cli` dataset + locked-conf |
 | Tests | **Done** — [`scripts/run_tests.py`](../../scripts/run_tests.py) |
 | Docs hub | **Done** — this file + redirects only (`FRESHNESS.md`, `STUBS.md`) |
-| Removed shims | **Done** — `dataset_from_manifest.py`, `experiment.py gpu-queue` |
+| Removed shims | **Done** — top-level `dataset_from_manifest.py`, `experiment.py gpu-queue` |
+| Phase 5 archive / CLI | **Done** — [`scripts/archive/`](../../scripts/archive/README.md), `validate-splits`, locked-conf delegate, P0-5 doc paths |
 
 **Branch note:** `git diff origin/main...HEAD` is mostly manuscript/literature/1093 rename — not config/doc sprawl; scope reviews separately.
 

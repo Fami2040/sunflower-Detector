@@ -30,7 +30,14 @@ from harchoc.json_io import load_json_dict
 from harchoc.splits_io import resolve_splits_dir
 from harchoc.schemas import with_schema_version
 from harchoc.script_scaffold import resolve_dataset_args
-from scripts._common_cli import add_dataset_args, add_dry_run_arg, cli_print, require_existing_dir, write_json
+from scripts._common_cli import (
+    add_dataset_args,
+    add_dry_run_arg,
+    add_locked_conf_args,
+    cli_print,
+    require_existing_dir,
+    write_json,
+)
 
 _DEFAULT_CATALOG = "reports/domains/catalog.json"
 _DEFAULT_EVAL_OUT = "reports/domains/domain_eval.json"
@@ -291,11 +298,7 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Tray key for --run-tray-eval (default: first key in catalog).",
     )
-    p.add_argument(
-        "--locked-conf-from",
-        default="reports/hsp/threshold_val.json",
-        help="Val threshold JSON for locked conf on tray eval export.",
-    )
+    add_locked_conf_args(p, default_from="reports/hsp/threshold_val.json")
     p.add_argument(
         "--device",
         default="cpu",

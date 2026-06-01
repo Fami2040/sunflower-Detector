@@ -173,6 +173,38 @@ class DescribeArgvTests(unittest.TestCase):
         self.assertIn("reports/describe_val.json", argv)
 
 
+class ValidateSplitsArgvTests(unittest.TestCase):
+    def test_argv_for_validate_splits_fields(self) -> None:
+        from harchoc.experiment_argv import argv_for_validate_splits
+
+        fields = {
+            "dry_run": True,
+            "manifest": "data/manifest.json",
+            "default_dataset_name": "sunflower",
+            "dataset_root": "/data/sunflower",
+            "splits_dir": "data/splits",
+            "require_test": True,
+            "check_rtdetr_query_cap": True,
+            "num_queries": 300,
+            "documented_peak_gt_boxes": 1015,
+            "audit_leakage": True,
+            "audit_leakage_out": "reports/split_leakage_audit.json",
+            "group_key": "stem",
+        }
+        argv = argv_for_validate_splits(fields)
+        self.assertIn("--dry-run", argv)
+        self.assertIn("--require-test", argv)
+        self.assertIn("--check-rtdetr-query-cap", argv)
+        self.assertIn("--num-queries", argv)
+        self.assertIn("300", argv)
+        self.assertIn("--documented-peak-gt-boxes", argv)
+        self.assertIn("1015", argv)
+        self.assertIn("--audit-leakage", argv)
+        self.assertIn("--audit-leakage-out", argv)
+        self.assertIn("--group-key", argv)
+        self.assertIn("stem", argv)
+
+
 class TrainArgvTests(unittest.TestCase):
     def test_argv_for_train_fields(self) -> None:
         from harchoc.experiment_argv import argv_for_train

@@ -24,6 +24,12 @@ class ExperimentCliDryRunTests(unittest.TestCase):
         rc = main(["--dry-run", "splits"])
         self.assertEqual(rc, 0)
 
+    def test_validate_splits_dry_run(self) -> None:
+        from scripts.experiment import main
+
+        rc = main(["--dry-run", "validate-splits"])
+        self.assertEqual(rc, 0)
+
     def test_describe_dry_run_writes_json(self) -> None:
         from scripts.experiment import main
 

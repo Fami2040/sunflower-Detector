@@ -8,7 +8,7 @@ Consolidated modules live in `harchoc/*` (`deploy_filters`, `json_io`, `experime
 
 | ID | Notes |
 |----|--------|
-| — | No open DRY rows; see [backlog Now](backlog.md#now) for science/GPU work |
+| — | Phase 5 archive/CLI DRY done (2026-06); see [dry-refactor-plan Phase 5](docs/plans/dry-refactor-plan.md#phase-5-2026-06--archive--cli-dry). Science/GPU: [backlog Now](backlog.md#now) |
 
 ## Science vs production
 

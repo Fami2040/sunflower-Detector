@@ -36,6 +36,18 @@ Phase 3 reports policy: **Done** ([`reports/README.md`](../../reports/README.md)
 | [`scripts/run_tests.py`](../../scripts/run_tests.py) + archive queue policy | **Done** |
 | [`scripts/README.md`](../../scripts/README.md) entrypoint map | **Done** |
 
+## Phase 5 (2026-06 — archive + CLI DRY)
+
+| Item | Status |
+|------|--------|
+| [`scripts/archive/`](../../scripts/archive/README.md) read-only shims + replacements table | **Done** |
+| `dataset_from_manifest.py` shim → `experiment.py dataset-root` | **Done** |
+| Remove dead `argv_for_gpu_queue` | **Done** |
+| `experiment.py validate-splits` + `argv_for_validate_splits` | **Done** |
+| `scripts/_common_cli.add_locked_conf_args` → `eval_domains` / `finetune` | **Done** |
+| P0-5 docs → `gpu_queue_zoo_p0_5.json` (archive `gpu_queue_full` = legacy) | **Done** |
+| `train_aug_mosaic_sweep_template.json` → `archive/templates/` | **Done** |
+
 ## Do not
 
 - Merge 1093 test with future cohort without new split SHA

@@ -742,6 +742,18 @@ def main(argv: list[str] | None = None) -> int:
     pd.add_argument("--split-file", action="append", default=argparse.SUPPRESS)
     pd.add_argument("--out", default=argparse.SUPPRESS)
 
+    pvs = sp.add_parser("validate-splits", help="Validate split lists and label paths exist.")
+    add_dataset_args(pvs, suppress_defaults=True)
+    add_dry_run_arg(pvs, suppress_defaults=True)
+    pvs.add_argument("--splits-dir", default=argparse.SUPPRESS)
+    pvs.add_argument("--require-test", action="store_true", default=argparse.SUPPRESS)
+    pvs.add_argument("--check-rtdetr-query-cap", action="store_true", default=argparse.SUPPRESS)
+    pvs.add_argument("--num-queries", type=int, default=argparse.SUPPRESS)
+    pvs.add_argument("--documented-peak-gt-boxes", type=int, default=argparse.SUPPRESS)
+    pvs.add_argument("--audit-leakage", action="store_true", default=argparse.SUPPRESS)
+    pvs.add_argument("--audit-leakage-out", default=argparse.SUPPRESS)
+    pvs.add_argument("--group-key", default=argparse.SUPPRESS)
+
     pdr = sp.add_parser(
         "dataset-root",
         help="Print resolved dataset root from data/manifest.json.",
@@ -1290,6 +1302,11 @@ def main(argv: list[str] | None = None) -> int:
         from scripts.describe_split import main as legacy_main
 
         return legacy_main(argv_for_describe(merged_fields))
+    if cmd == "validate-splits":
+        from harchoc.experiment_argv import argv_for_validate_splits
+        from scripts.validate_splits import main as legacy_main
+
+        return legacy_main(argv_for_validate_splits(merged_fields))
     if cmd == "eval":
         from harchoc.experiment_argv import argv_for_eval
         from scripts.eval import main as legacy_main

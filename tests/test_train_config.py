@@ -596,8 +596,10 @@ class TrainConfigExtendsTests(unittest.TestCase):
         )
 
         repo_root = Path(__file__).resolve().parents[1]
+        from harchoc.aug_smoke_train import TRAIN_AUG_MOSAIC_SWEEP_TEMPLATE
+
         template = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_mosaic_sweep_template.json",
+            repo_root / TRAIN_AUG_MOSAIC_SWEEP_TEMPLATE,
             repo_root=repo_root,
         )
         self.assertEqual(template["epochs"], 100)

@@ -43,7 +43,7 @@ from harchoc.hsp_weights import HSP_DETECTION_WEIGHTS
 from harchoc.json_io import load_json_dict
 from harchoc.script_scaffold import build_versioned_dry_run_payload, resolve_dataset_args
 from harchoc.schemas import with_schema_version
-from scripts._common_cli import add_dataset_args, add_dry_run_arg, require_existing_dir, write_json
+from scripts._common_cli import add_dataset_args, add_dry_run_arg, add_locked_conf_args, require_existing_dir, write_json
 
 
 def _load_transfer_yaml(path: Path) -> dict[str, Any]:
@@ -315,11 +315,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Fallback per-tray metrics for --audit-trays.",
     )
     p.add_argument("--weak-plan-top-k", type=int, default=1, help="Trays to take from weak plan.")
-    p.add_argument(
-        "--locked-conf-from",
-        default=DEFAULT_LOCKED_CONF_FROM,
-        help="Val threshold JSON for tray/canonical counting MAE.",
-    )
+    add_locked_conf_args(p, default_from=DEFAULT_LOCKED_CONF_FROM)
     p.add_argument(
         "--global-mae-ref",
         type=float,

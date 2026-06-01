@@ -413,21 +413,21 @@ def argv_for_fp_budget_sweep(fields: dict[str, Any]) -> list[str]:
     return out
 
 
-def argv_for_gpu_queue(fields: dict[str, Any]) -> list[str]:
-    """Argv for ``scripts/run_gpu_queue.py`` via ``experiment.py gpu-queue``."""
-    manifest = fields.get("manifest")
-    if manifest is None or (isinstance(manifest, str) and not str(manifest).strip()):
-        raise SystemExit("gpu-queue requires --manifest")
-    out = ["--manifest", str(manifest)]
-    if fields.get("dry_run"):
-        out.append("--dry-run")
-    elif fields.get("run"):
-        out.append("--run")
-    out += _bool_flag("--resume", fields.get("resume"))
-    out += _opt("--job", fields.get("job"))
-    out += _opt("--state-path", fields.get("state_path"))
-    if fields.get("min_free_mib") is not None:
-        out += ["--min-free-mib", str(int(fields["min_free_mib"]))]
+def argv_for_validate_splits(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/validate_splits.py`` via ``experiment.py validate-splits``."""
+    out: list[str] = []
+    out += _argv_dataset(fields, full=True)
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--splits-dir", fields.get("splits_dir"))
+    out += _bool_flag("--require-test", fields.get("require_test"))
+    out += _bool_flag("--check-rtdetr-query-cap", fields.get("check_rtdetr_query_cap"))
+    if fields.get("num_queries") is not None:
+        out += ["--num-queries", str(int(fields["num_queries"]))]
+    if fields.get("documented_peak_gt_boxes") is not None:
+        out += ["--documented-peak-gt-boxes", str(int(fields["documented_peak_gt_boxes"]))]
+    out += _bool_flag("--audit-leakage", fields.get("audit_leakage"))
+    out += _opt("--audit-leakage-out", fields.get("audit_leakage_out"))
+    out += _opt("--group-key", fields.get("group_key"))
     return out
 
 

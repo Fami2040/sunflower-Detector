@@ -23,3 +23,9 @@
 ## Unused train JSON (`unused_train/`)
 
 Legacy smokes with no repo references (superseded by `train_smoke_rank_15ep.json` + `aug_smoke_index.json`).
+
+## Templates (`templates/`)
+
+| File | Notes |
+|------|--------|
+| `train_aug_mosaic_sweep_template.json` | General 100-ep mosaic sweep base (archived); production confirm uses [`train_aug_winner_100ep.json`](../train_aug_winner_100ep.json) |

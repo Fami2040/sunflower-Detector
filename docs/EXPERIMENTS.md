@@ -191,7 +191,8 @@ One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (d
 |----------|------|---------|--------------|
 | [`gpu_queue_aug_pending.json`](../configs/experiments/archive/gpu_queue_aug_pending.json) | **Done** | Index-expanded S0–S14 smokes | `aug_smoke_from_index: true` — finished 2026-05-30 15:08 UTC |
 | [`gpu_queue_aug_confirm.json`](../configs/experiments/archive/gpu_queue_aug_confirm.json) | **1** | 100-ep aug winner confirm | `aug_confirm_winner_100ep` (**P1-AUG-100EP-WINNER**) — not in full manifest |
-| [`gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) | **1–2**, **P0-5** | Post-smoke backlog | RT-DETR refresh skipped on 8 GiB (**P1-RTDETR-COUNT-REFRESH**), amp/sg HSP (**P1-AMP-HSP-EVAL**, **P1-SG-HSP-EVAL**), close10/close25 sweeps, **`zoo_matrix_p0_5`** (`zoo_yolo_only` 4×100 ep, ~480 min), CV folds deferred |
+| [`gpu_queue_zoo_p0_5.json`](../configs/experiments/gpu_queue_zoo_p0_5.json) | **P0-5** | Zoo only (`zoo_yolo_only` 4×100 ep, ~480 min on 8 GiB) |
+| [`gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) | **1–2**, **P0-5** (legacy bundle) | Historical mega-queue | RT-DETR refresh skipped on 8 GiB, aug tails, **`zoo_matrix_p0_5`**, CV folds deferred — prefer `gpu_queue_zoo_p0_5` for P0-5 alone |
 | [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json) | **Post-P0-5** | After zoo matrix | Repro / manuscript-preflight → domain tray audit → staged finetune on weak trays ([FINETUNE_WEAK_TRAYS.md](FINETUNE_WEAK_TRAYS.md)); run only after `matrix_train.json` has 4/4 `zoo_yolo_only` rows |
 
 ```bash
@@ -233,7 +234,7 @@ mamba run -n harchoc python scripts/train.py --dry-run --name aug_sweep_mosaic0_
   --aug-config configs/aug/robustness_mosaic_off.yaml
 ```
 
-Optional 100-ep winner confirm (**P1-AUG-100EP-WINNER**): production [`robustness_minimal.yaml`](../configs/aug/robustness_minimal.yaml) via [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json) and [`gpu_queue_aug_confirm.json`](../configs/experiments/archive/gpu_queue_aug_confirm.json) (`aug_confirm_winner_100ep` → `reports/aug_smoke/aug_confirm_winner_100ep_summary.json`). Runbook: [backlog § P1-AUG-100EP-WINNER](../backlog.md#p1-aug-100ep-winner-optional-manifest). General 100-ep sweep template: [`train_aug_mosaic_sweep_template.json`](../configs/experiments/train_aug_mosaic_sweep_template.json).
+Optional 100-ep winner confirm (**P1-AUG-100EP-WINNER**): production [`robustness_minimal.yaml`](../configs/aug/robustness_minimal.yaml) via [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json) and [`gpu_queue_aug_confirm.json`](../configs/experiments/archive/gpu_queue_aug_confirm.json) (`aug_confirm_winner_100ep` → `reports/aug_smoke/aug_confirm_winner_100ep_summary.json`). Runbook: [backlog § P1-AUG-100EP-WINNER](../backlog.md#p1-aug-100ep-winner-optional-manifest). General 100-ep sweep template (archived; production winner: [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json)): [`archive/templates/train_aug_mosaic_sweep_template.json`](../configs/experiments/archive/templates/train_aug_mosaic_sweep_template.json).
 
 | 5 | Model zoo matrix (**`zoo_yolo_only`** 4×100 ep on 8 GiB; full `zoo_core` deferred) | **P0-5** — [§ Model zoo](#model-zoo-benchmark-matrix) |
 | 6+ | Tray finetune, domain eval, RT-DETR query cap | **P1-FINETUNE-LOOP**, **P1-DOMAIN-EVAL**, **P1-RTDETR-Q** |

@@ -1,6 +1,6 @@
 {
   "schema_version": "aug_comparative_analysis.v1",
-  "generated_at": "2026-06-01T14:37:23Z",
+  "generated_at": "2026-06-01T14:43:41Z",
   "primary_metric": "test_count_mae",
   "epochs_smoke": 15,
   "reference_best2": {

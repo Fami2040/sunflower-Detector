@@ -162,7 +162,7 @@ mamba run -n harchoc python scripts/<script>.py ...
 
 Details: [EXPERIMENTS.md](EXPERIMENTS.md) § GPU environment, [training_budget.md](training_budget.md).
 
-**GPU queue manifests (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) — default aug manifest is complete; **P0-5** lives in [`configs/experiments/archive/gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) (`zoo_matrix_p0_5`, `zoo_yolo_only`, ~480 min on 8 GiB). **Post-zoo** (repro, preflight, finetune): [`configs/experiments/gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Manifest map and P0-5 job spec: [EXPERIMENTS § GPU queue manifest map](EXPERIMENTS.md#gpu-queue-manifest-map) · [backlog § GPU runbook](../backlog.md#gpu-runbook).
+**GPU queue manifests (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) — default smoke manifest is [`gpu_queue_post_zoo_smoke.json`](../configs/experiments/gpu_queue_post_zoo_smoke.json). **P0-5** (primary): [`configs/experiments/gpu_queue_zoo_p0_5.json`](../configs/experiments/gpu_queue_zoo_p0_5.json) (`zoo_matrix_p0_5`, `zoo_yolo_only`, ~480 min on 8 GiB). Historical full bundle: [`archive/gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json). **Post-zoo** (repro, preflight, finetune): [`configs/experiments/gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Manifest map: [EXPERIMENTS § GPU queue manifest map](EXPERIMENTS.md#gpu-queue-manifest-map) · [backlog § GPU runbook](../backlog.md#gpu-runbook).
 
 ### Budget caps
 
