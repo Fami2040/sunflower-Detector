@@ -1,6 +1,6 @@
 # Backlog (local, not committed)
 
-Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **Branch:** `refactor/dry-5agent`
+Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **Branch:** `pr/backlog-ci-dataset`
 
 | Anchor | Value |
 |--------|--------|

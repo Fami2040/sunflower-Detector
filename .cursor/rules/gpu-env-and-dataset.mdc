@@ -49,7 +49,7 @@ alwaysApply: true
 
 ## Working in a non-main branch
 
-- When developing, always work in a feature branch rather than directly on `main`.
+- **Canonical PR branch:** `pr/backlog-ci-dataset` — all feature commits and agent work go here, not `main` and not ad-hoc names (`refactor/*`, etc.). See `.cursor/rules/git-pr-branch.mdc`.
 - Detect your branch name with:
   ```bash
   git rev-parse --abbrev-ref HEAD

@@ -1,0 +1,48 @@
+---
+description: Single PR branch — never invent parallel feature branch names
+alwaysApply: true
+---
+
+# Git: one PR branch
+
+This repo uses **two long-lived git lines**:
+
+| Branch | Use |
+|--------|-----|
+| `main` | Released / stable; do not commit feature work here |
+| `pr/backlog-ci-dataset` | **All** feature work, agents, and open-PR commits |
+
+## Mandatory for agents
+
+1. **Before any commit**, confirm branch:
+   ```bash
+   git rev-parse --abbrev-ref HEAD
+   ```
+   Must be `pr/backlog-ci-dataset`. If on `main` or any other name (`refactor/*`, `feature/*`, etc.), fix first:
+   ```bash
+   git fetch origin
+   git checkout pr/backlog-ci-dataset
+   git pull --ff-only origin pr/backlog-ci-dataset
+   ```
+   If `pull --ff-only` fails, stop and ask the user — do not create a new branch.
+
+2. **Never** create or commit to ad-hoc branches (`refactor/dry-5agent`, `squash-tmp`, `backup/*`) unless the user explicitly requests a throwaway experiment branch.
+
+3. **Push** (when asked) only to:
+   ```bash
+   git push origin pr/backlog-ci-dataset
+   ```
+
+4. Sync with remote before starting large work:
+   ```bash
+   git fetch origin
+   git diff origin/main...HEAD   # scope check vs main
+   ```
+
+## Do not
+
+- Reset `pr/backlog-ci-dataset` to a different history without user approval.
+- Force-push `main`.
+- Assume local `pr/backlog-ci-dataset` matches `origin/pr/backlog-ci-dataset` without `git fetch`.
+
+Remote tracking: `origin/pr/backlog-ci-dataset` is the PR source of truth on GitHub.
