@@ -155,7 +155,7 @@ Post-train test eval: [aug scan §5 shared eval](research/training_tech_scan_202
 
 **Canonical ops:** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) (`dry-run` | `run` | `resume`). Direct / CI: [`scripts/run_gpu_queue.py`](../scripts/run_gpu_queue.py) (`--manifest`, `--job`). `experiment.py gpu-queue` is a deprecated alias (config-file workflows only).
 
-**Default manifest:** [`configs/experiments/gpu_queue_aug_pending.json`](../configs/experiments/gpu_queue_aug_pending.json) (preflight + index-expanded pending smokes). **Full backlog** (RT-DETR probes, close25 sweep, **`zoo_core` 10×100 ep**, CV folds): [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) via `GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json`. Mosaic `aug_sweep_15_*` jobs are **removed** from manifests (covered by smokes **S2/S4/S5**).
+**Default manifest:** [`configs/experiments/gpu_queue_aug_pending.json`](../configs/experiments/gpu_queue_aug_pending.json) (preflight + index-expanded pending smokes). **Full backlog** (RT-DETR probes skipped on 8 GiB, close25 sweep, **`zoo_matrix_p0_5`** = **`zoo_yolo_only` 4×100 ep**, CV folds deferred): [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) via `GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json`. **Post-zoo** (repro/preflight, domain audit, finetune weak trays): [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Mosaic `aug_sweep_15_*` jobs are **removed** from manifests (covered by smokes **S2/S4/S5**).
 
 ```bash
 export DATASET_ROOT="$(pwd)/data/raw/extracted/dataset"
@@ -178,7 +178,7 @@ python -m json.tool reports/gpu_queue/run_state.json
 
 Per-job logs: `reports/gpu_queue/logs/{job_id}/{stage_id}.log`. Completed aug smokes update [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) and refresh [`reports/aug_smoke/leaderboard.md`](../reports/aug_smoke/leaderboard.md) (per-smoke `s{N}_summary.json` are written but ranking uses the leaderboard). On failure the queue stops; fix the issue and `--resume`.
 
-**Live queue snapshot** (pending jobs, dedup skips, run state): [backlog § Runbook (GPU)](../backlog.md#runbook-gpu).
+**Live queue snapshot** (pending jobs, dedup skips, run state): [backlog.md](../backlog.md) · historical runbook: [backlog_archive.md](../backlog_archive.md).
 
 ### GPU queue manifest map
 
@@ -188,7 +188,8 @@ One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (d
 |----------|------|---------|--------------|
 | [`gpu_queue_aug_pending.json`](../configs/experiments/gpu_queue_aug_pending.json) | **Done** | Index-expanded S0–S14 smokes | `aug_smoke_from_index: true` — finished 2026-05-30 15:08 UTC |
 | [`gpu_queue_aug_confirm.json`](../configs/experiments/gpu_queue_aug_confirm.json) | **1** | 100-ep aug winner confirm | `aug_confirm_winner_100ep` (**P1-AUG-100EP-WINNER**) — not in full manifest |
-| [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) | **1–2**, **P0-5** | Post-smoke backlog | RT-DETR refresh (**P1-RTDETR-COUNT-REFRESH**), amp/sg HSP (**P1-AMP-HSP-EVAL**, **P1-SG-HSP-EVAL**), close10/close25 sweeps, **`zoo_matrix_p0_5`** (`zoo_core` 10×100 ep), CV folds |
+| [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) | **1–2**, **P0-5** | Post-smoke backlog | RT-DETR refresh skipped on 8 GiB (**P1-RTDETR-COUNT-REFRESH**), amp/sg HSP (**P1-AMP-HSP-EVAL**, **P1-SG-HSP-EVAL**), close10/close25 sweeps, **`zoo_matrix_p0_5`** (`zoo_yolo_only` 4×100 ep, ~480 min), CV folds deferred |
+| [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json) | **Post-P0-5** | After zoo matrix | Repro / manuscript-preflight → domain tray audit → staged finetune on weak trays ([FINETUNE_WEAK_TRAYS.md](FINETUNE_WEAK_TRAYS.md)); run only after `matrix_train.json` has 4/4 `zoo_yolo_only` rows |
 
 ```bash
 # Tier 1 — 100-ep winner (separate manifest)
@@ -198,7 +199,9 @@ GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_aug_confirm.json ./scripts/run_
 GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json ./scripts/run_gpu_queue.sh dry-run
 ```
 
-**P0-5 job:** `zoo_matrix_p0_5` in full manifest — `kind: zoo_matrix_train`, `matrix_group: zoo_core`, out `reports/hsp/matrix_train.json` (~2000 min). Run after Tier 1 RT-DETR + Tier 2 eval/sweeps unless manually reordered. Zoo design: [zoo_comparison_design.md](zoo_comparison_design.md).
+**P0-5 job:** `zoo_matrix_p0_5` in full manifest — `kind: zoo_matrix_train`, `matrix_group: zoo_yolo_only` (`yolov8m`, `yolov10m`, `yolo11m`, `yolo26m` @ 1280; no external DETR stack on 8 GiB), out `reports/hsp/matrix_train.json` (~**480** min). `skip_if` requires a complete `zoo_yolo_only` matrix artifact. Run after Tier 2 eval/sweeps unless manually reordered. **Deferred from P0-5 path:** full **`zoo_core`** 10× (~2000 min). **Ultralytics RT-DETR** train @ 1280 OOMs on 8 GiB; external DETR is integration/scheduling, not universally >8 GiB. Zoo design: [zoo_comparison_design.md](zoo_comparison_design.md).
+
+**Post-zoo queue:** `GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_post_zoo.json ./scripts/run_gpu_queue.sh run` — integration order vs `best2` (**61.3** test MAE): [backlog.md](../backlog.md#now).
 
 **`aug_smoke_from_index`** (on `gpu_queue_manifest.v1`): when `true`, `load_gpu_queue_manifest()` replaces inline `aug_smoke` jobs with one queue job per [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) row in `status: gpu_pending` (optional `"aug_smoke_index"` path override). Train/`--aug-config` for those jobs come from the index entry, not duplicated in the manifest. Parity: `harchoc.aug_smoke_runner.aug_smoke_index_queue_parity_errors()`. Summaries: `finalize_smoke_job()` in [`aug_smoke_runner.py`](../harchoc/aug_smoke_runner.py).
 
@@ -229,7 +232,7 @@ mamba run -n harchoc python scripts/train.py --dry-run --name aug_sweep_mosaic0_
 
 Optional 100-ep winner confirm (**P1-AUG-100EP-WINNER**): production [`robustness_minimal.yaml`](../configs/aug/robustness_minimal.yaml) via [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json) and [`gpu_queue_aug_confirm.json`](../configs/experiments/gpu_queue_aug_confirm.json) (`aug_confirm_winner_100ep` → `reports/aug_smoke/aug_confirm_winner_100ep_summary.json`). Runbook: [backlog § P1-AUG-100EP-WINNER](../backlog.md#p1-aug-100ep-winner-optional-manifest). General 100-ep sweep template: [`train_aug_mosaic_sweep_template.json`](../configs/experiments/train_aug_mosaic_sweep_template.json).
 
-| 5 | Model zoo matrix (`zoo_core` 10×100 ep) | **P0-4** → **P0-5** — [§ Model zoo](#model-zoo-benchmark-matrix) |
+| 5 | Model zoo matrix (**`zoo_yolo_only`** 4×100 ep on 8 GiB; full `zoo_core` deferred) | **P0-5** — [§ Model zoo](#model-zoo-benchmark-matrix) |
 | 6+ | Tray finetune, domain eval, RT-DETR query cap | **P1-FINETUNE-LOOP**, **P1-DOMAIN-EVAL**, **P1-RTDETR-Q** |
 
 Set `DATASET_ROOT` and `HARCHOC_MAX_*` caps per [`docs/training_budget.md`](training_budget.md) (15-ep smokes vs 100-ep full runs).
@@ -540,7 +543,7 @@ Preview (CI-safe; counting/confusion steps auto `--dry-run` if test GT/preds exp
 PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py reviewer2-repro --dry-run
 ```
 
-Same stage via manuscript repro: `experiment.py repro --stage post-zoo`. **`repro --stage full`** runs the HSP chain then **manuscript-preflight** (figures, tables, aug compare, backlog narrative, reviewer2 — not reviewer2 alone). Bundle: [`configs/experiments/manuscript_repro_bundle.json`](../configs/experiments/manuscript_repro_bundle.json); reviewer2 subset: [`reviewer2_repro.json`](../configs/experiments/reviewer2_repro.json). Shared runner: `harchoc/repro_chain.py`. Index: [`reports/reviewer2_index.md`](../reports/reviewer2_index.md).
+Same stage via manuscript repro: `experiment.py repro --stage post-zoo`. **`repro --stage full`** runs the HSP chain then **manuscript-preflight** (figures, tables, aug compare, backlog narrative, reviewer2 — not reviewer2 alone). Bundle: [`configs/experiments/manuscript_repro_bundle.json`](../configs/experiments/manuscript_repro_bundle.json); reviewer2 subset: [`reviewer2_repro.json`](../configs/experiments/reviewer2_repro.json). Shared runner: `harchoc/repro_chain.py`. Human manuscript: [`reports/manuscript/`](../reports/manuscript/). LLM validation: [`reports/_llm/index.md`](../reports/_llm/index.md).
 
 ### Publication preflight (before Word paste)
 
@@ -696,6 +699,33 @@ mamba run -n harchoc python scripts/benchmark_matrix.py --no-dry-run \
 - Train recipes: `configs/experiments/train_bench_<stem>.json` (from bench `model:` stem).
 - **SuperGradients** (`yolo_nas_s`): `harchoc/supergradients_train.py` / `supergradients_eval.py`; install via `python scripts/bootstrap_env.py --env harchoc --with-super-gradients`.
 - **External DETR** (DEIM, D-FINE, RT-DETRv2): `harchoc/external_detector_train.py`; install via `--with-external-detr`, then `check_weights_cache.py --download --strict`.
+
+**Zoo matrix groups** ([`configs/zoo/matrix_rows.v1.json`](../configs/zoo/matrix_rows.v1.json)):
+
+| Group | Rows (filter) |
+|-------|----------------|
+| `zoo_core` | 10 |
+| `zoo_yolo_only` | 4 (8 GiB P0-5 path) |
+| `zoo_scale` | 14 |
+| `sota_2026` | 22 |
+| `sota_deim` / `zoo_detr_stack` | 4 each |
+
+```bash
+python scripts/benchmark_matrix.py --scaffold-zoo --out reports/benchmarks/zoo_scaffold_report.json
+python scripts/benchmark_matrix.py --validate-zoo
+mamba run -n harchoc python scripts/check_weights_cache.py --sync-repos-manifest
+mamba run -n harchoc python scripts/check_weights_cache.py --download --strict --out reports/hsp/weights_cache.json
+```
+
+**GPU queue job kinds** (manifest `gpu_queue_manifest.v1` — full tables in manifests under `configs/experiments/`):
+
+| Job kind | CPU / light | GPU train / export |
+|----------|-------------|-------------------|
+| `preflight` | splits, check_gpu | — |
+| `aug_smoke`, `zoo_matrix_train`, `finetune_tray` | dry-run plan | mamba train + HSP eval |
+| `domain_tray_audit_refresh` | write splits, audit | merge tray MAE |
+
+Runner: [`scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh). Finetune hyperparams: [`docs/FINETUNE_WEAK_TRAYS.md`](FINETUNE_WEAK_TRAYS.md).
 
 Example HSP zoo sweep:
 

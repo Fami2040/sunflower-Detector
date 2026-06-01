@@ -12,7 +12,7 @@ All quantitative claims must use paths from [`reports/README.md`](../../reports/
 | **Aug smokes** | `reports/aug_smoke/` | `leaderboard.md`, `comparative_analysis.json` |
 | **Domain / transfer** | `reports/domains/`, `reports/transfer/` | `domain_eval.json`, `finetune.json` |
 | **Publication** | [`reports/manuscript/`](../../reports/manuscript/README.md), [`reports/figures/`](../../reports/figures/README.md) | preflight manifest, tables, docx catalog |
-| **Reviewer-2 CPU** | `reports/reviewer2_*` | [`reviewer2_index.md`](../../reports/reviewer2_index.md) |
+| **Reviewer-2 CPU** | `reports/reviewer2_*.json`, [`reports/_llm/`](../../reports/_llm/) | [`_llm/index.md`](../../reports/_llm/index.md) |
 
 **Avoid:** `reports/eval.json`, `reports/split_drift/report.json`, `reports/benchmarks/matrix_train.json` (manuscript), root `reports/weights_cache.json` — see stale-path table in [`reports/README.md`](../../reports/README.md).
 

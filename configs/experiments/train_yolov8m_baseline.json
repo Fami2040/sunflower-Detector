@@ -1,5 +1,6 @@
 {
   "extends": "configs/experiments/train_bench_base.json",
   "model": "yolov8m.pt",
-  "batch": 1
+  "batch": 1,
+  "notes": "HARCHOC replication template on CVAT splits — NOT the command that produced models/best2.pt (upstream Fami2040/sunflower-Detector main). See configs/origin/public_yolov8_train_reference.json and docs/ORIGIN_MAIN_AND_DATASET.md."
 }

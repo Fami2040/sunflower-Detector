@@ -1,5 +1,10 @@
 # Data (local)
 
+**Canonical corpus:** CVAT-annotated sunflower seed dataset (~**2500** images), share **`y9xGFqCW`** — see [`manifest.json`](manifest.json) (`sunflower-cvat-2500`). Modeling pool: **1093** images with frozen splits.
+
+**Manuscript Methods text:** [`reports/manuscript/dataset.md`](../reports/manuscript/dataset.md).  
+**Reproducibility:** [`manifest.json`](manifest.json) + [`splits/`](splits/) SHA256 + [`docs/ORIGIN_MAIN_AND_DATASET.md`](../docs/ORIGIN_MAIN_AND_DATASET.md).
+
 Raw CVAT export and weights are **git-ignored**. Tracked files here define **where** data lives and **how** splits are frozen.
 
 ## Classes (canonical names)

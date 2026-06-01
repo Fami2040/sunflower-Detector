@@ -40,7 +40,7 @@ Single entry point for **how we train, evaluate, and improve** sunflower seed de
 
 | Stack step | Backlog (status in [work queue](../backlog.md#work-queue-p0--p2)) |
 |------------|----------------------------------------------------------------------|
-| **5** zoo gate | **P0-4** RT-DETR 15-ep smoke (**Partial**; [`rtdetr_smoke_notes`](../reports/hsp/rtdetr_smoke_notes.md)) → **P0-5** full matrix (**Blocked** on P0-4) |
+| **5** zoo gate | **P0-5** **`zoo_yolo_only`** 4×100 ep on 8 GiB (**Next**); `yolov10m` pending; Ultralytics RT-DETR train OOM @ 1280 ([`matrix_train.json`](../reports/hsp/matrix_train.json) partial) |
 | **3** threshold / trust | **P1-FP-BUDGET** (count-first `--select min_count_mae`), **MS-FUZZY-BOUND**, **P1-UNCERT-FP** |
 | **4** aug | **P1-AUG** S0–S14 (test MAE primary), **ARCH-MOSAIC0-AB** |
 | **5** zoo follow-on | **P1-ZOO-PARITY**, **P2-SEED-MAE** (after P0-5) |
@@ -161,6 +161,8 @@ mamba run -n harchoc python scripts/<script>.py ...
 - CI: `HARCHOC_ALLOW_BASE_PYTHON=1` for unittest only.
 
 Details: [EXPERIMENTS.md](EXPERIMENTS.md) § GPU environment, [training_budget.md](training_budget.md).
+
+**GPU queue manifests (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) — default aug manifest is complete; **P0-5** lives in [`configs/experiments/gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) (`zoo_matrix_p0_5`, `zoo_yolo_only`, ~480 min on 8 GiB). **Post-zoo** (repro, preflight, finetune): [`configs/experiments/gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Manifest map and P0-5 job spec: [EXPERIMENTS § GPU queue manifest map](EXPERIMENTS.md#gpu-queue-manifest-map) · [backlog § GPU runbook](../backlog.md#gpu-runbook).
 
 ### Budget caps
 
@@ -309,7 +311,7 @@ Details: [training_tech_scan_2026_detectors.md](research/training_tech_scan_2026
 
 **Baseline weights:** [HSP_BASELINE_MODELS.md](HSP_BASELINE_MODELS.md) (`best2.pt` vs `classifier.pt`, deploy SAHI vs manuscript export). Checksums: [baseline_models_manifest](../reports/hsp/baseline_models_manifest.json). Spec: `configs/experiments/eval_hsp_baseline.json`.
 
-**Headline metrics (frozen):** [reports/hsp/p0_summary.md](../reports/hsp/p0_summary.md). **Canonical artifacts:** [reports/hsp/README.md](../reports/hsp/README.md).
+**Headline metrics (frozen):** [reports/hsp/p0_summary.md](../reports/hsp/p0_summary.md) (aug S0–S14, `best2` vs zoo, finetune plan). **Methods paste blocks:** [reviewer gap §18–§20](manuscript/reviewer_comments_backlog_gap.md#18-manuscript-draft--augmentation-strategy-methods). **Canonical artifacts:** [reports/hsp/README.md](../reports/hsp/README.md).
 
 ### Pipeline (implemented; regen via configs)
 

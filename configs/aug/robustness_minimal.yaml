@@ -2,8 +2,9 @@ name: aug_robustness_minimal
 version: 1
 notes: >
   Conservative robustness recipe for dense sunflower-seed counting @ imgsz 1280.
-  Photometric-heavy; low mosaic; no mixup. Pair with test-split count metrics.
-  See docs/research/augmentation_robustness_literature.md.
+  Codified from upstream Fami2040/sunflower-Detector train() (~mosaic 0.1) plus HARCHOC fields.
+  models/best2.pt was trained upstream — this YAML documents/replicates intent; aug smokes are post-hoc.
+  See docs/ORIGIN_MAIN_AND_DATASET.md and docs/research/augmentation_robustness_literature.md.
 
 ultralytics:
   mosaic: 0.1
