@@ -251,12 +251,12 @@ class GpuQueueManifestTests(unittest.TestCase):
         for jid, cfg, run_name in (
             (
                 "aug_sweep_100_close10",
-                "configs/experiments/train_aug_close10_100ep.json",
+                "configs/experiments/train_aug_winner_100ep.json",
                 "aug_sweep_close10_100ep",
             ),
             (
                 "aug_sweep_100_close25",
-                "configs/experiments/train_aug_close25_100ep.json",
+                "configs/experiments/train_aug_winner_100ep.json",
                 "aug_sweep_close25_100ep",
             ),
             (
@@ -275,30 +275,27 @@ class GpuQueueManifestTests(unittest.TestCase):
             self.assertIn("eval_test", [s["stage_id"] for s in stages])
 
     def test_aug_close_100ep_train_configs_validate_schedule(self) -> None:
+        from harchoc.aug_smoke_runner import load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.train_config import load_train_config_json, validate_epochs_patience_close_mosaic
 
         repo = Path(__file__).resolve().parents[1]
-        for name in (
-            "train_aug_close10_100ep.json",
-            "train_aug_close25_100ep.json",
-            "train_aug_schedule_patience25_100ep.json",
-        ):
-            cfg = load_train_config_json(repo / "configs/experiments" / name, repo_root=repo)
-            validate_epochs_patience_close_mosaic(cfg, repo_root=repo, label=name)
-
-        close10 = load_train_config_json(
-            repo / "configs/experiments/train_aug_close10_100ep.json", repo_root=repo
-        )
-        close25 = load_train_config_json(
-            repo / "configs/experiments/train_aug_close25_100ep.json", repo_root=repo
-        )
-        self.assertEqual(close10.get("epochs"), 100)
-        self.assertEqual(close25.get("epochs"), 100)
-        self.assertEqual(close10.get("patience"), 30)
         sched = load_train_config_json(
             repo / "configs/experiments/train_aug_schedule_patience25_100ep.json",
             repo_root=repo,
         )
+        validate_epochs_patience_close_mosaic(sched, repo_root=repo, label="train_aug_schedule_patience25_100ep.json")
+
+        index = load_aug_smoke_index(repo / "configs/experiments/aug_smoke_index.json")
+        sweeps = index.get("sweeps_100ep") or {}
+        arms = {str(a["id"]): a for a in (sweeps.get("arms") or [])}
+        close10 = resolve_aug_smoke_train_raw(arms["close10_100"], repo_root=repo)
+        close25 = resolve_aug_smoke_train_raw(arms["close25_100"], repo_root=repo)
+        validate_epochs_patience_close_mosaic(close10, repo_root=repo, label="close10_100")
+        validate_epochs_patience_close_mosaic(close25, repo_root=repo, label="close25_100")
+        self.assertEqual(close10.get("epochs"), 100)
+        self.assertEqual(close25.get("epochs"), 100)
+        self.assertEqual(close10.get("patience"), 30)
         self.assertEqual(sched.get("patience"), 25)
 
     def test_full_manifest_aug_confirm_winner_skipped(self) -> None:

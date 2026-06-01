@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
 from argparse import Namespace
 from typing import Any
+
+DEFAULT_LOCKED_CONF_FROM = "reports/hsp/threshold_val.json"
 
 
 def merge_config_objects(config_paths: list[str]) -> dict[str, Any]:
@@ -90,4 +93,56 @@ def apply_dataset_args(
     )
     args.yolo_data_yaml = optional_str(
         pick_cli_or_dataset(args, "yolo_data_yaml", dataset_cfg=dataset_cfg_obj, default=None)
+    )
+
+
+def add_dataset_args(
+    p: argparse.ArgumentParser,
+    *,
+    suppress_defaults: bool = False,
+) -> None:
+    """Manifest / dataset resolution flags (shared by scripts and experiment.py)."""
+    dflt = argparse.SUPPRESS if suppress_defaults else None
+    p.add_argument(
+        "--manifest",
+        default=dflt if suppress_defaults else "data/manifest.json",
+        help="Path to tracked dataset manifest JSON.",
+    )
+    p.add_argument(
+        "--default-dataset-name",
+        default=dflt if suppress_defaults else "sunflower-cvat-1093",
+        help="Dataset name used if DATASET_NAME is not set.",
+    )
+    p.add_argument(
+        "--dataset-name",
+        default=dflt,
+        help="Override dataset selection (overrides DATASET_NAME).",
+    )
+    p.add_argument(
+        "--dataset-root",
+        default=dflt,
+        help="Override dataset root path (overrides DATASET_ROOT and manifest lookup).",
+    )
+    p.add_argument(
+        "--yolo-data-yaml",
+        default=dflt,
+        help="Optional path to data.yaml (overrides YOLO_DATA_YAML).",
+    )
+
+
+def add_locked_conf_args(
+    p: argparse.ArgumentParser,
+    *,
+    suppress_defaults: bool = False,
+    default_from: str = "",
+) -> None:
+    """Val-locked confidence JSON (threshold_sweep / error_analysis / domain eval)."""
+    dflt = argparse.SUPPRESS if suppress_defaults else (default_from or "")
+    p.add_argument(
+        "--locked-conf-from",
+        default=dflt,
+        help=(
+            "Read conf_thr (and match IoU when present) from a val sweep JSON; "
+            "evaluate at that fixed operating point."
+        ),
     )

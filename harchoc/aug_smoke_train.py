@@ -14,10 +14,9 @@ AUG_SMOKE_COMMITTED_TRAIN_STEMS = frozenset(
     {
         "train_aug_s10_yolo11s_smoke",
         "train_aug_s11_musgd_smoke",
-        "train_aug_close10_100ep",
-        "train_aug_close25_100ep",
         "train_aug_mosaic_sweep_smoke_15ep",
         "train_aug_mosaic_sweep_template",
+        "train_aug_winner_100ep",
         "train_aug_schedule_patience25_100ep",
     }
 )

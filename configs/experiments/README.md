@@ -18,20 +18,34 @@ Model-zoo candidate          →  configs/bench/*.yaml  →  benchmark_matrix.py
 
 Related paths only: `configs/aug/`, `configs/transfer/` — referenced by train scripts, not a fourth schema.
 
-**GPU queues (active):** [`gpu_queue_zoo_p0_5.json`](gpu_queue_zoo_p0_5.json) · [`gpu_queue_post_zoo.json`](gpu_queue_post_zoo.json) · [`gpu_queue_post_zoo_smoke.json`](gpu_queue_post_zoo_smoke.json). Closed aug/full queues: [`archive/`](archive/README.md).
+**GPU queues (active):** [`gpu_queue_zoo_p0_5.json`](gpu_queue_zoo_p0_5.json) · [`gpu_queue_post_zoo.json`](gpu_queue_post_zoo.json) · [`gpu_queue_post_zoo_smoke.json`](gpu_queue_post_zoo_smoke.json). **Archived (read-only):** [`archive/`](archive/README.md) — do not add jobs or revive `gpu_queue_full` on 8 GiB for RT-DETR-by-default.
+
+**GPU runner:** [`scripts/run_gpu_queue.sh`](../../scripts/run_gpu_queue.sh) or [`scripts/run_gpu_queue.py`](../../scripts/run_gpu_queue.py) — not `experiment.py`.
 
 Extend `experiment.py` / `train.py` / `benchmark_matrix.py` before new top-level scripts ([extend-before-add-script](../../.cursor/rules/extend-before-add-script.mdc) · [dry-refactor-plan](../../docs/plans/dry-refactor-plan.md)).
 
-## Train-only configs
+## Train JSON inventory (~30 active)
 
-Files without `"schema_version": "experiments.v1"` are consumed by `train.py` (and matrix via `train_bench_<stem>.json`):
+| Group | Files | Notes |
+|-------|--------|--------|
+| Baseline / hyperparams | `train_yolov8m_baseline.json`, `train_hyperparams_common.json`, `train_bench_base.json` | 100 ep production recipe |
+| Rank smokes | `train_smoke_rank_15ep.json`, `train_smoke_rank_yolo11s_15ep.json` | 15 ep @ 1280 |
+| Aug index | [`aug_smoke_index.json`](aug_smoke_index.json) | S0–S14 + sweeps; `train_overrides` for S9/S12/S13; aug YAML per arm |
+| Aug committed | `train_aug_s10_yolo11s_smoke.json`, `train_aug_s11_musgd_smoke.json` | Model / optimizer exceptions only |
+| Aug sweeps | `train_aug_mosaic_sweep_smoke_15ep.json`, `train_aug_winner_100ep.json`, `train_aug_schedule_patience25_100ep.json` | 15 ep / 100 ep shared bases |
+| Probes | `train_batch_probe.template.json` + overlays, `train_amp_probe.template.json` + on/off | VRAM / AMP 1 ep |
+| Bench matrix | `train_bench_*.json` | One overlay per zoo row |
+| RT-DETR smokes | `train_rtdetr_*_smoke*.json` | Query / imgsz probes |
 
-- Baselines: `train_yolov8m_baseline.json`, smokes, batch probes (`train_batch_probe.template.json` + thin `extends` overlays; `"_canonical": false`)
-- AMP 1-ep probes: `train_amp_probe.template.json` + `train_amp_on_probe_1ep.json` / `train_amp_off_probe_1ep.json`
-- Matrix: `train_bench_base.json` + per-model overlays; aug via `configs/aug/robustness_minimal.yaml`
-- Aug smokes: [`aug_smoke_index.json`](aug_smoke_index.json) (canonical arms; `train_overrides` for S9/S12/S13) + [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json) + S10/S11 committed JSON only
+**Unused / archived:** [`archive/unused_train/`](archive/unused_train/) (legacy smokes with no references).
 
-RT-DETR query-cap policy: `train_bench_rtdetr-l.json` — see [`docs/training_budget.md`](../../docs/training_budget.md#rt-detr-query-cap-dense-trays). External DETR: [`configs/external/README.md`](../external/README.md).
+## Generated train configs (gitignored)
+
+Index-only smokes with `train_overrides` materialize merged JSON under:
+
+`configs/experiments/.aug_smoke_generated/<smoke_id>.json`
+
+Written by `experiment.py validate-aug-smoke`, GPU queue aug_smoke stages, and tests. **Do not commit** — regenerate from [`aug_smoke_index.json`](aug_smoke_index.json).
 
 ## Manuscript / reviewer repro bundles
 
@@ -73,6 +87,7 @@ Run kinds include `eval`, `benchmark_matrix`, `split_drift`, `threshold_sweep`, 
 ```bash
 python scripts/benchmark_matrix.py --validate-zoo
 python scripts/experiment.py validate-aug-smoke
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/run_tests.py -q
 ```
 
 Zoo row manifest: [`configs/zoo/matrix_rows.v1.json`](../zoo/matrix_rows.v1.json). Design: [`docs/zoo_comparison_design.md`](../../docs/zoo_comparison_design.md).

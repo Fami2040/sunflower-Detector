@@ -120,18 +120,18 @@ Report: [`reports/manuscript/now_todos_smoke.json`](../../reports/manuscript/now
 
 ---
 
-## Repo hygiene — DRY / sprawl follow-ups
+## Repo hygiene — DRY / sprawl
 
 Full checklist: [`docs/plans/dry-refactor-plan.md`](../plans/dry-refactor-plan.md). **Do not** expand scope into 1093↔cohort merge, `telegram_bot.py`, or re-enabling archived `gpu_queue_full` on 8 GiB.
 
-| ID | Status | Notes |
-|----|--------|--------|
-| **DRY-2c-train** | **Done** | Batch/AMP `extends` templates; aug S9/S12/S13 → index `train_overrides` (materialized under `.aug_smoke_generated/`); 15ep close sweeps share `train_aug_mosaic_sweep_smoke_15ep.json`; S10/S11 JSON only |
-| **DRY-3-narrative** | **Done** | `narrative_from_backlog.md` gitignored (preflight regenerates) |
-| **DRY-2d-bootstrap** | **Done** | All `scripts/*.py` entrypoints use [`script_entry`](../../harchoc/script_entry.py) bootstrap block |
-| **DRY-3-reports** | **Done** | [`reports/README.md`](../../reports/README.md) tracking table; `.gitignore` allows `manuscript/reviewer2/` |
-| **DRY-entrypoints** | **Done** | `experiment.py dataset-root`; `gpu-queue` + `dataset_from_manifest.py` deprecated (warn) |
-| **DRY-reviewer2-index** | **Done** | [`reports/manuscript/reviewer2/README.md`](../../reports/manuscript/reviewer2/README.md) |
+| ID | Status |
+|----|--------|
+| Train JSON / aug index | **Done** — see [`configs/experiments/README.md`](../../configs/experiments/README.md) |
+| GPU queues | **Done** — 3 active + archive read-only |
+| Scripts / CLI | **Done** — [`scripts/README.md`](../../scripts/README.md); `harchoc.experiment_cli` dataset + locked-conf |
+| Tests | **Done** — [`scripts/run_tests.py`](../../scripts/run_tests.py) |
+| Docs hub | **Done** — this file + redirects only (`FRESHNESS.md`, `STUBS.md`) |
+| Removed shims | **Done** — `dataset_from_manifest.py`, `experiment.py gpu-queue` |
 
 **Branch note:** `git diff origin/main...HEAD` is mostly manuscript/literature/1093 rename — not config/doc sprawl; scope reviews separately.
 

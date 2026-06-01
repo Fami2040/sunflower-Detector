@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_aug_winner_100ep.json",
-  "aug_config": "configs/aug/robustness_close25.yaml",
-  "notes": "P1-AUG-CLOSE-100EP: close_mosaic=25 @ 100 ep (patience=30). Enable after Phase A gate: close25 @ 15 ep test MAE ≤ 72.3 (S1+5%)."
-}

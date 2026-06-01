@@ -50,32 +50,9 @@ def require_conda_env(*, env_name: str | None = None) -> None:
 
 
 def add_dataset_args(p: argparse.ArgumentParser, *, suppress_defaults: bool = False) -> None:
-    dflt = argparse.SUPPRESS if suppress_defaults else None
-    p.add_argument(
-        "--manifest",
-        default=dflt if suppress_defaults else "data/manifest.json",
-        help="Path to tracked dataset manifest JSON.",
-    )
-    p.add_argument(
-        "--default-dataset-name",
-        default=dflt if suppress_defaults else "sunflower-cvat-1093",
-        help="Dataset name used if DATASET_NAME is not set.",
-    )
-    p.add_argument(
-        "--dataset-name",
-        default=dflt,
-        help="Override dataset selection (overrides DATASET_NAME).",
-    )
-    p.add_argument(
-        "--dataset-root",
-        default=dflt,
-        help="Override dataset root path (overrides DATASET_ROOT and manifest lookup).",
-    )
-    p.add_argument(
-        "--yolo-data-yaml",
-        default=dflt,
-        help="Optional path to data.yaml (overrides YOLO_DATA_YAML).",
-    )
+    from harchoc.experiment_cli import add_dataset_args as _add
+
+    _add(p, suppress_defaults=suppress_defaults)
 
 
 def extend_dataset_argv(

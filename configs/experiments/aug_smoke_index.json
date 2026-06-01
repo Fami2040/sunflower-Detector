@@ -220,7 +220,7 @@
     "arms": [
       {
         "id": "close10_100",
-        "train_config": "configs/experiments/train_aug_close10_100ep.json",
+        "train_config": "configs/experiments/train_aug_winner_100ep.json",
         "aug_config": "configs/aug/robustness_close10.yaml",
         "run_name": "aug_sweep_close10_100ep",
         "status": "conditional_skip",
@@ -231,7 +231,7 @@
       },
       {
         "id": "close25_100",
-        "train_config": "configs/experiments/train_aug_close25_100ep.json",
+        "train_config": "configs/experiments/train_aug_winner_100ep.json",
         "aug_config": "configs/aug/robustness_close25.yaml",
         "run_name": "aug_sweep_close25_100ep",
         "status": "conditional_skip",

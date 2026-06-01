@@ -57,6 +57,7 @@ from harchoc.run_metadata import collect_run_metadata
 from harchoc.schemas import with_schema_version
 from harchoc.calibration_metrics import reliability_and_ece
 from harchoc.platt import apply_calibration_to_preds
+from harchoc.experiment_cli import add_locked_conf_args
 from scripts._common_cli import (
     add_dataset_args,
     add_dry_run_arg,
@@ -262,14 +263,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Evaluate metrics at this confidence without re-selecting (val-locked → test report).",
     )
-    p.add_argument(
-        "--locked-conf-from",
-        default="",
-        help=(
-            "Read conf_thr (and match IoU when present) from a val sweep JSON; evaluate test preds "
-            "at that fixed operating point without re-running --select."
-        ),
-    )
+    add_locked_conf_args(p)
     p.add_argument("--run-yolo", action="store_true", help="(Optional) Run ultralytics YOLO on a few images if --preds-json omitted.")
     p.add_argument("--images", nargs="*", default=[], help="Image paths for --run-yolo mode (small list).")
     p.add_argument(

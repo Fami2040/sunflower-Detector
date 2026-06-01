@@ -744,7 +744,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pdr = sp.add_parser(
         "dataset-root",
-        help="Print resolved dataset root from data/manifest.json (replaces scripts/dataset_from_manifest.py).",
+        help="Print resolved dataset root from data/manifest.json.",
     )
     pdr.add_argument("--dataset-name", default=argparse.SUPPRESS)
 
@@ -1121,41 +1121,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     pfb.add_argument("--light", action="store_true", default=argparse.SUPPRESS)
 
-    pgq = sp.add_parser(
-        "gpu-queue",
-        help="[deprecated] Use scripts/run_gpu_queue.sh or scripts/run_gpu_queue.py instead.",
-    )
-    pgq.add_argument(
-        "--manifest",
-        required=True,
-        help="Path to gpu_queue_manifest.v1 JSON (e.g. configs/experiments/archive/gpu_queue_full.json).",
-    )
-    add_dry_run_arg(pgq, suppress_defaults=True)
-    pgq.add_argument(
-        "--run",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="Execute jobs (default: dry-run prints stage commands).",
-    )
-    pgq.add_argument(
-        "--resume",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="Resume from reports/gpu_queue/run_state.json.",
-    )
-    pgq.add_argument("--job", default=argparse.SUPPRESS, help="Run only this job id.")
-    pgq.add_argument(
-        "--state-path",
-        default=argparse.SUPPRESS,
-        help="Override run state JSON (default reports/gpu_queue/run_state.json).",
-    )
-    pgq.add_argument(
-        "--min-free-mib",
-        type=int,
-        default=argparse.SUPPRESS,
-        help="GPU wait threshold MiB free (default 5500).",
-    )
-
     pvas = sp.add_parser(
         "validate-aug-smoke",
         help="Validate aug_smoke_index.json vs runtime train/aug configs (CI-safe, no ML deps).",
@@ -1518,19 +1483,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(dataset_root_from_manifest(dataset_name=name))
         return 0
-    if cmd == "gpu-queue":
-        import warnings
-
-        warnings.warn(
-            "experiment.py gpu-queue is deprecated; prefer ./scripts/run_gpu_queue.sh "
-            "or: mamba run -n harchoc python scripts/run_gpu_queue.py --manifest <path>",
-            DeprecationWarning,
-            stacklevel=1,
-        )
-        from harchoc.experiment_argv import argv_for_gpu_queue
-        from scripts.run_gpu_queue import main as run_gpu_queue_main
-
-        return run_gpu_queue_main(argv_for_gpu_queue(merged_fields))
     raise SystemExit(f"Unknown subcommand: {cmd}")
 
 

@@ -156,7 +156,7 @@ Post-train test eval: [aug scan §5 shared eval](research/training_tech_scan_202
 
 ### GPU sequential queue
 
-**Canonical ops:** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) (`dry-run` | `run` | `resume`). Direct / CI: [`scripts/run_gpu_queue.py`](../scripts/run_gpu_queue.py) (`--manifest`, `--job`). `experiment.py gpu-queue` is a deprecated alias (config-file workflows only).
+**Canonical ops:** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) (`dry-run` | `run` | `resume`). Direct / CI: [`scripts/run_gpu_queue.py`](../scripts/run_gpu_queue.py) (`--manifest`, `--job`).
 
 **Active manifests:** [`gpu_queue_zoo_p0_5.json`](../configs/experiments/gpu_queue_zoo_p0_5.json) (P0-5 zoo only) · [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json) (after matrix) · [`gpu_queue_post_zoo_smoke.json`](../configs/experiments/gpu_queue_post_zoo_smoke.json) (wiring smoke; default for `run_gpu_queue.sh`). **Archived** (aug tails, historical full queue): [`configs/experiments/archive/`](../configs/experiments/archive/README.md). Mosaic `aug_sweep_15_*` jobs are **removed** from manifests (covered by smokes **S2/S4/S5**).
 

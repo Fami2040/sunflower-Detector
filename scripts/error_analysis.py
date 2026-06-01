@@ -26,6 +26,7 @@ from harchoc.error_analysis_schema import (
 from harchoc.schemas import with_schema_version
 from harchoc.hsp_weights import HSP_DETECTION_WEIGHTS
 from harchoc.threshold_lock import load_locked_conf
+from harchoc.experiment_cli import add_locked_conf_args
 from scripts._common_cli import (
     add_dataset_args,
     add_dry_run_arg,
@@ -67,11 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         default=0.1,
         help="Background IoU threshold (t_b); max IoU below this => background FP.",
     )
-    p.add_argument(
-        "--locked-conf-from",
-        default="",
-        help="Use conf_thr from val threshold sweep JSON (overrides --conf).",
-    )
+    add_locked_conf_args(p)
     p.add_argument(
         "--tide-out",
         default="",
