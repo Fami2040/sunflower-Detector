@@ -117,6 +117,8 @@ reports/**/*
 !reports/manuscript/
 reports/manuscript/*
 !reports/manuscript/**/*.md
+!reports/manuscript/lit_audit/
+!reports/manuscript/lit_audit/**
 reports/manuscript/**/*.json
 # Ad-hoc agent probes (belong under scripts/ or harchoc/, not reports/)
 reports/gpu_queue/debug_*.py
