@@ -2,7 +2,7 @@
 
 Machine-readable source: [`literature_validated.json`](literature_validated.json) (`literature_validated.v1`).
 
-**Checked:** 2026-05-29 · **Gap map:** [`reviewer_comments_backlog_gap.md`](reviewer_comments_backlog_gap.md)
+**Checked:** 2026-06-01 (DOI audit: [`literature_doi_audit_2026-06-01.md`](../../reports/manuscript/literature_doi_audit_2026-06-01.md)) · **Gap map:** [`reviewer_comments_backlog_gap.md`](reviewer_comments_backlog_gap.md)
 
 ## Reviewer-requested papers
 
@@ -10,7 +10,7 @@ Machine-readable source: [`literature_validated.json`](literature_validated.json
 |----|-----|--------------|-----------|
 | `yang2024_oct_tl` | [10.1371/journal.pone.0296175](https://doi.org/10.1371/journal.pone.0296175) | Domain adaptation (§12) | **Analogy** — OCT ensemble + transfer, not seed OD |
 | `ren2025_scripta_interp` | [10.1016/j.scriptamat.2024.116350](https://doi.org/10.1016/j.scriptamat.2024.116350) | Explainability (§13) | **Framing** — interpretable ML; pair with Grad-CAM panel |
-| `alshehri2025_uav` | [10.3389/fnbot.2025.1582995](https://doi.org/10.3389/fnbot.2025.1582995) | Two-stage deploy (§14) | **Analogy** — UAV action recognition; gate+detect vs HSP single-stage; **MS-DEPLOY-2STG** Done |
+| `alshehri2025_uav` | [10.3389/fnbot.2025.1582995](https://doi.org/10.3389/fnbot.2025.1582995) | Two-stage deploy (§14) | **Analogy** — UAV **action recognition** (not detection); gate+detect vs HSP single-stage; **MS-DEPLOY-2STG** Done |
 | `yao2025_hfuzzy` | [10.1109/TFUZZ.2025.3549791](https://doi.org/10.1109/TFUZZ.2025.3549791) | Boundary / ambiguous seeds (§15) | **Methods + Discussion analogy** — **graded trust on detections** (locked conf + low-conf score band + `ambiguous_summary` + FP taxonomy; `fig_ambiguous_panel`); stack step 3 with **MS-FUZZY-BOUND** Done, **P1-FP-BUDGET**, **P1-UNCERT-FP**; Yao is tabular fuzzy **regression**, not a 3rd detect class or relabel protocol |
 
 ## Crop-seed / training peers (repo anchors)
@@ -26,7 +26,7 @@ Machine-readable source: [`literature_validated.json`](literature_validated.json
 
 | ID | DOI | §2 use | Research doc |
 |----|-----|--------|--------------|
-| `gwhd2020` | [10.34133/2020.3521832](https://doi.org/10.34133/2020.3521832) | Dense organ phenotyping benchmark | [fp_taxonomy](../research/fp_taxonomy_literature.md) |
+| `gwhd2020` | [10.34133/2020/3521852](https://doi.org/10.34133/2020/3521852) | Dense organ phenotyping benchmark | [fp_taxonomy](../research/fp_taxonomy_literature.md) |
 | `iamchuen2026_sunflower_uav` | [10.3390/su18021026](https://doi.org/10.3390/su18021026) | Sunflower heads; conf/IoU grids | [domain_shift](../research/domain_shift_transfer_literature.md), [eval scan](../research/training_tech_scan_2026_eval_calibration.md) |
 | `gulzar2025_sunflower_tl` | [10.55730/1300-0152.2763](https://doi.org/10.55730/1300-0152.2763) | Field TL / domain-shift survey | [domain_shift](../research/domain_shift_transfer_literature.md) |
 

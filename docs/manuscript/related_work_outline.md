@@ -81,7 +81,7 @@ Keep brief; full Discussion drafts live in gap §12–15.
 
 | Registry ID | DOI | §2 subsection | Manuscript use | Research synthesis |
 |-------------|-----|---------------|----------------|-------------------|
-| `gwhd2020` | [10.34133/2020.3521832](https://doi.org/10.34133/2020.3521832) | §2.1 | Phenotyping benchmark | [fp_taxonomy #3](../research/fp_taxonomy_literature.md) |
+| `gwhd2020` | [10.34133/2020/3521852](https://doi.org/10.34133/2020/3521852) | §2.1 | Phenotyping benchmark | [fp_taxonomy #3](../research/fp_taxonomy_literature.md) |
 | `grainnet2025` | [10.1186/s13007-025-01363-y](https://doi.org/10.1186/s13007-025-01363-y) | §2.4 | Closest counting peer | [fp_taxonomy #5](../research/fp_taxonomy_literature.md) |
 | `lwcd_yolo2025` | [10.3390/agriculture15181968](https://doi.org/10.3390/agriculture15181968) | §2.3–2.4 | Mosaic off, benchtop seeds | [aug scan §2.6](../research/training_tech_scan_2026_augmentation.md#26-mosaic-ablation-evidence-arch-mosaic0-ab--p1-aug-mosaic) |
 | `iamchuen2026_sunflower_uav` | [10.3390/su18021026](https://doi.org/10.3390/su18021026) | §2.2, §2.5 | Sunflower heads; threshold grids | [domain_shift #10](../research/domain_shift_transfer_literature.md) |

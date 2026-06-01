@@ -11,6 +11,8 @@ Repo-side **text and gap maps** for the sunflower HSP paper (LaTeX source is out
 | [architecture_recommendations.md](architecture_recommendations.md) | Lit-backed architecture backlog |
 | [literature_validated.md](literature_validated.md) | Citation registry (human index) |
 | [literature_validated.json](literature_validated.json) | Machine-readable cites |
+| [literature_doi_audit_2026-06-01.md](../../reports/manuscript/literature_doi_audit_2026-06-01.md) | DOI + `claim_fit` audit (2026-06-01) |
+| [lit_audit/](../../reports/manuscript/lit_audit/README.md) | Per-paper validation reports |
 | [related_work_outline.md](related_work_outline.md) | §2 Related work outline |
 | [gradcam_routing.md](gradcam_routing.md) | Grad-CAM entrypoint routing |
 | [originality_contribution_peers.md](originality_contribution_peers.md) | MS-ORIG peer contrast |

@@ -76,6 +76,12 @@ We thank the reviewer for a careful reading. Below we address each major comment
 
 ---
 
+## Literature and citations (2026-06-01 audit)
+
+All manuscript DOIs were checked against Crossref and publisher pages; see [`literature_doi_audit_2026-06-01.md`](literature_doi_audit_2026-06-01.md). One registry typo was corrected (GWHD `10.34133/2020/3521852`). Reviewer-cited works on transfer, interpretability, fuzzy boundaries, and staged deploy are cited **by analogy** where they address different modalities or tasks (OCT classification, materials regression, tabular fuzzy regression, UAV action recognition). Benchtop kernel peers (GrainNet, LWCD-YOLO) support related-work positioning; LWCD reports mosaic disabled for corn kernels, while our mosaic-off ablation **worsened** test count MAE.
+
+---
+
 ## Additional clarifications (metrics in submitted manuscript)
 
 **mAP50 0.793.** Held-out test mAP50 under the canonical protocol is 0.18 (Table 1). The submitted value is not reproduced on current test exports; we separate ranking mAP from counting MAE and do not use peak training-validation mAP as a generalization claim.

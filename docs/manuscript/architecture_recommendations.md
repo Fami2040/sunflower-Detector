@@ -11,7 +11,7 @@
 | `max_det: 3000` on dense trays | S14 truncation study | **Done** P0-1, [`s14_maxdet_truncation.json`](../../reports/hsp/s14_maxdet_truncation.json) |
 | Val tune → lock conf → test reporting | HSP protocol, threshold literature | P0-3 chain, [`dual_metric.json`](../../reports/hsp/dual_metric.json) |
 | **`zoo_yolo_only`** @ imgsz 1280 (4 YOLO rows; 8 GiB) | Detector SOTA on constrained GPU | **P0-5** Next (`zoo_matrix_p0_5`); **`yolov10m`** not trained yet (fits VRAM); Ultralytics RT-DETR train OOM @ 1280; partial [`matrix_train.json`](../../reports/hsp/matrix_train.json) |
-| Grad-CAM on FP crops | LWCD-YOLO, Yang/Ren XAI narrative | **Done** P2-FIG-CAM, `experiment.py gradcam` → [`gradcam_routing.md`](gradcam_routing.md) |
+| Grad-CAM on FP crops | **LWCD-YOLO** (vision); Selvaraju et al. (standard CAM); optional framing only: Ren (materials ML), Yang (OCT classification **analogy**) | **Done** P2-FIG-CAM, `experiment.py gradcam` → [`gradcam_routing.md`](gradcam_routing.md); do **not** cite Ren as the Grad-CAM method ([`lit_audit/ren2025_scripta_interp.md`](../../reports/manuscript/lit_audit/ren2025_scripta_interp.md)) |
 | Two-weight deploy gate | Alshehri analogy; production path | [`HSP_BASELINE_MODELS.md`](../HSP_BASELINE_MODELS.md), [gap §14](reviewer_comments_backlog_gap.md#14-manuscript-draft--two-stage-deploy-discussion) (**MS-DEPLOY-2STG** Done) |
 | Manuscript repro one-command | Reviewer reproducibility | **Done** MS-REPRO, `experiment.py repro` |
 | Label val mAP as non-generalization | Reviewer §2.2 / §9 | **Done** MS-VAL-MAP-CAVEAT, [`val_test_map_gap.md`](val_test_map_gap.md) |

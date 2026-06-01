@@ -18,6 +18,7 @@ Repo integration snapshot for manuscript / GPU agents (not a reviewer theme).
 | **Aug (closed)** | **Done** | Literature aug program (S0–S14 + 100 ep) on **same test split** as anchor **best2 61.3** — none beat anchor — [§18](#18-manuscript-draft--augmentation-strategy-methods) |
 | **MS-SOTA table** | **Draft ok** | [`reports/manuscript/tables/zoo_core.md`](../../reports/manuscript/tables/zoo_core.md) — refresh after **v10m** completes (`manuscript-preflight`). |
 | **Headline vs zoo** | **Keep `best2`** | Test count MAE **61.3** @ locked conf until a zoo/finetune row beats it on canonical test. |
+| **Literature DOI audit** | **Done** | 11/11 in registry; GWHD DOI fixed — [`literature_doi_audit_2026-06-01.md`](../../reports/manuscript/literature_doi_audit_2026-06-01.md), [`lit_audit/`](../../reports/manuscript/lit_audit/README.md) |
 
 **Single-GPU order:** kill strays → `zoo_matrix_p0_5` → repro/preflight → domain audit → finetune — [backlog § 4-agent workstream](../../backlog.md#4-agent-workstream-2026-06).
 
@@ -281,11 +282,11 @@ Suggested Methods sentence: *“The detector weights (`best2.pt`) were obtained 
 
 **Use for Methods / reviewer questions on training aug, S0–S14, and why production weights were not replaced.** Canonical one-pager: [`p0_summary.md` § Augmentation](../../reports/hsp/p0_summary.md#augmentation-strategy-reviewer-methods). Index: [`aug_smoke_index.json`](../../configs/experiments/aug_smoke_index.json). Rankings (test IDs only): [`leaderboard.md`](../../reports/aug_smoke/leaderboard.md).
 
-**Methods (draft):** Production **`best2.pt`** was trained in the public upstream repo ([origin `main`](https://github.com/Fami2040/sunflower-Detector)) with conservative online augmentation (`mosaic=0.1`, photometric jitter, no mixup) — see [`public_yolov8_train_reference.json`](../../configs/origin/public_yolov8_train_reference.json). HARCHOC **codifies** a similar recipe in [`robustness_minimal.yaml`](../../configs/aug/robustness_minimal.yaml) and cites benchtop **seed/kernel** literature (LWCD-YOLO mosaic-off precedent [`lwcd_yolo2025`](literature_validated.json); GrainNet [`grainnet2025`](literature_validated.json)).
+**Methods (draft):** Production **`best2.pt`** was trained in the public upstream repo ([origin `main`](https://github.com/Fami2040/sunflower-Detector)) with conservative online augmentation (`mosaic=0.1`, photometric jitter, no mixup) — see [`public_yolov8_train_reference.json`](../../configs/origin/public_yolov8_train_reference.json). HARCHOC **codifies** a similar recipe in [`robustness_minimal.yaml`](../../configs/aug/robustness_minimal.yaml) and cites benchtop **seed/kernel** peers ([`grainnet2025`](literature_validated.json); [`lwcd_yolo2025`](literature_validated.json) — LWCD **reports** mosaic disabled in §3.1 for corn kernels; **our S2 mosaic=0 worsened** test MAE to **147.4**, so we do not adopt mosaic-off for sunflower). DOI audit: [`literature_doi_audit_2026-06-01.md`](../../reports/manuscript/literature_doi_audit_2026-06-01.md).
 
 **Augmentation comparison (same protocol as anchor):** Legacy **`best2.pt`** was re-evaluated on frozen CVAT splits (test count MAE **61.3** at validation-locked conf **≈0.15**). We then trained **fifteen 15-epoch** YOLOv8m variants (**S0–S14**) with **literature-guided** augmentation tactics ([`training_tech_scan_2026_augmentation.md`](../research/training_tech_scan_2026_augmentation.md)), plus a **100-epoch** full train with production-like minimal aug — each evaluated on **`data/splits/test.txt`** with the **same** locked confidence (no test leakage). **S14** is eval-only (`max_det=300`) — control, not an aug competitor.
 
-**Results:** No alternative train beat the anchor: best smoke **68.9** (+7.6 vs **61.3**); 100-ep confirm **64.1** (+2.9). **S2** (mosaic=0) **147.4** supports low mosaic vs mosaic-off. **Closed** — retain **`best2.pt`**.
+**Results:** No alternative train beat the anchor: best smoke **68.9** (+7.6 vs **61.3**); 100-ep confirm **64.1** (+2.9). **S2** (mosaic=0) **147.4** — full mosaic-off **rejected** on our trays (retain low mosaic like anchor). **Closed** — retain **`best2.pt`**.
 
 **Evidence:** [`ORIGIN_MAIN_AND_DATASET.md`](../ORIGIN_MAIN_AND_DATASET.md), [`leaderboard.json`](../../reports/aug_smoke/leaderboard.json), [`aug_confirm_winner_100ep_summary.json`](../../reports/aug_smoke/aug_confirm_winner_100ep_summary.json).
 
@@ -328,6 +329,8 @@ Suggested Methods sentence: *“For acquisition trays with elevated count MAE at
 | [`originality_contribution_peers.md`](originality_contribution_peers.md) | 2 |
 | [`val_test_map_gap.md`](val_test_map_gap.md) | 9, 16 |
 | [`literature_validated.json`](literature_validated.json) | 6, 12–15, 18 |
+| [`literature_doi_audit_2026-06-01.md`](../../reports/manuscript/literature_doi_audit_2026-06-01.md) | All cites |
+| [`lit_audit/`](../../reports/manuscript/lit_audit/README.md) | Per-paper `claim_fit` |
 | [`related_work_outline.md`](related_work_outline.md) | 6 |
 | [`reports/hsp/p0_summary.md`](../../reports/hsp/p0_summary.md) | 2, 3, 4, 5, 9, 10, 11, 12, 14, 15, **18–20** |
 | [`reports/aug_smoke/leaderboard.md`](../../reports/aug_smoke/leaderboard.md) | **18** |

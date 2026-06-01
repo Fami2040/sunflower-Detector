@@ -45,6 +45,7 @@ Classes **0 = developed**, **1 = aborted**. Splits [`data/splits/*.txt`](data/sp
 | **MS-SOTA** | P1 | Blocked | P0-5 complete |
 | **MS-GEN** | P1 | Partial | Tray spread narrative |
 | **MS-ABS** | P2 | Next | Use [`reports/manuscript/abstract.md`](reports/manuscript/abstract.md) |
+| **LIT-VALIDATE** | P2 | **Partial Done** | 11/11 DOI audit 2026-06-01 — [`literature_doi_audit_2026-06-01.md`](reports/manuscript/literature_doi_audit_2026-06-01.md); cite only from [`literature_validated.json`](docs/manuscript/literature_validated.json) |
 
 **GPU order:** `kill_stray_gpu_jobs.sh` → **P0-5** → `gpu_queue_post_zoo.json` (domain audit, finetune). Details: [EXPERIMENTS § GPU queue](docs/EXPERIMENTS.md#gpu-sequential-queue).
 
@@ -52,7 +53,7 @@ Classes **0 = developed**, **1 = aborted**. Splits [`data/splits/*.txt`](data/sp
 
 ## Aug (closed)
 
-Anchor **61.3**; best smoke **68.9**; 100-ep confirm **64.1**; mosaic-off rejected **147.4**. Leaderboard: [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md). Full table: [archive § Aug](backlog_archive.md).
+Anchor **61.3**; best smoke **68.9**; 100-ep confirm **64.1**; mosaic-off rejected **147.4** (S2; LWCD reports mosaic disabled for **corn**, not evidence for sunflower — [`lit_audit/lwcd_yolo2025.md`](reports/manuscript/lit_audit/lwcd_yolo2025.md)). Leaderboard: [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md). Full table: [archive § Aug](backlog_archive.md).
 
 ---
 
@@ -65,6 +66,7 @@ Anchor **61.3**; best smoke **68.9**; 100-ep confirm **64.1**; mosaic-off reject
 | HSP JSON | [`reports/hsp/`](reports/hsp/) |
 | Reviewer validation | [`reports/_llm/`](reports/_llm/) |
 | Gap map (agents) | [`docs/manuscript/reviewer_comments_backlog_gap.md`](docs/manuscript/reviewer_comments_backlog_gap.md) |
+| Literature DOI audit | [`literature_doi_audit_2026-06-01.md`](reports/manuscript/literature_doi_audit_2026-06-01.md) · [`lit_audit/`](reports/manuscript/lit_audit/README.md) |
 
 ```bash
 mamba run -n harchoc python scripts/experiment.py repro --stage full
