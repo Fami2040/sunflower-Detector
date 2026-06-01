@@ -1,5 +1,9 @@
 {
   "extends": "configs/experiments/finetune_tray.json",
   "epochs": 25,
-  "notes": "Stage 2: full unfreeze. Set --base-weights to stage 1 runs/transfer/finetune_tray_s1/weights/best.pt (or your stage-1 run dir)."
+  "imgsz": 1280,
+  "batch": 1,
+  "patience": 50,
+  "lr0": 0.0005,
+  "notes": "Stage 2: full unfreeze (configs/transfer/finetune_stage2.yaml: freeze_backbone=false, lr=0.0005, epochs=25). Set --base-weights to stage-1 runs/transfer/<run_name>/weights/best.pt."
 }

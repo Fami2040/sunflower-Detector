@@ -215,6 +215,16 @@ def argv_for_finetune(fields: dict[str, Any]) -> list[str]:
     out += _opt("--tray-catalog", fields.get("tray_catalog"))
     out += _opt("--domains-dir", fields.get("domains_dir"))
     out += _opt("--splits-dir", fields.get("splits_dir"))
+    out += _bool_flag("--from-weak-plan", fields.get("from_weak_plan"))
+    out += _bool_flag("--audit-trays", fields.get("audit_trays"))
+    out += _opt("--weak-plan", fields.get("weak_plan"))
+    out += _opt("--locked-conf-from", fields.get("locked_conf_from"))
+    out += _opt("--global-mae-ref", fields.get("global_mae_ref"))
+    out += _opt("--canonical-gate-pct", fields.get("canonical_gate_pct"))
+    out += _opt("--tide-summary", fields.get("tide_summary"))
+    out += _bool_flag("--debug", fields.get("debug"))
+    if fields.get("hsp_counting") is False:
+        out.append("--no-hsp-counting")
     return out
 
 

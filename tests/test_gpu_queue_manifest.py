@@ -312,6 +312,55 @@ class GpuQueueManifestTests(unittest.TestCase):
         self.assertTrue(job.get("skip"))
         self.assertIn("gpu_queue_aug_confirm", str(job.get("skip_reason") or ""))
 
+    def test_post_zoo_manifest_finetune_and_domain_stages(self) -> None:
+        from harchoc.gpu_queue import build_job_stages, load_gpu_queue_manifest
+
+        repo = Path(__file__).resolve().parents[1]
+        m = load_gpu_queue_manifest(
+            repo / "configs/experiments/gpu_queue_post_zoo.json", repo_root=repo
+        )
+        self.assertEqual(
+            m["defaults"]["weak_plan"], "reports/domains/weak_tray_plan.json"
+        )
+        by_id = {j["id"]: j for j in m["jobs"]}
+        domain = by_id["domain_tray_audit_refresh"]
+        self.assertEqual(domain["weak_plan_out"], "reports/domains/weak_tray_plan.json")
+        self.assertTrue(domain.get("merge_mamba"))
+        dom_stages = [s["stage_id"] for s in build_job_stages(domain, repo_root=repo)]
+        self.assertEqual(
+            dom_stages,
+            [
+                "write_domain_splits",
+                "gpu_wait",
+                "merge_tray_count_mae",
+                "domain_tray_audit",
+            ],
+        )
+        merge_stage = next(
+            s for s in build_job_stages(domain, repo_root=repo) if s["stage_id"] == "merge_tray_count_mae"
+        )
+        self.assertTrue(merge_stage.get("mamba"))
+        self.assertIn("0", merge_stage["argv"])
+        fin = by_id["finetune_weak_tray_1"]
+        self.assertEqual(fin.get("device"), "0")
+        self.assertTrue(fin.get("mamba"))
+        self.assertEqual(
+            fin["train_config"], "configs/experiments/finetune_tray_stage1.json"
+        )
+        hp = fin.get("hyperparams") or {}
+        self.assertEqual(hp.get("epochs"), 25)
+        self.assertEqual(hp.get("freeze_backbone"), True)
+        fin_argv = build_job_stages(fin, repo_root=repo)[0]["argv"]
+        self.assertTrue(any("finetune_tray_stage1.json" in str(a) for a in fin_argv))
+        zoo = load_gpu_queue_manifest(
+            repo / "configs/experiments/gpu_queue_full.json", repo_root=repo
+        )
+        zjob = next(j for j in zoo["jobs"] if j.get("id") == "zoo_matrix_p0_5")
+        mh = zjob.get("matrix_hyperparams") or {}
+        self.assertEqual(mh.get("epochs"), 100)
+        self.assertEqual(mh.get("imgsz"), 1280)
+        self.assertEqual(len(zjob.get("bench_configs") or []), 4)
+
     def test_full_manifest_gpu_execution_tier_order(self) -> None:
         """Tier 1 RT-DETR block → Tier 2 eval/sweeps → P0-5 zoo_matrix before cv_fold (backlog § GPU execution tiers)."""
         from harchoc.gpu_queue import load_gpu_queue_manifest

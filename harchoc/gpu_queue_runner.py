@@ -104,6 +104,56 @@ def _sg_smoke_requires_supergradients(job: dict[str, Any], *, repo_root: Path) -
 
 def _mamba_env() -> str:
     return os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
+
+
+def _finalize_finetune_job_summary(
+    *,
+    repo_root: Path,
+    job: dict[str, Any],
+    meta: dict[str, Any],
+    dry_run: bool,
+) -> int:
+    """Transcript for finetune_tray jobs (finetune_run.v1 already at finetune_out)."""
+    job_id = str(job.get("id") or "finetune_tray")
+    finetune_out = str(
+        meta.get("finetune_out")
+        or job.get("out")
+        or job.get("finetune_out")
+        or f"reports/transfer/finetune_queue_{job_id}.json"
+    )
+    if dry_run:
+        print(f"# finetune summary {job_id} -> {finetune_out}")
+        return 0
+
+    fin_path = repo_root / finetune_out
+    if not fin_path.is_file():
+        return 1
+    fin_obj = load_json_dict(fin_path)
+    ok = fin_obj.get("status") == "ok"
+    outcome = fin_obj.get("finetune_outcome") or {}
+    transcript: dict[str, Any] = {
+        "schema_version": "gpu_queue_job.v1",
+        "job_id": job_id,
+        "kind": job.get("kind"),
+        "status": "complete" if ok else "failed",
+        "finished_at": _utc_now(),
+        "tray_key": job.get("tray_key"),
+        "stage": job.get("stage"),
+        "finetune_out": finetune_out,
+        "weights": fin_obj.get("weights"),
+        "finetune_outcome": outcome,
+        "canonical_gate_passed": (outcome.get("canonical_gate") or {}).get("passed"),
+    }
+    hold = outcome.get("tray_holdout") or []
+    if hold and isinstance(hold[0], dict):
+        transcript["tray_count_mae_after"] = hold[0].get("count_mae_after")
+    _write_json(repo_root / DEFAULT_JOBS_ROOT / f"{job_id}.json", transcript)
+    summary_path = str(meta.get("summary_path") or finetune_out)
+    if summary_path != finetune_out:
+        _write_json(repo_root / summary_path, transcript)
+    return 0 if ok else 1
+
+
 def _finalize_job_summary(
     *,
     repo_root: Path,
@@ -423,6 +473,14 @@ def _run_internal_stage(
             log_path=log_path,
             dry_run=dry_run,
             job_context=job_context,
+        )
+
+    if internal == "finetune_summary":
+        return _finalize_finetune_job_summary(
+            repo_root=repo_root,
+            job=job,
+            meta=meta,
+            dry_run=dry_run,
         )
 
     if internal in (

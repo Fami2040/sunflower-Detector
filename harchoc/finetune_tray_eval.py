@@ -6,6 +6,15 @@ from pathlib import Path
 from typing import Any
 
 from harchoc.domain_eval import domain_split_file, tray_keys_from_catalog_blob
+from harchoc.finetune_pipeline import (
+    hsp_transfer_paths,
+    metrics_from_eval_json,
+)
+from harchoc.hsp_eval_chain import (
+    DEFAULT_LOCKED_CONF_FROM,
+    build_error_analysis_argv,
+    extract_count_mae,
+)
 from harchoc.json_io import load_json_dict
 from harchoc.post_train_eval import build_post_train_eval_argv
 
@@ -79,6 +88,64 @@ def tray_eval_out_path(
     return reports_dir / f"{stem}.json"
 
 
+def _append_hsp_export_argv(
+    argv: list[str],
+    *,
+    paths: dict[str, Path],
+    locked_conf_from: str,
+) -> list[str]:
+    out = list(argv)
+    out += [
+        "--export-gt-json",
+        str(paths["gt"]),
+        "--export-preds-json",
+        str(paths["preds"]),
+        "--locked-conf-from",
+        locked_conf_from,
+        "--export-only",
+    ]
+    return out
+
+
+def _run_error_analysis(
+    *,
+    repo_root: Path,
+    paths: dict[str, Path],
+    locked_conf_from: str,
+) -> int:
+    from harchoc.ml_env import run_repo_python
+
+    argv = build_error_analysis_argv(
+        paths["gt"],
+        paths["preds"],
+        locked_conf_from,
+        paths["error"],
+        repo_root=repo_root,
+    )
+    proc = run_repo_python(argv, repo_root=repo_root)
+    return int(proc.returncode)
+
+
+def _record_role_metrics(
+    *,
+    eval_out: Path,
+    hsp_paths: dict[str, Path],
+) -> dict[str, Any]:
+    mae, _ci = extract_count_mae(hsp_paths["error"])
+    m = metrics_from_eval_json(eval_out)
+    if mae is None:
+        mae = m.get("count_mae")
+    return {
+        "eval_json": str(eval_out),
+        "error_json": str(hsp_paths["error"]),
+        "gt_json": str(hsp_paths["gt"]),
+        "preds_json": str(hsp_paths["preds"]),
+        "count_mae": mae,
+        "mAP50": m.get("mAP50"),
+        "mAP50_95": m.get("mAP50_95"),
+    }
+
+
 def build_tray_eval_commands(
     *,
     phase: str,
@@ -94,8 +161,14 @@ def build_tray_eval_commands(
     yolo_data_yaml: str | None,
     eval_section: dict[str, Any] | None,
     train_imgsz: int | None,
+    locked_conf_from: str = DEFAULT_LOCKED_CONF_FROM,
+    hsp_counting: bool = True,
 ) -> list[dict[str, Any]]:
     """Planned eval.py invocations for one phase (before or after fine-tune)."""
+    section = eval_section if isinstance(eval_section, dict) else {}
+    use_hsp = bool(hsp_counting and section.get("hsp_counting", True))
+    locked = str(section.get("locked_conf_from") or locked_conf_from)
+
     commands: list[dict[str, Any]] = []
     for role in TRAY_EVAL_ROLES:
         if role == "test":
@@ -106,9 +179,14 @@ def build_tray_eval_commands(
                 splits_dir=splits_dir,
             )
             out = tray_eval_out_path(reports_dir=reports_dir, phase=phase, role=role)
+            hsp_paths = (
+                hsp_transfer_paths(reports_dir, phase=phase, role=role, tray_key=None)
+                if use_hsp
+                else None
+            )
             argv = build_post_train_eval_argv(
                 recorded_weights=weights,
-                eval_out=str(out),
+                eval_out=str(hsp_paths["eval"] if hsp_paths else out),
                 manifest=manifest,
                 default_dataset_name=default_dataset_name,
                 dataset_name=dataset_name,
@@ -118,6 +196,8 @@ def build_tray_eval_commands(
                 eval_section=eval_section,
                 train_imgsz=train_imgsz,
             )
+            if use_hsp and hsp_paths is not None:
+                argv = _append_hsp_export_argv(argv, paths=hsp_paths, locked_conf_from=locked)
             commands.append(
                 {
                     "phase": phase,
@@ -125,6 +205,7 @@ def build_tray_eval_commands(
                     "split_file": split_file,
                     "out": str(out),
                     "argv": argv,
+                    "hsp_paths": {k: str(v) for k, v in hsp_paths.items()} if hsp_paths else None,
                 }
             )
             continue
@@ -142,9 +223,14 @@ def build_tray_eval_commands(
                 role=role,
                 tray_key=tray_key,
             )
+            hsp_paths = (
+                hsp_transfer_paths(reports_dir, phase=phase, role=role, tray_key=tray_key)
+                if use_hsp
+                else None
+            )
             argv = build_post_train_eval_argv(
                 recorded_weights=weights,
-                eval_out=str(out),
+                eval_out=str(hsp_paths["eval"] if hsp_paths else out),
                 manifest=manifest,
                 default_dataset_name=default_dataset_name,
                 dataset_name=dataset_name,
@@ -154,6 +240,8 @@ def build_tray_eval_commands(
                 eval_section=eval_section,
                 train_imgsz=train_imgsz,
             )
+            if use_hsp and hsp_paths is not None:
+                argv = _append_hsp_export_argv(argv, paths=hsp_paths, locked_conf_from=locked)
             commands.append(
                 {
                     "phase": phase,
@@ -162,13 +250,14 @@ def build_tray_eval_commands(
                     "split_file": split_file,
                     "out": str(out),
                     "argv": argv,
+                    "hsp_paths": {k: str(v) for k, v in hsp_paths.items()} if hsp_paths else None,
                 }
             )
     return commands
 
 
 def paths_from_tray_eval_commands(commands: list[dict[str, Any]]) -> dict[str, Any]:
-    """Map role / tray_key → eval JSON path for finetune metadata."""
+    """Map role / tray_key → eval JSON path for finetune metadata (dry-run)."""
     paths: dict[str, Any] = {}
     for cmd in commands:
         role = str(cmd["role"])
@@ -199,12 +288,12 @@ def build_tray_eval_plan(
     yolo_data_yaml: str | None,
     eval_section: dict[str, Any] | None,
     train_imgsz: int | None,
+    locked_conf_from: str = DEFAULT_LOCKED_CONF_FROM,
+    hsp_counting: bool = True,
 ) -> dict[str, Any]:
     if not enabled:
         return {"enabled": False, "tray_keys": tray_keys}
-    before_cmds = build_tray_eval_commands(
-        phase="before",
-        weights=base_weights,
+    kwargs = dict(
         tray_keys=tray_keys,
         reports_dir=reports_dir,
         domains_dir=domains_dir,
@@ -216,25 +305,16 @@ def build_tray_eval_plan(
         yolo_data_yaml=yolo_data_yaml,
         eval_section=eval_section,
         train_imgsz=train_imgsz,
+        locked_conf_from=locked_conf_from,
+        hsp_counting=hsp_counting,
     )
-    after_cmds = build_tray_eval_commands(
-        phase="after",
-        weights=after_weights,
-        tray_keys=tray_keys,
-        reports_dir=reports_dir,
-        domains_dir=domains_dir,
-        splits_dir=splits_dir,
-        manifest=manifest,
-        default_dataset_name=default_dataset_name,
-        dataset_name=dataset_name,
-        dataset_root=dataset_root,
-        yolo_data_yaml=yolo_data_yaml,
-        eval_section=eval_section,
-        train_imgsz=train_imgsz,
-    )
+    before_cmds = build_tray_eval_commands(phase="before", weights=base_weights, **kwargs)
+    after_cmds = build_tray_eval_commands(phase="after", weights=after_weights, **kwargs)
     return {
         "enabled": True,
         "tray_keys": tray_keys,
+        "hsp_counting": hsp_counting,
+        "locked_conf_from": locked_conf_from,
         "domains_dir": str(domains_dir),
         "splits_dir": str(splits_dir),
         "before": {"weights": base_weights, "commands": before_cmds},
@@ -246,13 +326,15 @@ def run_tray_eval_commands(
     commands: list[dict[str, Any]],
     *,
     eval_main: Any,
+    repo_root: Path | None = None,
     skip_missing_splits: bool = True,
 ) -> tuple[dict[str, Any], list[int], list[str]]:
     """
-    Run eval.py for each planned command.
+    Run eval.py (+ error_analysis when HSP paths set) for each planned command.
 
-    Returns (paths dict, return codes, warnings).
+    Returns (paths dict with count_mae, return codes, warnings).
     """
+    rr = (repo_root or Path.cwd()).resolve()
     paths: dict[str, Any] = {}
     rcs: list[int] = []
     warnings: list[str] = []
@@ -268,14 +350,40 @@ def run_tray_eval_commands(
         argv = list(cmd["argv"])
         rc = int(eval_main(argv))
         rcs.append(rc)
-        out = str(cmd["out"])
+
         role = str(cmd["role"])
         tray_key = cmd.get("tray_key")
+        eval_out = Path(str(cmd.get("hsp_paths", {}).get("eval") if cmd.get("hsp_paths") else cmd["out"]))
+        if not eval_out.is_absolute():
+            eval_out = (rr / eval_out).resolve()
+
+        metrics: dict[str, Any] = {"eval_json": str(eval_out), "count_mae": None}
+        hsp_raw = cmd.get("hsp_paths")
+        if isinstance(hsp_raw, dict) and hsp_raw:
+            hsp_paths = {k: Path(str(v)) for k, v in hsp_raw.items()}
+            locked = ""
+            for i, tok in enumerate(argv):
+                if tok == "--locked-conf-from" and i + 1 < len(argv):
+                    locked = argv[i + 1]
+                    break
+            if rc == 0 and hsp_paths.get("gt", Path()).is_file() and locked:
+                err_rc = _run_error_analysis(
+                    repo_root=rr,
+                    paths=hsp_paths,
+                    locked_conf_from=locked,
+                )
+                rcs.append(err_rc)
+                if err_rc != 0:
+                    warnings.append(f"error_analysis failed for {role} {tray_key or ''}: rc={err_rc}")
+            metrics = _record_role_metrics(eval_out=eval_out, hsp_paths=hsp_paths)
+        else:
+            metrics.update(metrics_from_eval_json(eval_out))
+
         if tray_key:
             bucket = paths.setdefault(str(tray_key), {})
             assert isinstance(bucket, dict)
-            bucket[role] = out
+            bucket[role] = metrics
         else:
-            paths[role] = out
+            paths[role] = metrics
 
     return paths, rcs, warnings

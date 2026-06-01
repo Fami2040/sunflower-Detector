@@ -1,5 +1,9 @@
 {
   "extends": "configs/experiments/finetune_tray.json",
   "epochs": 25,
-  "notes": "Stage 1: frozen backbone (see configs/transfer/finetune_stage1.yaml). Run stage 2 with --stage 2 and --base-weights from stage 1 best.pt."
+  "imgsz": 1280,
+  "batch": 1,
+  "patience": 50,
+  "lr0": 0.001,
+  "notes": "Stage 1: frozen backbone (freeze policy in configs/transfer/finetune_stage1.yaml: freeze_backbone=true, lr=0.001, epochs=25). Run stage 2 with finetune_tray_stage2.json and stage-1 best.pt."
 }

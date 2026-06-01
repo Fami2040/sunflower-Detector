@@ -33,6 +33,31 @@ class FinetuneTrayEvalTests(unittest.TestCase):
             self.assertIn("--device", tray_cmd["argv"])
             self.assertIn("cpu", tray_cmd["argv"])
 
+    def test_build_commands_hsp_locked_conf(self) -> None:
+        from harchoc.finetune_tray_eval import build_tray_eval_commands
+
+        with tempfile.TemporaryDirectory() as td:
+            cmds = build_tray_eval_commands(
+                phase="after",
+                weights="w.pt",
+                tray_keys=["t1"],
+                reports_dir=Path(td),
+                domains_dir=Path("data/domains"),
+                splits_dir=Path("data/splits"),
+                manifest="data/manifest.json",
+                default_dataset_name="sunflower",
+                dataset_name=None,
+                dataset_root=None,
+                yolo_data_yaml=None,
+                eval_section={},
+                train_imgsz=640,
+                locked_conf_from="reports/hsp/threshold_val.json",
+                hsp_counting=True,
+            )
+            argv = next(c for c in cmds if c["role"] == "tray")["argv"]
+            self.assertIn("--locked-conf-from", argv)
+            self.assertIn("threshold_val.json", " ".join(argv))
+
 
 if __name__ == "__main__":
     unittest.main()

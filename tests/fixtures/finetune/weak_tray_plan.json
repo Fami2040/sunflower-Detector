@@ -1,0 +1,20 @@
+{
+  "status": "ok",
+  "source": "/root/development/harchoc/sunflower-Detector/reports/domains/domain_count_mae.json",
+  "global_mae_reference": 61.3,
+  "n_trays_ranked": 41,
+  "recommended_tray_keys": [
+    "3a5-9"
+  ],
+  "top_trays": [
+    {
+      "tray_key": "3a5-9",
+      "count_mae": 243.5,
+      "delta_vs_global": 182.2,
+      "mAP50": 0.32769190069918114
+    }
+  ],
+  "finetune_hint": "mamba run -n harchoc python scripts/finetune.py --tray-key 3a5-9 --train-mode tray_adapt --dataset-root $DATASET_ROOT",
+  "docs": "docs/FINETUNE_WEAK_TRAYS.md",
+  "schema_version": "weak_tray_plan.v1"
+}

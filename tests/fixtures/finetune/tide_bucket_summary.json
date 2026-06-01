@@ -1,0 +1,7 @@
+{
+  "method": "tide_bucket_count_proxy.v1",
+  "buckets": {"Miss": 10, "Loc": 40, "Bkg": 35, "Cls": 5, "Dupe": 2},
+  "n_errors": 92,
+  "dominant_bucket": "Loc",
+  "loc_plus_bkg_over_cls_ratio": 15.0
+}

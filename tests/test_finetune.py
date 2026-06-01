@@ -156,6 +156,35 @@ class FinetuneTests(unittest.TestCase):
             self.assertTrue(train_doc.get("freeze_backbone"))
             self.assertEqual(train_doc.get("unfreeze_epoch"), 10)
 
+    def test_dry_run_includes_pipeline_fields(self) -> None:
+        from scripts.finetune import main
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(__file__).resolve().parents[1]
+            weak = repo / "tests/fixtures/finetune/weak_tray_plan.json"
+            tide = repo / "tests/fixtures/finetune/tide_bucket_summary.json"
+            out = Path(td) / "finetune.json"
+            rc = main(
+                [
+                    "--dry-run",
+                    "--out",
+                    str(out),
+                    "--from-weak-plan",
+                    "--weak-plan",
+                    str(weak),
+                    "--tide-summary",
+                    str(tide),
+                    "--tray-key",
+                    "tray-a",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            obj = json.loads(out.read_text(encoding="utf-8"))
+            self.assertIn("tide_guidance", obj)
+            self.assertIn("weak_tray_plan", obj)
+            plan = obj.get("tray_eval_plan") or {}
+            self.assertTrue(plan.get("hsp_counting"))
+
     def test_stage2_dry_run_uses_stage_configs(self) -> None:
         from scripts.finetune import main
 

@@ -15,6 +15,13 @@ from harchoc.aug_smoke_train import (
     resolve_aug_smoke_aug_config,
     resolve_aug_smoke_train_config_path,
 )
+from harchoc.finetune_pipeline import (
+    build_finetune_queue_argv,
+    finetune_queue_out_path,
+    finetune_train_config_for_stage,
+    finetune_transfer_config_for_stage,
+    resolve_weak_plan_rel,
+)
 
 DEFAULT_EVAL_OUT_DIR = "reports/gpu_queue/eval"
 DEFAULT_SUMMARIES_ROOT = "reports/gpu_queue/summaries"
@@ -57,8 +64,41 @@ def _is_rtdetr_train_job(job: dict[str, Any], *, repo_root: Path) -> bool:
     return is_rtdetr_model(str(merged.get("model") or ""))
 
 
+def _job_use_mamba(job: dict[str, Any], *, default: bool = True) -> bool:
+    if "mamba" in job:
+        return bool(job["mamba"])
+    return default
+
+
 def validate_job_files(job: dict[str, Any], repo_root: Path) -> None:
     kind = str(job.get("kind") or "")
+    if kind == "shell":
+        argv = job.get("argv") or job.get("command")
+        if not argv:
+            raise ValueError(f"job {job.get('id')}: shell requires argv or command")
+    if kind == "domain_tray_audit_refresh":
+        if not str(job.get("catalog") or "").strip():
+            raise ValueError(f"job {job.get('id')}: domain_tray_audit_refresh requires catalog")
+    if kind == "head_roi_eval":
+        bw = str(job.get("weights") or "models/best2.pt")
+        if job.get("weights") and not (repo_root / bw).is_file():
+            raise FileNotFoundError(f"job {job.get('id')}: missing weights {bw}")
+    if kind == "finetune_tray":
+        if not str(job.get("tray_key") or "").strip():
+            raise ValueError(f"job {job.get('id')}: finetune_tray requires tray_key")
+        stage = job.get("stage")
+        if stage is not None and int(stage) not in (1, 2):
+            raise ValueError(f"job {job.get('id')}: finetune_tray stage must be 1 or 2")
+        bw = str(job.get("base_weights") or "models/best2.pt")
+        if job.get("base_weights") and not (repo_root / bw).is_file():
+            raise FileNotFoundError(f"job {job.get('id')}: missing base_weights {bw}")
+        st = int(job.get("stage") or 1)
+        tc = finetune_train_config_for_stage(job, st)
+        if not (repo_root / tc).is_file():
+            raise FileNotFoundError(f"job {job.get('id')}: missing train_config {tc}")
+        xfer = finetune_transfer_config_for_stage(job, st)
+        if not (repo_root / xfer).is_file():
+            raise FileNotFoundError(f"job {job.get('id')}: missing transfer_config {xfer}")
     if kind in ("aug_smoke", "train_compare", "vram_probe", "rtdetr_smoke", "amp_smoke", "sg_smoke", "aug_sweep_15", "aug_sweep_100"):
         cfg = job.get("train_config")
         if cfg and not (repo_root / str(cfg)).is_file():
@@ -133,7 +173,7 @@ def _build_ultralytics_smoke_stages(
             {
                 "stage_id": "eval_test",
                 "internal": "smoke_hsp_eval",
-                "mamba": False,
+                "mamba": True,
                 "meta": {
                     "run_name": name,
                     "train_config": cfg,
@@ -524,6 +564,56 @@ def build_job_stages(
         ]
         return stages
 
+    if kind == "finetune_tray":
+        job_id = str(job.get("id") or "finetune_tray")
+        finetune_argv = build_finetune_queue_argv(
+            job,
+            repo_root=repo_root,
+            defaults=defs,
+            dry_run=False,
+        )
+        finetune_dry_argv = build_finetune_queue_argv(
+            job,
+            repo_root=repo_root,
+            defaults=defs,
+            dry_run=True,
+        )
+        out_path = str(
+            job.get("out")
+            or job.get("finetune_out")
+            or defs.get("finetune_out")
+            or finetune_queue_out_path(job_id)
+        )
+        stages[0] = {
+            "stage_id": "dry_run",
+            "argv": _script_argv("finetune.py", finetune_dry_argv),
+            "mamba": True,
+        }
+        stages.append(
+            {
+                "stage_id": "finetune",
+                "argv": _script_argv("finetune.py", finetune_argv),
+                "mamba": True,
+            }
+        )
+        stages.append(
+            {
+                "stage_id": "summary",
+                "internal": "finetune_summary",
+                "mamba": False,
+                "meta": {
+                    "summary_kind": "finetune_tray",
+                    "finetune_out": out_path,
+                    "tray_key": job.get("tray_key"),
+                    "stage": job.get("stage"),
+                    "summary_path": str(
+                        job.get("summary_path") or out_path
+                    ),
+                },
+            }
+        )
+        return stages
+
     if kind == "cv_fold_train":
         folds = int(job.get("folds") or 5)
         splits_out = str(job.get("splits_out") or "reports/cv_folds")
@@ -554,5 +644,127 @@ def build_job_stages(
             )
         stages.append({"stage_id": "summary", "internal": "job_summary", "mamba": False, "meta": {"summary_kind": "generic"}})
         return stages
+
+    if kind == "domain_tray_audit_refresh":
+        catalog = str(job.get("catalog") or "reports/domains/catalog.json")
+        domains_dir = str(job.get("domains_dir") or "data/domains")
+        domain_eval = str(job.get("domain_eval") or "reports/domains/domain_eval.json")
+        count_mae = str(job.get("count_mae") or "reports/domains/domain_count_mae.json")
+        weak_out = resolve_weak_plan_rel(job, defaults=defs, prefer_out=True)
+        top_k = int(job.get("top_k") or 3)
+        global_mae = job.get("global_mae")
+        device = str(job.get("merge_device") or job.get("device") or "0")
+        use_mamba = bool(job.get("mamba", False))
+        merge_mamba = bool(job.get("merge_mamba", True))
+        return [
+            {
+                "stage_id": "write_domain_splits",
+                "argv": _script_argv(
+                    "eval_domains.py",
+                    [
+                        "--catalog",
+                        catalog,
+                        "--write-domain-splits",
+                        "--domains-dir",
+                        domains_dir,
+                    ],
+                ),
+                "mamba": use_mamba,
+            },
+            {"stage_id": "gpu_wait", "internal": "gpu_wait", "mamba": False},
+            {
+                "stage_id": "merge_tray_count_mae",
+                "argv": _script_argv(
+                    "eval_domains.py",
+                    [
+                        "--merge-tray-count-mae",
+                        "--device",
+                        device,
+                        "--locked-conf-from",
+                        locked,
+                        "--catalog",
+                        catalog,
+                        "--out",
+                        domain_eval,
+                        "--count-mae-sidecar",
+                        count_mae,
+                    ],
+                ),
+                "mamba": merge_mamba,
+            },
+            {
+                "stage_id": "domain_tray_audit",
+                "argv": _script_argv(
+                    "experiment.py",
+                    [
+                        "domain-tray-audit",
+                        "--out",
+                        weak_out,
+                        "--count-mae",
+                        count_mae,
+                        "--domain-eval",
+                        domain_eval,
+                        "--top-k",
+                        str(top_k),
+                    ]
+                    + (["--global-mae", str(global_mae)] if global_mae is not None else []),
+                ),
+                "mamba": use_mamba,
+            },
+        ]
+
+    if kind == "head_roi_eval":
+        split_file = str(job.get("split_file") or "data/splits/test.txt")
+        weights = str(job.get("weights") or "models/best2.pt")
+        device = str(job.get("device") or "0")
+        out_path = str(job.get("out") or "reports/hsp/head_roi_eval_smoke.json")
+        use_mamba = _job_use_mamba(job, default=True)
+        tail = [
+            "--split-file",
+            split_file,
+            "--weights",
+            weights,
+            "--device",
+            device,
+            "--locked-conf-from",
+            locked,
+            "--out",
+            out_path,
+        ]
+        if job.get("export_run_name"):
+            tail.extend(["--export-run-name", str(job["export_run_name"])])
+        if job.get("gt_json"):
+            tail.extend(["--gt-json", str(job["gt_json"])])
+        if job.get("preds_json"):
+            tail.extend(["--preds-json", str(job["preds_json"])])
+        if job.get("max_det") is not None:
+            tail.extend(["--max-det", str(int(job["max_det"]))])
+        return [
+            {"stage_id": "gpu_wait", "internal": "gpu_wait", "mamba": False},
+            {
+                "stage_id": "eval",
+                "argv": _script_argv("head_roi_eval.py", tail),
+                "mamba": use_mamba,
+            },
+        ]
+
+    if kind == "shell":
+        raw_argv = list(job.get("argv") or job.get("command") or [])
+        if not raw_argv:
+            raise ValueError(f"shell job {job.get('id')}: argv or command required")
+        script = str(raw_argv[0])
+        tail = [str(a) for a in raw_argv[1:]]
+        use_mamba = _job_use_mamba(job, default=True)
+        stage_list: list[dict[str, Any]] = []
+        if not bool(job.get("eval_only")):
+            stage_list.append({"stage_id": "gpu_wait", "internal": "gpu_wait", "mamba": False})
+        stage_list.append(
+            {
+                "stage_id": "run",
+                "argv": _script_argv(script, tail),
+                "mamba": use_mamba,
+            }
+        )
+        return stage_list
 
     raise ValueError(f"unsupported job kind: {kind!r}")

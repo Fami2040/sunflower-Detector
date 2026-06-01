@@ -8,6 +8,23 @@ from typing import Any
 
 import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
 
+from harchoc.finetune_pipeline import (
+    DEFAULT_CANONICAL_GATE_PCT,
+    DEFAULT_DOMAIN_COUNT_MAE_PATH,
+    DEFAULT_DOMAIN_EVAL_PATH,
+    DEFAULT_GLOBAL_MAE_REF,
+    DEFAULT_LOCKED_CONF_FROM,
+    DEFAULT_TIDE_SUMMARY_PATH,
+    DEFAULT_WEAK_PLAN_PATH,
+    apply_debug_transfer_overrides,
+    build_finetune_outcome,
+    ensure_weak_tray_plan,
+    finetune_tide_guidance,
+    load_weak_tray_plan,
+    merge_finetune_eval_section,
+    resolve_repo_path,
+    tray_keys_from_weak_plan,
+)
 from harchoc.finetune_tray_eval import (
     build_tray_eval_plan,
     paths_from_tray_eval_commands,
@@ -116,6 +133,44 @@ def _apply_split_plan_to_train_doc(
     train_doc["val_split_file"] = str(split_plan.val_split_file)
 
 
+def _resolve_planning_context(
+    *,
+    repo_root: Path,
+    args: argparse.Namespace,
+    explicit_tray_keys: list[str],
+) -> tuple[list[str], dict[str, Any], dict[str, Any]]:
+    """Weak-tray plan + TIDE guidance for finetune planning."""
+    weak_plan_path = resolve_repo_path(repo_root, str(args.weak_plan))
+    count_mae_path = resolve_repo_path(repo_root, str(args.domain_count_mae))
+    domain_eval_path = resolve_repo_path(repo_root, str(args.domain_eval))
+    global_mae = float(args.global_mae_ref)
+
+    weak_plan = load_weak_tray_plan(weak_plan_path)
+    if bool(args.audit_trays) or (
+        bool(args.from_weak_plan) and weak_plan.get("status") in ("missing", "pending")
+    ):
+        weak_plan = ensure_weak_tray_plan(
+            repo_root=repo_root,
+            weak_plan_path=weak_plan_path,
+            count_mae_path=count_mae_path,
+            domain_eval_path=domain_eval_path,
+            global_mae=global_mae,
+            top_k=int(args.weak_plan_top_k),
+            write=bool(args.audit_trays) or not args.dry_run,
+        )
+
+    tray_keys = list(explicit_tray_keys)
+    if bool(args.from_weak_plan) and not tray_keys:
+        tray_keys = tray_keys_from_weak_plan(weak_plan, top_n=int(args.weak_plan_top_k))
+
+    tide_path = resolve_repo_path(repo_root, str(args.tide_summary))
+    tide = finetune_tide_guidance(
+        tide_path if tide_path.is_file() else None,
+        tray_key=tray_keys[0] if tray_keys else None,
+    )
+    return tray_keys, weak_plan, tide
+
+
 def _tray_eval_context(
     *,
     repo_root: Path,
@@ -123,9 +178,10 @@ def _tray_eval_context(
     transfer: dict[str, Any],
     train_doc: dict[str, Any] | None,
     dataset_root: str | None,
+    tray_keys_override: list[str] | None = None,
 ) -> dict[str, Any]:
     catalog_path = _resolve_catalog_path(str(args.tray_catalog), repo_root)
-    tray_keys = resolve_tray_holdout_keys(
+    tray_keys = list(tray_keys_override) if tray_keys_override else resolve_tray_holdout_keys(
         cli_tray_keys=list(args.tray_key) if args.tray_key else None,
         transfer=transfer,
         catalog_path=catalog_path,
@@ -133,9 +189,11 @@ def _tray_eval_context(
     if not tray_keys and bool(args.tray_eval):
         tray_keys = ["_example"]
 
-    eval_section = train_doc.get("eval") if isinstance(train_doc, dict) else None
-    if not isinstance(eval_section, dict):
-        eval_section = {}
+    eval_section = merge_finetune_eval_section(
+        train_doc.get("eval") if isinstance(train_doc, dict) else None,
+        locked_conf_from=str(args.locked_conf_from),
+        hsp_counting=bool(args.hsp_counting),
+    )
 
     domains_dir = Path(str(args.domains_dir))
     if not domains_dir.is_absolute():
@@ -159,6 +217,8 @@ def _tray_eval_context(
         "reports_dir": reports_dir,
         "catalog_path": catalog_path,
         "dataset_root": dataset_root,
+        "locked_conf_from": str(args.locked_conf_from),
+        "hsp_counting": bool(args.hsp_counting),
     }
 
 
@@ -222,6 +282,65 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Train split policy: tray_adapt (default when --tray-key set), lofo_pool, or canonical.",
     )
+    p.add_argument(
+        "--from-weak-plan",
+        action="store_true",
+        help="Use recommended_tray_keys from --weak-plan when --tray-key omitted.",
+    )
+    p.add_argument(
+        "--weak-plan",
+        default=DEFAULT_WEAK_PLAN_PATH,
+        help="weak_tray_plan.v1 JSON from domain-tray-audit.",
+    )
+    p.add_argument(
+        "--audit-trays",
+        action="store_true",
+        help="Refresh weak_tray_plan from domain_count_mae / domain_eval before run.",
+    )
+    p.add_argument(
+        "--domain-count-mae",
+        default=DEFAULT_DOMAIN_COUNT_MAE_PATH,
+        help="Per-tray MAE artifact for --audit-trays.",
+    )
+    p.add_argument(
+        "--domain-eval",
+        default=DEFAULT_DOMAIN_EVAL_PATH,
+        help="Fallback per-tray metrics for --audit-trays.",
+    )
+    p.add_argument("--weak-plan-top-k", type=int, default=1, help="Trays to take from weak plan.")
+    p.add_argument(
+        "--locked-conf-from",
+        default=DEFAULT_LOCKED_CONF_FROM,
+        help="Val threshold JSON for tray/canonical counting MAE.",
+    )
+    p.add_argument(
+        "--global-mae-ref",
+        type=float,
+        default=DEFAULT_GLOBAL_MAE_REF,
+        help="Canonical test MAE reference for gate (default 61.3).",
+    )
+    p.add_argument(
+        "--canonical-gate-pct",
+        type=float,
+        default=DEFAULT_CANONICAL_GATE_PCT,
+        help="Max fractional regression on canonical test MAE (default 0.10).",
+    )
+    p.add_argument(
+        "--tide-summary",
+        default=DEFAULT_TIDE_SUMMARY_PATH,
+        help="Global TIDE bucket summary for train_mode hints.",
+    )
+    p.add_argument(
+        "--hsp-counting",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Tray eval: export gt/preds + error_analysis @ locked conf (default on).",
+    )
+    p.add_argument(
+        "--debug",
+        action="store_true",
+        help="Debug run: 2 epochs, low patience (for pipeline smoke).",
+    )
     args = p.parse_args(argv)
 
     if args.stage == 1:
@@ -257,23 +376,42 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         from harchoc.train_kwargs import resolve_freeze_policy
 
+        if bool(args.debug):
+            transfer_preview = apply_debug_transfer_overrides(transfer_preview)
         _, freeze_policy, _ = resolve_freeze_policy(transfer_preview)
+        explicit_keys = _explicit_tray_keys(
+            cli_tray_keys=list(args.tray_key) if args.tray_key else [],
+            transfer=transfer_preview,
+        )
+        planned_keys, weak_plan, tide_guidance = _resolve_planning_context(
+            repo_root=repo_root,
+            args=args,
+            explicit_tray_keys=explicit_keys,
+        )
+        if planned_keys:
+            explicit_keys = planned_keys
         ctx = _tray_eval_context(
             repo_root=repo_root,
             args=args,
             transfer=transfer_preview,
             train_doc=train_doc_preview,
             dataset_root=getattr(args, "dataset_root", None),
-        )
-        explicit_keys = _explicit_tray_keys(
-            cli_tray_keys=list(args.tray_key) if args.tray_key else [],
-            transfer=transfer_preview,
+            tray_keys_override=explicit_keys or None,
         )
         train_mode = _effective_train_mode(
             cli_mode=args.train_mode,
             transfer=transfer_preview,
             explicit_tray_keys=explicit_keys,
         )
+        if (
+            tide_guidance.get("recommended_train_mode") == "defer_finetune"
+            and train_mode == "tray_adapt"
+            and not args.train_mode
+        ):
+            print(
+                f"# TIDE hint: {tide_guidance.get('notes')} "
+                f"(override with explicit --train-mode tray_adapt)"
+            )
         split_plan = None
         split_plan_dict: dict[str, Any] | None = None
         if train_mode != "canonical" and explicit_keys:
@@ -312,40 +450,57 @@ def main(argv: list[str] | None = None) -> int:
             yolo_data_yaml=getattr(args, "yolo_data_yaml", None),
             eval_section=ctx["eval_section"],
             train_imgsz=ctx["train_imgsz"],
+            locked_conf_from=ctx["locked_conf_from"],
+            hsp_counting=ctx["hsp_counting"],
         )
-        out_path = write_json(
-            args.out,
-            build_versioned_dry_run_payload(
-                script="finetune",
-                schema_version="finetune_run.v1",
-                out=args.out,
-                base_weights=args.base_weights,
-                config=str(exp_path),
-                transfer_config=str(transfer_path),
-                train_mode=train_mode,
-                split_plan=split_plan_dict,
-                train_split_file=train_doc_preview.get("train_split_file"),
-                val_split_file=train_doc_preview.get("val_split_file"),
-                transfer_policy=freeze_policy,
-                tray_eval_plan=tray_plan,
-                tray_eval_before=paths_from_tray_eval_commands(
-                    tray_plan.get("before", {}).get("commands", [])
-                )
-                if tray_plan.get("enabled")
-                else None,
-                tray_eval_after=paths_from_tray_eval_commands(
-                    tray_plan.get("after", {}).get("commands", [])
-                )
-                if tray_plan.get("enabled")
-                else None,
-            ),
+        dry_payload = build_versioned_dry_run_payload(
+            script="finetune",
+            schema_version="finetune_run.v1",
+            out=args.out,
+            base_weights=args.base_weights,
+            config=str(exp_path),
+            transfer_config=str(transfer_path),
+            train_mode=train_mode,
+            split_plan=split_plan_dict,
+            train_split_file=train_doc_preview.get("train_split_file"),
+            val_split_file=train_doc_preview.get("val_split_file"),
+            transfer_policy=freeze_policy,
+            tray_eval_plan=tray_plan,
+            tray_eval_before=paths_from_tray_eval_commands(
+                tray_plan.get("before", {}).get("commands", [])
+            )
+            if tray_plan.get("enabled")
+            else None,
+            tray_eval_after=paths_from_tray_eval_commands(
+                tray_plan.get("after", {}).get("commands", [])
+            )
+            if tray_plan.get("enabled")
+            else None,
         )
+        dry_payload["weak_tray_plan"] = weak_plan
+        dry_payload["tide_guidance"] = tide_guidance
+        dry_payload["debug"] = bool(args.debug)
+        dry_payload["hsp_counting"] = bool(args.hsp_counting)
+        out_path = write_json(args.out, dry_payload)
         print(f"Wrote {out_path}")
         return 0
 
     spec = resolve_dataset_args(args)
     require_existing_dir(spec.root, what="Dataset root", hint="Export DATASET_ROOT=/path/to/extracted/dataset")
     transfer = transfer_preview if transfer_preview else _load_transfer_yaml(transfer_path)
+    if bool(args.debug):
+        transfer = apply_debug_transfer_overrides(transfer)
+    explicit_keys = _explicit_tray_keys(
+        cli_tray_keys=list(args.tray_key) if args.tray_key else [],
+        transfer=transfer,
+    )
+    planned_keys, weak_plan, tide_guidance = _resolve_planning_context(
+        repo_root=repo_root,
+        args=args,
+        explicit_tray_keys=explicit_keys,
+    )
+    if planned_keys:
+        explicit_keys = planned_keys
     train_doc = _merge_finetune_train_config(
         repo_root=repo_root,
         base_weights=str(args.base_weights),
@@ -359,16 +514,9 @@ def main(argv: list[str] | None = None) -> int:
         transfer=transfer,
         train_doc=train_doc,
         dataset_root=str(spec.root),
+        tray_keys_override=explicit_keys or None,
     )
-    tray_keys_live = resolve_tray_holdout_keys(
-        cli_tray_keys=list(args.tray_key) if args.tray_key else None,
-        transfer=transfer,
-        catalog_path=ctx["catalog_path"],
-    )
-    explicit_keys = _explicit_tray_keys(
-        cli_tray_keys=list(args.tray_key) if args.tray_key else [],
-        transfer=transfer,
-    )
+    tray_keys_live = ctx["tray_keys"]
     train_mode = _effective_train_mode(
         cli_mode=args.train_mode,
         transfer=transfer,
@@ -420,7 +568,11 @@ def main(argv: list[str] | None = None) -> int:
             eval_section=ctx["eval_section"],
             train_imgsz=ctx["train_imgsz"],
         )
-        paths, phase_rcs, warns = run_tray_eval_commands(commands, eval_main=eval_main)
+        paths, phase_rcs, warns = run_tray_eval_commands(
+            commands,
+            eval_main=eval_main,
+            repo_root=repo_root,
+        )
         eval_rcs.extend(phase_rcs)
         tray_eval_warnings.extend(warns)
         return paths or None
@@ -465,6 +617,16 @@ def main(argv: list[str] | None = None) -> int:
         if tmp_path:
             Path(tmp_path).unlink(missing_ok=True)
 
+    finetune_outcome = build_finetune_outcome(
+        tray_keys=tray_keys_live,
+        tray_eval_before=tray_eval_before,
+        tray_eval_after=tray_eval_after,
+        repo_root=repo_root,
+        global_mae=float(args.global_mae_ref),
+        gate_pct=float(args.canonical_gate_pct),
+        weak_plan=weak_plan,
+        tide_guidance=tide_guidance,
+    )
     payload = with_schema_version(
         {
             "status": "ok" if rc == 0 and not any(r != 0 for r in eval_rcs) else "failed",
@@ -483,10 +645,16 @@ def main(argv: list[str] | None = None) -> int:
             "train_split_file": train_doc.get("train_split_file"),
             "val_split_file": train_doc.get("val_split_file"),
             "tray_eval_enabled": bool(args.tray_eval),
+            "hsp_counting": bool(args.hsp_counting),
+            "locked_conf_from": str(args.locked_conf_from),
             "tray_keys": tray_keys_live,
             "tray_eval_before": tray_eval_before,
             "tray_eval_after": tray_eval_after,
             "tray_eval_warnings": tray_eval_warnings or None,
+            "weak_tray_plan": weak_plan,
+            "tide_guidance": tide_guidance,
+            "finetune_outcome": finetune_outcome,
+            "debug": bool(args.debug),
             "train_returncode": rc,
             "tray_eval_returncodes": eval_rcs or None,
             "run_dir": str(run_dir.resolve()),

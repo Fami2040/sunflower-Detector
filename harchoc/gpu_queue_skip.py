@@ -156,14 +156,59 @@ def _summary_is_verified_complete(
 
 def should_skip_job(job: dict[str, Any], *, repo_root: Path) -> tuple[bool, str]:
     kind = str(job.get("kind") or "")
+    if kind == "finetune_tray" and job.get("skip_if_missing_plan"):
+        from harchoc.finetune_pipeline import (
+            resolve_repo_path,
+            resolve_weak_plan_rel,
+            weak_tray_plan_actionable,
+        )
+
+        wp_rel = resolve_weak_plan_rel(job)
+        if not weak_tray_plan_actionable(resolve_repo_path(repo_root, wp_rel)):
+            return True, f"weak_tray_plan missing or empty: {wp_rel}"
+    if kind == "finetune_tray":
+        from harchoc.finetune_pipeline import finetune_queue_out_path
+
+        job_id = str(job.get("id") or "finetune_tray")
+        skip_if = job.get("skip_if") or {}
+        out_rel = str(
+            skip_if.get("finetune_out")
+            or skip_if.get("summary")
+            or job.get("out")
+            or finetune_queue_out_path(job_id)
+        )
+        out_p = repo_root / out_rel
+        if out_p.is_file():
+            try:
+                obj = load_json_dict(out_p)
+                if obj.get("status") == "ok" and obj.get("finetune_outcome"):
+                    return True, f"finetune complete: {out_rel}"
+            except Exception:
+                pass
     if kind == "zoo_matrix_train":
         train_out = str(job.get("out") or "reports/hsp/matrix_train.json")
         matrix_group = str(job.get("matrix_group") or "")
-        ok, reason = matrix_train_verified(repo_root, train_out, matrix_group)
+        skip_if = job.get("skip_if") or {}
+        accept_skipped = skip_if.get("accept_skipped_no_weights")
+        ok, reason = matrix_train_verified(
+            repo_root,
+            train_out,
+            matrix_group,
+            accept_skipped_no_weights=(
+                bool(accept_skipped) if accept_skipped is not None else None
+            ),
+        )
         if ok:
             return True, reason
 
     skip_if = job.get("skip_if") or {}
+    weak_plan_skip = skip_if.get("weak_plan")
+    if weak_plan_skip:
+        from harchoc.finetune_pipeline import resolve_repo_path, weak_tray_plan_actionable
+
+        wp_rel = str(weak_plan_skip)
+        if weak_tray_plan_actionable(resolve_repo_path(repo_root, wp_rel)):
+            return True, f"weak_tray_plan present: {wp_rel}"
     summary = skip_if.get("summary") or job_summary_path(job)
     if summary:
         sp = repo_root / str(summary)
