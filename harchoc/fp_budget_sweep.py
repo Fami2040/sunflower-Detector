@@ -261,12 +261,14 @@ def format_fp_budget_manuscript_md(
     title: str | None = None,
 ) -> str:
     """Manuscript-ready markdown: selection modes, constraint grid, pick recommendation."""
-    eval_target = payload.get("eval_target") if isinstance(payload.get("eval_target"), dict) else {}
+    from harchoc.config_coerce import child_dict
+
+    eval_target = child_dict(payload, "eval_target")
     split_role = str(eval_target.get("split_role") or "val")
-    n_images = int((payload.get("images") or {}).get("n") or 0)
-    match = payload.get("match") if isinstance(payload.get("match"), dict) else {}
+    n_images = int(child_dict(payload, "images").get("n") or 0)
+    match = child_dict(payload, "match")
     iou = _row_metric(match, "iou", 0.5)
-    inputs = payload.get("inputs") if isinstance(payload.get("inputs"), dict) else {}
+    inputs = child_dict(payload, "inputs")
     sweep_src = inputs.get("sweep_val") or inputs.get("sweep_from") or "—"
 
     heading = title or f"FP budget constraint sweep ({split_role})"

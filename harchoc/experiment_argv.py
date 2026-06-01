@@ -164,6 +164,65 @@ def argv_for_gradcam(fields: dict[str, Any]) -> list[str]:
     return out
 
 
+def argv_for_figures_repro(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/make_figures.py`` via ``experiment.py figures-repro``."""
+    from harchoc.figures_repro import default_figures_repro_fields
+
+    defaults = default_figures_repro_fields()
+    out: list[str] = []
+    out += _opt("--out-dir", fields.get("out_dir") or defaults["out_dir"])
+    out += _opt("--meta-out", fields.get("meta_out") or defaults["meta_out"])
+    out += _opt(
+        "--split-drift-report",
+        fields.get("split_drift_report") or defaults["split_drift_report"],
+    )
+    out += _opt("--threshold-csv", fields.get("threshold_csv") or defaults["threshold_csv"])
+    out += _opt("--threshold-json", fields.get("threshold_json") or defaults["threshold_json"])
+    if "error_report" in fields:
+        err = str(fields.get("error_report") or "").strip()
+        if err:
+            out += _opt("--error-report", err)
+    else:
+        out += _opt("--error-report", defaults["error_report"])
+    out += _opt("--weights", fields.get("weights"))
+    out += _opt("--panel-size", fields.get("panel_size") or defaults["panel_size"])
+    out += _opt("--figure", fields.get("figure") or defaults["figure"])
+    if fields.get("journal_style") is False:
+        out.append("--no-journal-style")
+    else:
+        out.append("--journal-style")
+    return out
+
+
+def argv_for_finetune(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/finetune.py`` via ``experiment.py finetune-tray``."""
+    out: list[str] = []
+    out += _argv_dataset(fields)
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--base-weights", fields.get("base_weights") or HSP_DETECTION_WEIGHTS)
+    out += _opt("--config", fields.get("config"))
+    out += _opt("--transfer-config", fields.get("transfer_config"))
+    out += _opt("--name", fields.get("name"))
+    out += _opt("--out-dir", fields.get("out_dir"))
+    out += _opt("--out", fields.get("out"))
+    out += _opt("--train-mode", fields.get("train_mode"))
+    stage = fields.get("stage")
+    if stage is not None:
+        out += _opt("--stage", int(stage))
+    if fields.get("tray_eval") is False:
+        out.append("--no-tray-eval")
+    out += _opt_repeat("--tray-key", fields.get("tray_key") or fields.get("tray_keys"))
+    out += _opt("--tray-catalog", fields.get("tray_catalog"))
+    out += _opt("--domains-dir", fields.get("domains_dir"))
+    out += _opt("--splits-dir", fields.get("splits_dir"))
+    return out
+
+
+def argv_for_domain_tray_audit(fields: dict[str, Any]) -> list[str]:
+    """Fields consumed by ``experiment.py domain-tray-audit`` (in-process, no argv)."""
+    return []
+
+
 def argv_for_deploy_parity(fields: dict[str, Any]) -> list[str]:
     """Logical argv for ``experiment.py deploy-parity`` (writes JSON via deploy_hsp_parity)."""
     out: list[str] = []
@@ -294,6 +353,23 @@ def argv_for_gpu_queue(fields: dict[str, Any]) -> list[str]:
     return out
 
 
+def argv_for_reviewer_counting(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/experiment.py reviewer-counting``."""
+    out: list[str] = ["reviewer-counting"]
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--out", fields.get("out"))
+    out += _opt("--locked-conf-from", fields.get("locked_conf_from"))
+    out += _opt("--gt-test", fields.get("gt_test"))
+    out += _opt("--preds-test", fields.get("preds_test"))
+    out += _opt("--gt-val", fields.get("gt_val"))
+    out += _opt("--preds-val", fields.get("preds_val"))
+    out += _opt("--eval-test", fields.get("eval_test"))
+    out += _opt("--dual-metric", fields.get("dual_metric"))
+    out += _opt("--split-file", fields.get("split_file"))
+    out += _opt("--weights", fields.get("weights"))
+    return out
+
+
 def argv_for_repro_steps(
     bundle: dict[str, Any],
     *,
@@ -310,3 +386,11 @@ def argv_for_repro_steps(
         skip_gpu_check=skip_gpu_check,
         include_test_map=include_test_map,
     )
+
+
+def argv_for_reviewer2_repro(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/experiment.py reviewer2-repro``."""
+    out: list[str] = ["reviewer2-repro"]
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--bundle", fields.get("bundle"))
+    return out

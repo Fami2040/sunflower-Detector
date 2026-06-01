@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 EXPERIMENTS = REPO / "docs" / "EXPERIMENTS.md"
-DEDUP_ROOT_CAUSE = REPO / "reports" / "aug_smoke" / "dedup_root_cause.md"
+AUG_SMOKE_INDEX = REPO / "configs" / "experiments" / "aug_smoke_index.json"
+STALE_DEDUP_MD = "reports/aug_smoke/dedup_root_cause.md"
+INDEX_REF = "configs/experiments/aug_smoke_index.json"
 
 # Substrings / patterns that indicate duplicated or obsolete doc state.
 STALE_SUBSTRINGS = (
@@ -47,21 +50,36 @@ class TestDocIndexParity(unittest.TestCase):
         self.assertIn("./scripts/run_gpu_queue.sh", text)
         self.assertIn("backlog.md#runbook-gpu", text)
 
-    def test_dedup_root_cause_canonical_path(self) -> None:
-        self.assertTrue(
-            DEDUP_ROOT_CAUSE.is_file(),
-            "Canonical dedup notes must live at reports/aug_smoke/dedup_root_cause.md",
-        )
-        self.assertFalse(
-            (REPO / "docs" / "dedup_root_cause.md").exists(),
-            "docs/dedup_root_cause.md is redundant — use reports/aug_smoke/ only",
-        )
-        experiments = EXPERIMENTS.read_text(encoding="utf-8")
-        backlog = (REPO / "backlog.md").read_text(encoding="utf-8")
-        self.assertIn("reports/aug_smoke/dedup_root_cause.md", experiments)
-        self.assertIn("reports/aug_smoke/dedup_root_cause.md", backlog)
-        self.assertNotIn("docs/dedup_root_cause.md", experiments)
-        self.assertNotIn("docs/dedup_root_cause.md", backlog)
+    def test_aug_dedup_canonical_registry_and_doc_links(self) -> None:
+        """Preds/recipe dedup audit lives in aug_smoke_index equivalence_classes, not orphan markdown."""
+        from harchoc.equivalence_index import parse_equivalence_classes
+
+        index = json.loads(AUG_SMOKE_INDEX.read_text(encoding="utf-8"))
+        classes = (index.get("equivalence_classes") or {}).get("classes") or []
+        self.assertGreaterEqual(len(classes), 2, "equivalence_classes.classes required")
+
+        class_ids = {tuple(sorted(c.get("smoke_ids") or [])) for c in classes}
+        self.assertIn(tuple(sorted(["S0", "S1", "S13", "CLOSE25"])), class_ids)
+        self.assertIn(tuple(sorted(["S3", "S6", "S7"])), class_ids)
+
+        for cls in classes:
+            with self.subTest(smoke_ids=cls.get("smoke_ids")):
+                self.assertTrue(cls.get("canonical_smoke_id"))
+                self.assertTrue(cls.get("preds_sha256"))
+                self.assertGreaterEqual(len(cls.get("smoke_ids") or []), 2)
+
+        audit_only, verified_preds, _ = parse_equivalence_classes(index)
+        self.assertEqual(audit_only, {"S0", "S6", "S7", "S13", "CLOSE25"})
+        self.assertIn(round(68.90825688073394, 12), verified_preds)
+        self.assertIn(round(151.73394495412845, 12), verified_preds)
+
+        for path in (EXPERIMENTS, REPO / "backlog.md", REPO / "docs" / "zoo_comparison_design.md"):
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(doc=path.name):
+                self.assertIn(INDEX_REF, text)
+                self.assertIn("equivalence_classes", text)
+                self.assertNotIn(STALE_DEDUP_MD, text)
+                self.assertNotIn("docs/dedup_root_cause.md", text)
 
 
 if __name__ == "__main__":

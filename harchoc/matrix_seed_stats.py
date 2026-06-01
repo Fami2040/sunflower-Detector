@@ -258,8 +258,8 @@ def compare_runs_by_seed(
                     r = ks_2samp(a, b)
                     ks_block = {
                         "metric": "mAP50",
-                        "statistic": float(r.statistic),
-                        "pvalue": float(r.pvalue),
+                        "statistic": float(getattr(r, "statistic", 0.0)),
+                        "pvalue": float(getattr(r, "pvalue", 1.0)),
                         "n_a": len(a),
                         "n_b": len(b),
                     }

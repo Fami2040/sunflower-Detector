@@ -76,6 +76,20 @@ Examples:
 
 `normalize_experiment_spec()` skips files without `"schema_version": "experiments.v1"`.
 
+### Manuscript / reviewer repro bundles (not `experiments.v1`)
+
+Loaded by `scripts/experiment.py` subcommands and `harchoc/repro_chain.py` (no `normalize_experiment_spec`):
+
+| File | Role |
+|------|------|
+| [`manuscript_repro_bundle.json`](manuscript_repro_bundle.json) | HSP repro chain + `manuscript_preflight` step list and paths |
+| [`reviewer2_repro.json`](reviewer2_repro.json) | Post-zoo reviewer-2 CPU chain (counting, confusion, paste check) |
+| [`figures_repro.json`](figures_repro.json) | Journal-style figure manifest |
+| [`reviewer2_confusion_tide.json`](reviewer2_confusion_tide.json) | Confusion / TIDE audit wiring |
+| [`reviewer_counting.json`](reviewer_counting.json) | Counting metrics report |
+
+CLI overview: [`docs/EXPERIMENTS.md`](../../docs/EXPERIMENTS.md#publication-preflight-before-word-paste).
+
 ### Zoo matrix manifest (`matrix_rows.v1`)
 
 Canonical **26-row** zoo definition: [`configs/zoo/matrix_rows.v1.json`](../zoo/matrix_rows.v1.json) (`zoo_matrix_rows.v1`). Bench YAML + `train_bench_*.json` must stay aligned with this file.

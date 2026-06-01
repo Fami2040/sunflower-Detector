@@ -40,9 +40,12 @@ class GpuQueueDedupIntegrationTests(unittest.TestCase):
             tmp_dir=tmp_dir,
         )
 
-    def _aug_job(self, manifest: dict, smoke_id: str) -> dict | None:
+    def _aug_job(self, manifest: dict, smoke_id: str) -> dict:
         sid = smoke_id.upper()
-        return next((j for j in manifest["jobs"] if j.get("smoke_id") == sid), None)
+        job = next((j for j in manifest["jobs"] if j.get("smoke_id") == sid), None)
+        if job is None:
+            raise AssertionError(f"job not found for smoke_id={smoke_id}")
+        return job
 
     def test_integration_gpu_pending_s6_skipped_preds_duplicate(self) -> None:
         """gpu_pending S6 with complete S3 preds → skipped (preds duplicate)."""

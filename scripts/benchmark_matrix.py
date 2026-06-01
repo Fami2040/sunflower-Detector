@@ -8,9 +8,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 
 from harchoc.post_train_eval import build_post_train_eval_argv, post_train_eval_skipped
+from harchoc.config_coerce import as_dict, as_list, as_str_list, coerce_float, coerce_int, optional_str
 from harchoc.bench_config import (
     BenchConfig,
     _bench_eval_max_det,
@@ -226,6 +234,80 @@ def _cached_ultralytics_weights(cfg: BenchConfig) -> Path | None:
     p = Path(str(raw))
     return p if p.is_file() else None
 
+
+
+def _invoke_ultralytics_hsp_for_matrix(
+    *,
+    repo_root: Path,
+    cfg: BenchConfig,
+    weights: str | Path,
+    run_name: str,
+    runs_dir: Path,
+    manifest: str,
+    default_dataset_name: str,
+    dataset_env: dict[str, str] | None,
+    train_doc: dict[str, Any],
+    eval_out: Path | None = None,
+    hsp_out_dir: str = "reports/hsp",
+) -> dict[str, object]:
+    """HSP test export + error_analysis (count MAE) and optional val mAP for zoo matrix rows."""
+    from harchoc.hsp_eval_chain import (
+        extract_count_mae,
+        hsp_eval_artifacts_verified,
+        hsp_eval_prefix_paths,
+        run_hsp_eval_chain,
+    )
+
+    imgsz = _infer_imgsz(cfg)
+    if imgsz is None:
+        imgsz = int(train_doc.get("imgsz") or 1280)
+    max_det = _bench_eval_max_det(cfg, train_doc)
+    if not hsp_eval_artifacts_verified(repo_root, run_name=run_name, out_dir=hsp_out_dir):
+        run_hsp_eval_chain(
+            repo_root=repo_root,
+            run_name=run_name,
+            weights=weights,
+            out_dir=hsp_out_dir,
+            max_det=int(max_det),
+            imgsz=int(imgsz),
+            env=dataset_env,
+        )
+    paths = hsp_eval_prefix_paths(repo_root, run_name, hsp_out_dir)
+    mae, _ci = extract_count_mae(paths["error"])
+    map_ev: dict[str, object] = {}
+    if eval_out is not None and eval_out.is_file():
+        with capture_failure(f"parse eval JSON {eval_out}") as cap:
+            obj = json.loads(eval_out.read_text(encoding="utf-8"))
+            if isinstance(obj.get("mAP50"), (int, float)):
+                map_ev["mAP50"] = float(obj["mAP50"])
+            if isinstance(obj.get("mAP50_95"), (int, float)):
+                map_ev["mAP50_95"] = float(obj["mAP50_95"])
+        if cap.failed:
+            fail_or_warn(f"{cap.context}: {cap.exc_type}: {cap.exc_msg}")
+    elif eval_out is not None:
+        map_ev = _invoke_test_eval_for_bench(
+            cfg=cfg,
+            weights=weights,
+            manifest=manifest,
+            default_dataset_name=default_dataset_name,
+            dataset_env=dataset_env,
+            train_doc=train_doc,
+            eval_out=eval_out,
+        )
+    try:
+        err_rel = str(paths["error"].resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        err_rel = str(paths["error"].resolve())
+    out: dict[str, object] = {
+        "status": "ok",
+        "split": "test",
+        "hsp_out_dir": hsp_out_dir,
+        "error_json": err_rel,
+        "test_count_mae": mae,
+        "eval_out": str(eval_out) if eval_out is not None else None,
+    }
+    out.update(map_ev)
+    return out
 
 
 def _invoke_test_eval_for_bench(
@@ -795,11 +877,12 @@ def main(argv: list[str] | None = None) -> int:
         from harchoc.experiment_config import script_section_from_config
 
         run_section = script_section_from_config(config_obj, "benchmark_matrix")
-        dataset_section = config_obj.get("dataset") if isinstance(config_obj.get("dataset"), dict) else {}
-        bench_section = config_obj.get("benchmark") if isinstance(config_obj.get("benchmark"), dict) else {}
+        dataset_section = as_dict(config_obj.get("dataset"))
+        bench_section = as_dict(config_obj.get("benchmark"))
+        run_cli = as_dict(run_section)
         config_obj = {
             "dataset": dataset_section,
-            "benchmark": merge_experiment_config(config=bench_section, cli=run_section),
+            "benchmark": merge_experiment_config(config=bench_section, cli=run_cli),
         }
 
     dataset_cfg = config_obj.get("dataset")
@@ -826,17 +909,17 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
     default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    dataset_name = _pick_dataset("dataset_name", default=None)
-    dataset_root = _pick_dataset("dataset_root", default=None)
-    yolo_data_yaml = _pick_dataset("yolo_data_yaml", default=None)
+    dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
+    dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
+    yolo_data_yaml_override = optional_str(_pick_dataset("yolo_data_yaml", default=None))
 
     dataset_env: dict[str, str] = {}
     if dataset_name is not None and str(dataset_name).strip():
         dataset_env["DATASET_NAME"] = str(dataset_name).strip()
     if dataset_root is not None and str(dataset_root).strip():
         dataset_env["DATASET_ROOT"] = str(dataset_root).strip()
-    if yolo_data_yaml is not None and str(yolo_data_yaml).strip():
-        dataset_env["YOLO_DATA_YAML"] = str(yolo_data_yaml).strip()
+    if yolo_data_yaml_override is not None and yolo_data_yaml_override.strip():
+        dataset_env["YOLO_DATA_YAML"] = yolo_data_yaml_override.strip()
 
     spec = resolve_dataset(
         manifest_path=manifest,
@@ -846,12 +929,12 @@ def main(argv: list[str] | None = None) -> int:
     dataset_description = describe_dataset(spec)
 
     bench_config_cli = list(args.bench_config or [])
-    bench_config_cfg = bench_cfg_obj.get("bench_config") if isinstance(bench_cfg_obj.get("bench_config"), list) else []
-    bench_config = bench_config_cli if bench_config_cli else [str(x) for x in bench_config_cfg]
+    bench_config_cfg = as_str_list(bench_cfg_obj.get("bench_config"))
+    bench_config = bench_config_cli if bench_config_cli else bench_config_cfg
 
     bench_dir = str(_pick("bench_dir", default="configs/bench"))
     pattern = str(_pick("pattern", default="*.yaml"))
-    limit = int(_pick("limit", default=0) or 0)
+    limit = coerce_int(_pick("limit", default=0)) or 0
     out = str(_pick("out", default="reports/benchmarks/matrix.json"))
     eval_out = str(_pick("eval_out", default="reports/benchmarks/matrix_eval.json"))
     train_out = str(_pick("train_out", default="reports/benchmarks/matrix_train.json"))
@@ -892,7 +975,7 @@ def main(argv: list[str] | None = None) -> int:
     sahi_eval = bool(_pick("sahi_eval", default=False))
     sahi_rows_raw = _pick("sahi_rows", default=None)
     sahi_rows = parse_sahi_rows_config(sahi_rows_raw) if sahi_eval and sahi_rows_raw is not None else None
-    selected_groups = [str(g) for g in (_pick("group", default=[]) or []) if str(g).strip()]
+    selected_groups = [str(g) for g in as_str_list(_pick("group", default=[])) if str(g).strip()]
     list_groups = bool(_pick("list_groups", default=False))
 
     if bench_config:
@@ -949,7 +1032,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if not dry_run and would_train:
         from harchoc.queue_notify import notify_matrix_row
-        from harchoc.queue_skip_gates import existing_bench_run_weights, matrix_run_is_complete
+        from harchoc.queue_skip_gates import (
+            enrich_matrix_train_run_from_artifacts,
+            existing_bench_run_weights,
+            matrix_run_is_complete,
+        )
         from harchoc.rtdetr_zoo_gate import zoo_core_rtdetr_gate_skip_reason
 
         parent_job_id = (os.environ.get("HARCHOC_GPU_QUEUE_JOB_ID") or "").strip() or None
@@ -966,7 +1053,7 @@ def main(argv: list[str] | None = None) -> int:
                 row_name=str(tr.get("name") or cfg.name),
                 status=st,
                 matrix_group=matrix_group,
-                test_count_mae=float(mae) if mae is not None else None,
+                test_count_mae=coerce_float(mae),
                 detail=detail,
                 parent_job_id=parent_job_id,
             )
@@ -986,12 +1073,25 @@ def main(argv: list[str] | None = None) -> int:
             if not existing_train_doc:
                 return None
             cfg_path = str(cfg.path.resolve())
-            for r in existing_train_doc.get("runs") or []:
+            for r in as_list(existing_train_doc.get("runs")):
                 if not isinstance(r, dict):
                     continue
                 if str(r.get("config_path") or "") == cfg_path or str(r.get("name") or "") == cfg.name:
                     return r
             return None
+
+        def _flush_train_checkpoint() -> None:
+            write_json(
+                train_out,
+                {
+                    "schema_version": "benchmark_matrix_train.v1",
+                    "status": "train",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "dataset": {"description": dataset_description},
+                    "runs_dir": str(runs_dir.resolve()),
+                    "runs": train_runs,
+                },
+            )
 
         for cfg in configs:
             prior = _prior_matrix_run(cfg)
@@ -1042,8 +1142,16 @@ def main(argv: list[str] | None = None) -> int:
                     dataset_root=spec.root,
                 )
             tr["matrix_metadata"] = bench_matrix_metadata(cfg)
+            run_name = str(tr.get("run_name") or _bench_run_name(cfg))
+            tr = enrich_matrix_train_run_from_artifacts(
+                repo_root, tr, runs_dir=runs_dir, hsp_out_dir="reports/hsp"
+            )
+            if matrix_run_is_complete(repo_root, tr):
+                train_runs.append(tr)
+                _notify_row(tr, cfg)
+                _flush_train_checkpoint()
+                continue
             if would_eval and tr.get("status") == "ok" and tr.get("weights"):
-                run_name = str(tr.get("run_name") or _bench_run_name(cfg))
                 eval_path = runs_dir / run_name / "test_eval.json"
                 backend = select_backend(cfg)
                 if backend == "external":
@@ -1088,6 +1196,19 @@ def main(argv: list[str] | None = None) -> int:
                         eval_out=eval_path,
                         max_det=max_det,
                     )
+                elif backend == "ultralytics":
+                    ev = _invoke_ultralytics_hsp_for_matrix(
+                        repo_root=repo_root,
+                        cfg=cfg,
+                        weights=str(tr["weights"]),
+                        run_name=run_name,
+                        runs_dir=runs_dir,
+                        manifest=manifest,
+                        default_dataset_name=default_dataset_name,
+                        dataset_env=dataset_env or None,
+                        train_doc=train_doc,
+                        eval_out=eval_path,
+                    )
                 else:
                     ev = _invoke_test_eval_for_bench(
                         cfg=cfg,
@@ -1099,10 +1220,15 @@ def main(argv: list[str] | None = None) -> int:
                         eval_out=eval_path,
                     )
                 tr["test_eval"] = ev
+                if ev.get("test_count_mae") is not None:
+                    tr["test_count_mae"] = ev["test_count_mae"]
+                if ev.get("error_json"):
+                    tr["error_test_report"] = ev["error_json"]
                 tr["mAP50"] = ev.get("mAP50")
                 tr["mAP50_95"] = ev.get("mAP50_95")
             train_runs.append(tr)
             _notify_row(tr, cfg)
+            _flush_train_checkpoint()
         train_payload: dict[str, object] = {
             "schema_version": "benchmark_matrix_train.v1",
             "status": "train",

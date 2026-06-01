@@ -329,7 +329,10 @@ def _run_internal_stage(
     if internal == "gpu_wait":
         with log_path.open("w", encoding="utf-8") as f:
             try:
-                info = wait_gpu_free(min_free_mib=min_free_mib, dry_run=dry_run, log_fn=f.write)
+                def _log(msg: str) -> None:
+                    f.write(msg)
+
+                info = wait_gpu_free(min_free_mib=min_free_mib, dry_run=dry_run, log_fn=_log)
                 f.write(json.dumps(info, indent=2) + "\n")
                 return 0
             except TimeoutError as ex:

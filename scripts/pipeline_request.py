@@ -34,7 +34,7 @@ def _module_available(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
-def _detect_backend_availability() -> dict[str, object]:
+def _detect_backend_availability() -> dict[str, Any]:
     """
     Report runtime dependencies without importing them.
     This makes `--dry-run` CI-safe.

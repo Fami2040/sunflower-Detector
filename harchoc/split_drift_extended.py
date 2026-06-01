@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from harchoc.config_coerce import child_dict
 from harchoc.domain_tags import tray_key_from_stem
 from harchoc.label_stats import label_path_for_image
 from harchoc.splits_io import read_split_list, resolve_split_entry
@@ -194,12 +195,12 @@ def collect_split_extended_stats(
 def extended_pairwise_comparison(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     a_cls = dict(a.get("per_class_boxes_per_image_mean") or {})
     b_cls = dict(b.get("per_class_boxes_per_image_mean") or {})
-    a_q = a.get("bbox_area_px_quantiles") if isinstance(a.get("bbox_area_px_quantiles"), dict) else {}
-    b_q = b.get("bbox_area_px_quantiles") if isinstance(b.get("bbox_area_px_quantiles"), dict) else {}
-    a_tray = a.get("images_per_tray") if isinstance(a.get("images_per_tray"), dict) else {}
-    b_tray = b.get("images_per_tray") if isinstance(b.get("images_per_tray"), dict) else {}
-    a_pt = a_tray.get("per_tray_counts") if isinstance(a_tray.get("per_tray_counts"), dict) else {}
-    b_pt = b_tray.get("per_tray_counts") if isinstance(b_tray.get("per_tray_counts"), dict) else {}
+    a_q = child_dict(a, "bbox_area_px_quantiles")
+    b_q = child_dict(b, "bbox_area_px_quantiles")
+    a_tray = child_dict(a, "images_per_tray")
+    b_tray = child_dict(b, "images_per_tray")
+    a_pt = child_dict(a_tray, "per_tray_counts")
+    b_pt = child_dict(b_tray, "per_tray_counts")
 
     a_keys = list(a_tray.get("tray_keys") or [])
     b_keys = list(b_tray.get("tray_keys") or [])

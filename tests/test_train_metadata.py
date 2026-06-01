@@ -309,6 +309,7 @@ class TrainMetadataTests(unittest.TestCase):
         }
         summary = _val_metrics_summary(raw)
         self.assertIsNotNone(summary)
+        assert summary is not None
         self.assertIn("metrics/mAP50-95(B)", summary)
         self.assertNotIn("train/box_loss", summary)
 

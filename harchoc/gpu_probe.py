@@ -6,7 +6,7 @@ from typing import Any
 from harchoc import strict_ml
 
 
-def try_import_torch() -> tuple[object | None, object | None, str | None]:
+def try_import_torch() -> tuple[Any | None, Any | None, str | None]:
     """Return ``(torch, torchvision, error)``. *error* is set when torch import fails."""
     try:
         import torch  # type: ignore
@@ -33,7 +33,7 @@ def fmt_bytes(n: int) -> str:
     return f"{x:.2f} PiB"
 
 
-def torch_cuda_payload(torch: object) -> dict[str, Any]:
+def torch_cuda_payload(torch: Any) -> dict[str, Any]:
     """CUDA availability and device details suitable for JSON reports."""
     t = torch
     cuda_available = bool(getattr(t.cuda, "is_available")())
@@ -72,7 +72,7 @@ def torch_cuda_payload(torch: object) -> dict[str, Any]:
     return out
 
 
-def matmul_bench(torch: object, *, device: str = "cuda", n: int, iters: int) -> dict[str, Any]:
+def matmul_bench(torch: Any, *, device: str = "cuda", n: int, iters: int) -> dict[str, Any]:
     """Small float16 matmul benchmark; returns elapsed seconds and TFLOPS."""
     t = torch
 

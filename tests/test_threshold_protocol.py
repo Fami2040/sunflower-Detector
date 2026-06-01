@@ -38,6 +38,8 @@ class ThresholdProtocolTests(unittest.TestCase):
         from harchoc.threshold_protocol import build_iou_grid
 
         g = build_iou_grid(iou=0.5, iou_min=0.4, iou_max=0.6, iou_steps=3)
+        self.assertIsNotNone(g)
+        assert g is not None
         self.assertEqual(len(g), 3)
         self.assertAlmostEqual(g[0], 0.4)
         self.assertAlmostEqual(g[-1], 0.6)

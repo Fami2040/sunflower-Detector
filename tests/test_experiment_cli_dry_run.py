@@ -87,6 +87,24 @@ class ExperimentCliDryRunTests(unittest.TestCase):
             self.assertEqual(obj.get("status"), "plan")
             self.assertTrue(obj.get("dry_run"))
 
+    def test_aug_compare_dry_run_subcommand_flag(self) -> None:
+        from scripts.experiment import main
+
+        rc = main(["aug-compare", "--dry-run"])
+        self.assertEqual(rc, 0)
+
+    def test_backlog_narrative_dry_run_subcommand_flag(self) -> None:
+        from scripts.experiment import main
+
+        rc = main(["backlog-narrative", "--dry-run"])
+        self.assertEqual(rc, 0)
+
+    def test_backlog_narrative_global_dry_run(self) -> None:
+        from scripts.experiment import main
+
+        rc = main(["--dry-run", "backlog-narrative"])
+        self.assertEqual(rc, 0)
+
     def test_train_dry_run_writes_run_files(self) -> None:
         from scripts.experiment import main
 

@@ -234,9 +234,9 @@ def _verify_external_train_smoke_inprocess(
     yaml_config = _yaml_config_for_stack(train_stack, repo)
     cfg = yaml_config(str(overlay_path.resolve()))
     ds = cfg.train_dataloader.dataset
-    ds.set_epoch(int(epoch))
-    img, target = ds.load_item(0)
-    out = ds._transforms(img, target, ds)
+    ds.set_epoch(int(epoch))  # type: ignore[attr-defined]
+    img, target = ds.load_item(0)  # type: ignore[attr-defined]
+    out = ds._transforms(img, target, ds)  # type: ignore[attr-defined]
     if isinstance(out, tuple):
         if len(out) < 2:
             return False, f"{train_stack}_transform_short_tuple"

@@ -15,6 +15,27 @@ Generated manuscript figures and `run.json` manifest (`figures_run.v1`).
 
 `scripts/make_figures.py` enables this by default (`--journal-style`; pass `--no-journal-style` for legacy 120–150 DPI output).
 
+## One-command reproduction
+
+Canonical entry (journal style + manifest with SHA256 / DPI / dimensions):
+
+```bash
+mamba run -n harchoc python scripts/experiment.py \
+  --config configs/experiments/figures_repro.json figures-repro
+```
+
+Dry-run (prints delegated `make_figures.py` argv):
+
+```bash
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py \
+  --config configs/experiments/figures_repro.json figures-repro --dry-run
+```
+
+| Artifact | Role |
+|----------|------|
+| `run.json` | Per-figure render status (`figures_run.v1`) |
+| `manifest.json` | Publication audit (`figures_repro_manifest.v1`: paths, sha256, dpi, pixel size) |
+
 ## Regenerate from HSP JSON
 
 From the repo root. **CPU** (matplotlib + PIL only) for drift, PR curve, taxonomy, and ambiguous panels:

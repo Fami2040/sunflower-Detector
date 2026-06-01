@@ -4,7 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 
 class FinetuneTests(unittest.TestCase):
@@ -62,7 +62,7 @@ class FinetuneTests(unittest.TestCase):
 
     @patch("scripts.eval.main", return_value=0)
     @patch("scripts.train.main", return_value=0)
-    def test_train_invokes_train_main(self, mock_train: object, mock_eval: object) -> None:
+    def test_train_invokes_train_main(self, mock_train: MagicMock, mock_eval: MagicMock) -> None:
         from scripts.finetune import main
 
         with tempfile.TemporaryDirectory() as td:
@@ -88,7 +88,7 @@ class FinetuneTests(unittest.TestCase):
 
     @patch("scripts.eval.main", return_value=0)
     @patch("scripts.train.main", return_value=0)
-    def test_tray_eval_before_train(self, mock_train: object, mock_eval: object) -> None:
+    def test_tray_eval_before_train(self, mock_train: MagicMock, mock_eval: MagicMock) -> None:
         from scripts.finetune import main
 
         dataset_root = Path(__file__).resolve().parents[1] / "data" / "raw" / "extracted" / "dataset"
@@ -118,7 +118,7 @@ class FinetuneTests(unittest.TestCase):
             self.assertIsNotNone(obj.get("tray_eval_before"))
 
     @patch("scripts.train.main", return_value=0)
-    def test_train_temp_config_includes_freeze(self, mock_train: object) -> None:
+    def test_train_temp_config_includes_freeze(self, mock_train: MagicMock) -> None:
         from scripts.finetune import main
 
         captured: dict[str, object] = {}

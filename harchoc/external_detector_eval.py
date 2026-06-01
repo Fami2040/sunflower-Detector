@@ -103,8 +103,8 @@ def _build_deploy_model(
         class DeployModel(nn.Module):
             def __init__(self) -> None:
                 super().__init__()
-                self.model = cfg.model.deploy()
-                self.postprocessor = cfg.postprocessor.deploy()
+                self.model = cfg.model.deploy()  # type: ignore[operator]
+                self.postprocessor = cfg.postprocessor.deploy()  # type: ignore[operator]
 
             def forward(self, images: torch.Tensor, orig_target_sizes: torch.Tensor) -> tuple[Any, Any, Any]:
                 outputs = self.model(images)
@@ -177,7 +177,7 @@ def export_hsp_gt_preds_json(
                 continue
             im_pil = Image.open(img_path).convert("RGB")
             w, h = im_pil.size
-            im_data = transforms(im_pil)[None].to(dev)
+            im_data = transforms(im_pil)[None].to(dev)  # type: ignore[index]
             orig_size = torch.tensor([[w, h]], dtype=torch.float32, device=dev)
             labels, boxes, scores = model(im_data, orig_size)
             dets = external_results_to_detections(labels, boxes, scores, max_det=max_det)

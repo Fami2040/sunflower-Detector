@@ -55,5 +55,49 @@
     "dual_metric": "reports/hsp/dual_metric.json",
     "eval_test_map": "reports/hsp/eval_test_map.json",
     "p0_summary": "reports/hsp/p0_summary.md"
+  },
+  "post_zoo_reviewer2": {
+    "bundle": "configs/experiments/reviewer2_repro.json",
+    "command": "scripts/experiment.py reviewer2-repro",
+    "note": "After zoo matrix train + HSP eval exports; before Word docx paste."
+  },
+  "manuscript_preflight": {
+    "manifest": "reports/manuscript/preflight_manifest.json",
+    "steps": [
+      "reviewer2_repro",
+      "figures_repro",
+      "tables_repro",
+      "docx_repro",
+      "aug_compare",
+      "backlog_narrative"
+    ],
+    "reviewer2": {
+      "bundle": "configs/experiments/reviewer2_repro.json",
+      "skip_if_missing_hsp_exports": true
+    },
+    "figures": {
+      "bundle": "configs/experiments/figures_repro.json"
+    },
+    "tables": {
+      "out_dir": "reports/manuscript/tables"
+    },
+    "docx_repro": {
+      "out_dir": "reports/manuscript/docx",
+      "confusion": "reports/hsp/best2_test_confusion.json",
+      "dual_metric": "reports/hsp/dual_metric.json",
+      "counting": "reports/reviewer2_counting_metrics_computed.json"
+    },
+    "aug_compare": {
+      "index": "configs/experiments/aug_smoke_index.json",
+      "out_dir": "reports/aug_smoke",
+      "write_figure": true
+    },
+    "backlog_narrative": {
+      "backlog": "backlog.md",
+      "out_md": "reports/manuscript/narrative_from_backlog.md",
+      "out_json": "reports/manuscript/backlog_narrative.json"
+    },
+    "command": "scripts/experiment.py manuscript-preflight",
+    "repro_stage_alias": "preflight"
   }
 }

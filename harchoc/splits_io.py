@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from pathlib import Path
+from typing import Literal, overload
 
 
 def repo_root() -> Path:
@@ -43,6 +44,26 @@ def iter_split_list_lines(lines: Iterable[str]) -> Iterator[str]:
         if not s or s.startswith("#"):
             continue
         yield s
+
+
+@overload
+def read_split_list(
+    path: Path,
+    *,
+    missing_ok: bool = False,
+    as_paths: Literal[False] = False,
+    errors: str = "strict",
+) -> list[str]: ...
+
+
+@overload
+def read_split_list(
+    path: Path,
+    *,
+    missing_ok: bool = False,
+    as_paths: Literal[True],
+    errors: str = "strict",
+) -> list[Path]: ...
 
 
 def read_split_list(

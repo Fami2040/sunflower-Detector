@@ -659,6 +659,7 @@ class BenchmarkMatrixTests(unittest.TestCase):
         cfg = load_bench_config(repo_root / "configs" / "bench" / "yolo_nas_s_default.yaml")
         resolved = _resolve_bench_train_config_path(cfg)
         self.assertIsNotNone(resolved)
+        assert resolved is not None
         self.assertTrue(resolved.name.endswith("train_bench_yolo_nas_s.json"))
 
     def test_bench_yaml_matches_implicit_train_bench_recipe(self) -> None:
@@ -678,7 +679,9 @@ class BenchmarkMatrixTests(unittest.TestCase):
                 raw = _load_bench_train_raw(cfg)
             except FileNotFoundError:
                 self.fail(f"missing train bench recipe for implicit train_config in {pth.name}")
-            eval_section = raw.get("eval") if isinstance(raw.get("eval"), dict) else {}
+            from harchoc.config_coerce import as_dict
+
+            eval_section = as_dict(raw.get("eval"))
 
             self.assertEqual(
                 cfg.epochs,
@@ -701,7 +704,8 @@ class BenchmarkMatrixTests(unittest.TestCase):
                 raw.get("imgsz"),
                 msg=f"infer.imgsz mismatch for {pth.name}",
             )
-            infer_max_det = cfg.infer.get("max_det")
+            infer = cfg.infer if isinstance(cfg.infer, dict) else {}
+            infer_max_det = infer.get("max_det")
             self.assertEqual(
                 infer_max_det,
                 eval_section.get("max_det"),

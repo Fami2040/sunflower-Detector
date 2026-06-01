@@ -14,6 +14,7 @@ from harchoc.finetune_tray_eval import (
     resolve_tray_holdout_keys,
     run_tray_eval_commands,
 )
+from harchoc.finetune_tray_splits import FinetuneSplitPlan, resolve_finetune_split_plan
 from harchoc.hsp_weights import HSP_DETECTION_WEIGHTS
 from harchoc.json_io import load_json_dict
 from harchoc.script_scaffold import build_versioned_dry_run_payload, resolve_dataset_args
@@ -63,6 +64,56 @@ def _resolve_catalog_path(raw: str, repo_root: Path) -> Path:
     if not p.is_absolute():
         p = (repo_root / p).resolve()
     return p
+
+
+def _explicit_tray_keys(
+    *,
+    cli_tray_keys: list[str],
+    transfer: dict[str, Any],
+) -> list[str]:
+    """Tray keys from CLI or transfer YAML only (not catalog auto-discovery)."""
+    keys: list[str] = []
+    keys.extend(k.strip() for k in cli_tray_keys if k and k.strip())
+    if not keys:
+        raw = transfer.get("tray_keys")
+        if isinstance(raw, list):
+            keys.extend(str(k).strip() for k in raw if str(k).strip())
+        single = transfer.get("tray_key")
+        if single is not None and str(single).strip():
+            keys.append(str(single).strip())
+    seen: set[str] = set()
+    out: list[str] = []
+    for k in keys:
+        if k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+def _effective_train_mode(
+    *,
+    cli_mode: str | None,
+    transfer: dict[str, Any],
+    explicit_tray_keys: list[str],
+) -> str:
+    if cli_mode:
+        return str(cli_mode)
+    raw = transfer.get("train_mode")
+    if raw is not None and str(raw).strip():
+        return str(raw).strip()
+    return "tray_adapt" if explicit_tray_keys else "canonical"
+
+
+def _apply_split_plan_to_train_doc(
+    train_doc: dict[str, Any],
+    split_plan: FinetuneSplitPlan | None,
+) -> None:
+    if split_plan is None:
+        train_doc.pop("train_split_file", None)
+        train_doc.pop("val_split_file", None)
+        return
+    train_doc["train_split_file"] = str(split_plan.train_split_file)
+    train_doc["val_split_file"] = str(split_plan.val_split_file)
 
 
 def _tray_eval_context(
@@ -165,6 +216,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Staged unfreeze: 1=frozen backbone (finetune_tray_stage1), 2=full unfreeze (stage2 YAML).",
     )
+    p.add_argument(
+        "--train-mode",
+        choices=("canonical", "tray_adapt", "lofo_pool"),
+        default=None,
+        help="Train split policy: tray_adapt (default when --tray-key set), lofo_pool, or canonical.",
+    )
     args = p.parse_args(argv)
 
     if args.stage == 1:
@@ -208,6 +265,37 @@ def main(argv: list[str] | None = None) -> int:
             train_doc=train_doc_preview,
             dataset_root=getattr(args, "dataset_root", None),
         )
+        explicit_keys = _explicit_tray_keys(
+            cli_tray_keys=list(args.tray_key) if args.tray_key else [],
+            transfer=transfer_preview,
+        )
+        train_mode = _effective_train_mode(
+            cli_mode=args.train_mode,
+            transfer=transfer_preview,
+            explicit_tray_keys=explicit_keys,
+        )
+        split_plan = None
+        split_plan_dict: dict[str, Any] | None = None
+        if train_mode != "canonical" and explicit_keys:
+            ds_root = Path(ctx["dataset_root"]) if ctx["dataset_root"] else repo_root / "data"
+            try:
+                split_plan = resolve_finetune_split_plan(
+                    train_mode=train_mode,
+                    tray_keys=explicit_keys,
+                    domains_dir=ctx["domains_dir"],
+                    splits_dir=ctx["splits_dir"],
+                    dataset_root=ds_root,
+                    work_dir=ctx["reports_dir"] / "split_lists",
+                )
+                split_plan_dict = split_plan.to_dict() if split_plan is not None else None
+                _apply_split_plan_to_train_doc(train_doc_preview, split_plan)
+            except SystemExit as exc:
+                split_plan_dict = {
+                    "status": "pending",
+                    "train_mode": train_mode,
+                    "tray_keys": explicit_keys,
+                    "notes": str(exc),
+                }
         after_weights = str((Path(args.out_dir) / str(args.name) / "weights" / "best.pt").resolve())
         tray_plan = build_tray_eval_plan(
             enabled=bool(args.tray_eval),
@@ -234,6 +322,10 @@ def main(argv: list[str] | None = None) -> int:
                 base_weights=args.base_weights,
                 config=str(exp_path),
                 transfer_config=str(transfer_path),
+                train_mode=train_mode,
+                split_plan=split_plan_dict,
+                train_split_file=train_doc_preview.get("train_split_file"),
+                val_split_file=train_doc_preview.get("val_split_file"),
                 transfer_policy=freeze_policy,
                 tray_eval_plan=tray_plan,
                 tray_eval_before=paths_from_tray_eval_commands(
@@ -273,6 +365,26 @@ def main(argv: list[str] | None = None) -> int:
         transfer=transfer,
         catalog_path=ctx["catalog_path"],
     )
+    explicit_keys = _explicit_tray_keys(
+        cli_tray_keys=list(args.tray_key) if args.tray_key else [],
+        transfer=transfer,
+    )
+    train_mode = _effective_train_mode(
+        cli_mode=args.train_mode,
+        transfer=transfer,
+        explicit_tray_keys=explicit_keys,
+    )
+    split_plan = None
+    if train_mode != "canonical" and explicit_keys:
+        split_plan = resolve_finetune_split_plan(
+            train_mode=train_mode,
+            tray_keys=explicit_keys,
+            domains_dir=ctx["domains_dir"],
+            splits_dir=ctx["splits_dir"],
+            dataset_root=spec.root,
+            work_dir=ctx["reports_dir"] / "split_lists",
+        )
+        _apply_split_plan_to_train_doc(train_doc, split_plan)
 
     from scripts._common_cli import extend_dataset_argv
     from scripts.train import main as train_main
@@ -366,6 +478,10 @@ def main(argv: list[str] | None = None) -> int:
                 "unfreeze_epoch": transfer.get("unfreeze_epoch"),
                 "freeze": transfer.get("freeze"),
             },
+            "train_mode": train_mode,
+            "split_plan": split_plan.to_dict() if split_plan is not None else None,
+            "train_split_file": train_doc.get("train_split_file"),
+            "val_split_file": train_doc.get("val_split_file"),
             "tray_eval_enabled": bool(args.tray_eval),
             "tray_keys": tray_keys_live,
             "tray_eval_before": tray_eval_before,

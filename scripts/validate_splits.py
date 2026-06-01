@@ -3,7 +3,14 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 from harchoc.datasets import resolve_dataset
 from harchoc.label_stats import peak_boxes_per_image
 from harchoc.rtdetr_limits import (
@@ -109,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
                 n_missing_images += 1
                 eprint(f"Missing image ({split}): {rel_img}")
                 continue
-            rel_lbl = _label_for_image(rel_img)
+            rel_lbl = _label_for_image(Path(rel_img) if isinstance(rel_img, str) else rel_img)
             lbl_path = root / rel_lbl
             if not lbl_path.exists():
                 n_missing_labels += 1

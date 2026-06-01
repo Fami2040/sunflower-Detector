@@ -19,6 +19,15 @@ mamba run -n harchoc python scripts/train.py --help
 
 Run repo scripts from the repository root as `python scripts/<name>.py` (each imports `scripts._path`); prefer the `mamba run` prefix above for any live train/eval/export.
 
+## IDE / Pyright (basedpyright)
+
+Type checking expects the **`harchoc`** interpreter (torch, ultralytics, optional `super_gradients` live there — not base Python).
+
+- Root [`pyrightconfig.json`](../pyrightconfig.json): `extraPaths` for vendored detectors; `ignore` = `external/**`; `typeCheckingMode` = `basic`. Do **not** put `venvPath` with `~` in that file — Pyright treats `~` as a literal path under the repo. Point the env via `.vscode/settings.json` (`python.defaultInterpreterPath`, `basedpyright.analysis.venvPath` / `venv`). JSON merge helpers: `harchoc.config_coerce` (`pick_int`, `optional_str`, …).
+- Copy [`.vscode/settings.json.example`](../.vscode/settings.json.example) → `.vscode/settings.json`; set `python.defaultInterpreterPath` to your `harchoc` env; `basedpyright.analysis.typeCheckingMode` = `basic`. Per-rule severities use flat `report*` keys in `pyrightconfig.json`, not nested `diagnosticSeverityOverrides`.
+
+Reload the window after changing interpreter or Pyright settings so `reportMissingImports` and stale severity-8 diagnostics clear.
+
 ## Agent runtime (Cursor agents)
 
 Permanent rules: `.cursor/rules/gpu-env-and-dataset.mdc`, `.cursor/rules/ml-strict-runtime.mdc` (`alwaysApply: true`).
@@ -89,7 +98,7 @@ Modeling splits live in repo-tracked `data/splits/{train,val,test}.txt`. Ultraly
 | `scripts/train.py` | Ultralytics training + optional post-train test eval (`--config`, `--aug-config`) |
 | `scripts/eval.py` | Test-split mAP + optional GT/preds export (`--export-*`, `--max-det`, `--imgsz`) |
 | `scripts/benchmark_matrix.py` | Model-zoo plan / train / test eval (`configs/bench/*.yaml`) |
-| `scripts/experiment.py` | Unified CLI: `splits`, `describe`, `eval`, `benchmark`, `train`, `hpo`, **`cv-eval`**, `map-cpu`, `dual-metric`, `repro`, `gradcam`, `deploy-parity` |
+| `scripts/experiment.py` | Unified CLI: `splits`, `describe`, `eval`, `benchmark`, `train`, `hpo`, **`cv-eval`**, `map-cpu`, `dual-metric`, `repro`, **`reviewer2-repro`**, **`figures-repro`**, **`tables-repro`**, **`manuscript-docx-repro`**, **`manuscript-preflight`**, `aug-compare`, `backlog-narrative`, `gradcam`, `deploy-parity` |
 | `scripts/threshold_sweep.py` | Confidence sweep (default `--out reports/thresholds/sweep.json`; HSP → `reports/hsp/threshold_*.json`) |
 | `scripts/error_analysis.py` | Counting / TIDE-style summary (HSP → `reports/hsp/error_*.json`; see [`reports/error_analysis/README.md`](../reports/error_analysis/README.md)) |
 | `scripts/describe_split.py` | Split stats → `reports/split_stats.json` |
@@ -171,7 +180,7 @@ Per-job logs: `reports/gpu_queue/logs/{job_id}/{stage_id}.log`. Completed aug sm
 
 ### GPU queue manifest map
 
-One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (default: aug pending, now **complete**). Job order is manifest order; recipe dedup skips trains when a complete smoke owns the same [`effective_train_recipe_fingerprint`](../harchoc/train_config.py). Rankings / equivalence: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json), [`leaderboard.md`](../reports/aug_smoke/leaderboard.md), [dedup notes](../reports/aug_smoke/dedup_root_cause.md).
+One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (default: aug pending, now **complete**). Job order is manifest order; recipe dedup skips trains when a complete smoke owns the same [`effective_train_recipe_fingerprint`](../harchoc/train_config.py). Rankings / equivalence / preds dedup audit: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) (`equivalence_classes`), [`leaderboard.md`](../reports/aug_smoke/leaderboard.md).
 
 | Manifest | Tier | Purpose | Notable jobs |
 |----------|------|---------|--------------|
@@ -321,6 +330,7 @@ Thin wrapper around script entrypoints. Subcommands:
 - `train` → `scripts/train.py`
 - `hpo` → plans budget-capped search configs (execution via generated train configs)
 - `cv-eval` → `scripts/cv_eval.py` (**preferred** entry for k-fold lists, `--write-fold-splits`, `--fold-metrics` aggregation; direct `scripts/cv_eval.py` is equivalent)
+- `figures-repro` → all manuscript figures with journal style + `reports/figures/manifest.json` (`figures_repro_manifest.v1`; delegates to `make_figures.py`)
 - `gradcam` → **canonical** Grad-CAM FP panel: `scripts/make_figures.py --figure fig_gradcam_panel` (`harchoc/gradcam_panel.py`; routing rationale in [`docs/manuscript/gradcam_routing.md`](manuscript/gradcam_routing.md))
 - `dual-metric` → merges eval + threshold + error-analysis JSON (`dual_metric_report.v1`)
 
@@ -339,6 +349,25 @@ mamba run -n harchoc python scripts/experiment.py --dry-run \
 ```
 
 **Cross-validation:** use `experiment.py cv-eval` (not `scripts/cv_eval.py` directly). Dry-run writes `cv_eval_run.v1` scaffold JSON; real runs need `DATASET_ROOT` and optional `--write-fold-splits` / `--fold-metrics`. Canonical dry-run spec: [`configs/experiments/cv_eval_dry.json`](../configs/experiments/cv_eval_dry.json) (`experiments.v1`, `run.kind: cv_eval`).
+
+**Figures reproduction (journal style)** — prefer `experiment.py figures-repro` for the full manuscript set. Writes `reports/figures/run.json` (render log) and `reports/figures/manifest.json` (per-file SHA256, DPI, pixel size). Bundle: [`configs/experiments/figures_repro.json`](../configs/experiments/figures_repro.json).
+
+```bash
+# Plan only (no matplotlib / GPU)
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py \
+  --config configs/experiments/figures_repro.json figures-repro --dry-run
+
+# CPU panels + drift/PR (omit error_report to skip FP mosaics)
+python scripts/make_figures.py --out-dir reports/figures --meta-out reports/figures/run.json \
+  --split-drift-report reports/hsp/split_drift_p0.json \
+  --threshold-csv reports/hsp/threshold_val.csv --figure all
+
+# Full set (needs error_test_report.json + optional weights for Grad-CAM overlays)
+mamba run -n harchoc python scripts/experiment.py \
+  --config configs/experiments/figures_repro.json figures-repro
+mamba run -n harchoc python scripts/experiment.py figures-repro \
+  --weights models/best2.pt --error-report reports/hsp/error_test_report.json
+```
 
 **Grad-CAM panel** — prefer `experiment.py gradcam` over calling `make_figures.py` directly. Requires prior `error_analysis.py --export-fp-crops` on the test split (`reports/hsp/error_test_report.json` + crop files). `--dry-run` prints the delegated `make_figures.py` argv only (no torch/GPU). Overlays need `--weights`; without weights the mosaic renders crop thumbnails only (`status: partial`). See [`docs/manuscript/gradcam_routing.md`](manuscript/gradcam_routing.md).
 
@@ -493,6 +522,40 @@ mamba run -n harchoc python scripts/experiment.py repro --include-test-map
 
 Headline numbers: [`reports/hsp/p0_summary.md`](../reports/hsp/p0_summary.md). Backlog: **MS-REPRO** (Done).
 
+### Post-zoo reviewer-2 pack (before Word paste)
+
+After P0 / zoo matrix train and HSP exports exist under `reports/hsp/`, regenerate reviewer-2 JSON in one chain:
+
+```bash
+mamba run -n harchoc python scripts/experiment.py reviewer2-repro
+```
+
+Preview (CI-safe; counting/confusion steps auto `--dry-run` if test GT/preds exports are missing):
+
+```bash
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py reviewer2-repro --dry-run
+```
+
+Same stage via manuscript repro: `experiment.py repro --stage post-zoo`. **`repro --stage full`** runs the HSP chain then **manuscript-preflight** (figures, tables, aug compare, backlog narrative, reviewer2 — not reviewer2 alone). Bundle: [`configs/experiments/manuscript_repro_bundle.json`](../configs/experiments/manuscript_repro_bundle.json); reviewer2 subset: [`reviewer2_repro.json`](../configs/experiments/reviewer2_repro.json). Shared runner: `harchoc/repro_chain.py`. Index: [`reports/reviewer2_index.md`](../reports/reviewer2_index.md).
+
+### Publication preflight (before Word paste)
+
+One ordered CPU chain after HSP exports (and optionally post-zoo reviewer-2): **reviewer2-repro** (skipped with warning if test GT/preds exports are missing) → **figures-repro** → **tables-repro** → **manuscript-docx-repro** → **aug-compare** → **backlog-narrative**. Writes step status to [`reports/manuscript/preflight_manifest.json`](../reports/manuscript/preflight_manifest.json). Implementation: `harchoc/manuscript_preflight.py` (`_cfg_section` / `_mapping` for nested bundle dicts).
+
+```bash
+mamba run -n harchoc python scripts/experiment.py manuscript-preflight
+# alias:
+mamba run -n harchoc python scripts/experiment.py repro --stage preflight
+```
+
+Preview (CI-safe):
+
+```bash
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py manuscript-preflight --dry-run
+```
+
+Config block: `manuscript_preflight` in [`manuscript_repro_bundle.json`](../configs/experiments/manuscript_repro_bundle.json) (`steps`: reviewer2 → figures → tables → docx → aug → narrative). Subcommands (also runnable standalone): `reviewer2-repro`, `figures-repro`, `tables-repro`, `manuscript-docx-repro`, `aug-compare`, `backlog-narrative`. Docx outputs: `reports/manuscript/docx/catalog.json`; tables: `reports/manuscript/tables/`.
+
 CI-light path: `threshold_sweep.py --light`, `error_analysis.py --light` (tracked `data/examples/{gt,preds}.json`).
 
 ### Manuscript and reviewer traceability
@@ -523,10 +586,18 @@ Canonical policy: [`configs/eval/asymmetric_seed_policy.json`](../configs/eval/a
 
 ### Detection confusion matrix (developed / aborted / background)
 
-3×3 matrix at the val-locked operating point (`detection_confusion_matrix.v1`). Prefer the **streaming** path (no preds JSON):
+3×3 matrix at the val-locked operating point (`detection_confusion_matrix.v1`).
+
+| Path | Needs GPU | Notes |
+|------|-----------|--------|
+| `eval.py --confusion-matrix-only` (streaming) | **Yes** — Ultralytics `predict` | One model load; `--confusion-matrix-splits test,train` writes `{prefix}_{role}_confusion.json` |
+| `eval.py --confusion-from-exports` | **No** | Reads existing `--export-gt-json` / `--export-preds-json`; match IoU from `--locked-conf-from` |
+| `error_analysis.py --confusion-matrix-out` | **No** | Same matcher as §11 error report; with `--locked-conf-from`, confusion uses counting match IoU (0.3) |
+| `experiment.py reviewer2-confusion` | **No** | CPU audit: IoU 0.5 vs stored error report + IoU 0.3 vs `best2_test_confusion.json` |
+
+**GPU streaming** (no preds JSON on disk):
 
 ```bash
-# One model load — test + train (zoo row example)
 mamba run -n harchoc python scripts/eval.py \
   --weights runs/hsp_zoo/yolo26m_e100_s0/weights/best.pt \
   --confusion-matrix-only \
@@ -537,18 +608,21 @@ mamba run -n harchoc python scripts/eval.py \
   --out reports/hsp/yolo26m_e100_s0_confusion_run.json
 ```
 
-Writes `reports/hsp/yolo26m_e100_s0_test_confusion.json` and `_train_confusion.json`. GPU default (`cuda` unless `HARCHOC_EXPORT_DEVICE` set); optional micro-batch via `HARCHOC_PREDICT_BATCH=4`.
-
-If `*_gt.json` / `*_preds.json` already exist, reuse exports (no re-inference):
+**CPU from frozen exports** (best2 / HSP parity, no dataset mount required):
 
 ```bash
-mamba run -n harchoc python scripts/error_analysis.py \
-  --gt-json reports/hsp/yolo26m_e100_s0_gt.json \
-  --preds-json reports/hsp/yolo26m_e100_s0_preds.json \
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/eval.py \
+  --confusion-matrix-only --confusion-from-exports \
+  --export-gt-json reports/hsp/gt_test.json \
+  --export-preds-json reports/hsp/preds_test.json \
+  --confusion-matrix-out reports/hsp/best2_test_confusion.json \
   --locked-conf-from reports/hsp/threshold_val.json \
-  --confusion-matrix-out reports/hsp/yolo26m_e100_s0_test_confusion.json \
-  --out reports/hsp/yolo26m_e100_s0_error.json \
-  --report reports/hsp/yolo26m_e100_s0_error_report.json
+  --weights models/best2.pt \
+  --out reports/hsp/best2_confusion_from_exports_run.json
+```
+
+```bash
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/experiment.py reviewer2-confusion
 ```
 
 Library API: `harchoc/detection_confusion.py` (`confusion_matrix_streaming`, `confusion_matrix_multi_split`, `confusion_matrix_from_exports`).
@@ -776,6 +850,8 @@ mamba run -n harchoc python scripts/eval_domains.py --run-all-trays \
 
 ## Transfer fine-tune (tray domain)
 
+**Playbook:** [FINETUNE_WEAK_TRAYS.md](FINETUNE_WEAK_TRAYS.md) (weak-tray audit → `tray_adapt` splits → staged GPU).
+
 `scripts/finetune.py` merges `configs/transfer/finetune_minimal.yaml` into a temp train JSON and calls `scripts/train.py`. Transfer fields:
 
 | Field | Role |
@@ -784,15 +860,25 @@ mamba run -n harchoc python scripts/eval_domains.py --run-all-trays \
 | `freeze` | Optional explicit Ultralytics `freeze` (int or list of layer indices) |
 | `unfreeze_epoch` | **Meta only** — logged once per train run; staged unfreeze needs two train stages |
 | `epochs`, `lr`, `seed` | Override experiment JSON for the finetune run |
+| `train_mode` | `tray_adapt` (default when `--tray-key` set), `lofo_pool`, or `canonical` |
 
-`train.py` records `freeze_policy` in `meta.json` (`train_meta.v1`). Dry-run finetune includes `transfer_policy` and `tray_eval_plan` (planned `eval.py` argv for tray / val / test splits) in `finetune_run.v1` JSON.
+`train.py` records `freeze_policy` in `meta.json` (`train_meta.v1`). Dry-run finetune includes `transfer_policy`, `split_plan`, and `tray_eval_plan` in `finetune_run.v1` JSON.
 
 | Flag | Role |
 |------|------|
+| `--train-mode` | `tray_adapt`: train on `data/domains/train_{tray}+val_{tray}` only (no `test.txt` leak) |
 | `--tray-eval` / `--no-tray-eval` | Chain tray holdout eval before/after train (default on) |
 | `--tray-key` | Holdout tray id(s); else transfer YAML or `--tray-catalog` |
-| `--domains-dir` | `data/domains/{test,val}_{tray_key}.txt` |
+| `--domains-dir` | `data/domains/{train,val,test}_{tray_key}.txt` (requires `--write-domain-splits`) |
 | `--splits-dir` | Canonical `test.txt` for manuscript test eval |
+
+`train.py` also accepts `--train-split-file` / `--val-split-file` (set automatically by finetune when `train_mode` ≠ `canonical`).
+
+```bash
+python scripts/experiment.py domain-tray-audit --out reports/domains/weak_tray_plan.json
+mamba run -n harchoc python scripts/experiment.py finetune-tray --stage 1 --tray-key 349-10-2 \
+  --dataset-root "$DATASET_ROOT"
+```
 
 Live runs record `tray_eval_before` / `tray_eval_after` output paths in `finetune.json`; device policy matches train config `eval` via `harchoc/post_train_eval.py`.
 

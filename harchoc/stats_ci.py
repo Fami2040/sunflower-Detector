@@ -133,7 +133,7 @@ def bootstrap_ci(
         n_resamples=int(n_resamples),
         confidence_level=float(confidence),
         method="percentile",
-        random_state=random_state,
+        random_state=random_state,  # type: ignore[call-arg]
     )
     low, high = float(res.confidence_interval.low), float(res.confidence_interval.high)
     return CiResult(

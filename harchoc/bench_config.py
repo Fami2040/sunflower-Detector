@@ -14,6 +14,7 @@ from harchoc.rtdetr_limits import (
 )
 from harchoc.training_budget import _budget_limit_int
 from harchoc.train_config import load_train_config_json
+from harchoc.config_coerce import as_dict, coerce_int
 from harchoc.yaml_minimal import parse_minimal_yaml
 
 
@@ -266,8 +267,7 @@ def load_bench_config(path: Path) -> BenchConfig:
             obj = _resolve_bench_includes(obj, path)
     infer = obj.get("infer") if isinstance(obj.get("infer"), dict) else {}
     assert isinstance(infer, dict)
-    infer_imgsz = infer.get("imgsz")
-    imgsz = int(infer_imgsz) if isinstance(infer_imgsz, int) else (int(obj["imgsz"]) if isinstance(obj.get("imgsz"), int) else None)
+    imgsz = coerce_int(infer.get("imgsz")) or coerce_int(obj.get("imgsz"))
     raw_groups = obj.get("groups", obj.get("group"))
     groups: tuple[str, ...] = ()
     if isinstance(raw_groups, str):
@@ -285,9 +285,9 @@ def load_bench_config(path: Path) -> BenchConfig:
         groups=groups,
         infer=infer,
         imgsz=imgsz,
-        epochs=int(obj["epochs"]) if isinstance(obj.get("epochs"), int) else None,
-        patience=int(obj["patience"]) if isinstance(obj.get("patience"), int) else None,
-        seed=int(obj["seed"]) if isinstance(obj.get("seed"), int) else None,
+        epochs=coerce_int(obj.get("epochs")),
+        patience=coerce_int(obj.get("patience")),
+        seed=coerce_int(obj.get("seed")),
         train_config=str(obj["train_config"]).strip()
         if obj.get("train_config") is not None and str(obj.get("train_config")).strip()
         else None,
@@ -336,15 +336,15 @@ def _bench_to_train_config(cfg: BenchConfig, *, weights_path: str) -> dict[str, 
             merged["seed"] = int(cfg.seed)
         # Bench infer.max_det is an eval/infer cap only; do not overwrite train max_det
         # from committed train_bench_*.json (typically 3000 for dense trays).
-        infer_max_det = cfg.infer.get("max_det")
-        out: dict[str, Any] = {"train": merged}
-        eval_section = raw.get("eval") if isinstance(raw.get("eval"), dict) else {}
-        eval_out = dict(eval_section)
-        if isinstance(infer_max_det, int):
-            eval_out.setdefault("max_det", int(infer_max_det))
+        infer_max_det = coerce_int(cfg.infer.get("max_det"))
+        doc: dict[str, Any] = {"train": merged}
+        eval_section = as_dict(raw.get("eval"))
+        eval_out: dict[str, Any] = {**eval_section}
+        if infer_max_det is not None:
+            eval_out.setdefault("max_det", infer_max_det)
         if eval_out:
-            out["eval"] = eval_out
-        return out
+            doc["eval"] = eval_out
+        return doc
 
     imgsz = _infer_imgsz(cfg) or 1280
     train: dict[str, Any] = {
@@ -356,11 +356,11 @@ def _bench_to_train_config(cfg: BenchConfig, *, weights_path: str) -> dict[str, 
         train["patience"] = int(cfg.patience)
     if cfg.seed is not None:
         train["seed"] = int(cfg.seed)
-    infer_max_det = cfg.infer.get("max_det")
-    out: dict[str, Any] = {"train": train}
-    if isinstance(infer_max_det, int):
-        out["eval"] = {"max_det": int(infer_max_det)}
-    return out
+    infer_max_det = coerce_int(cfg.infer.get("max_det"))
+    doc = {"train": train}
+    if infer_max_det is not None:
+        doc["eval"] = {"max_det": infer_max_det}
+    return doc
 
 
 def _bench_eval_max_det(cfg: BenchConfig, train_doc: dict[str, Any]) -> int | None:
@@ -369,8 +369,7 @@ def _bench_eval_max_det(cfg: BenchConfig, train_doc: dict[str, Any]) -> int | No
         v = eval_section.get("max_det")
         if isinstance(v, int):
             return v
-    max_det = cfg.infer.get("max_det")
-    return int(max_det) if isinstance(max_det, int) else None
+    return coerce_int(cfg.infer.get("max_det"))
 
 
 def bench_external_provenance(cfg: BenchConfig) -> dict[str, object] | None:

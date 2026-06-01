@@ -210,6 +210,60 @@ class DetectionConfusionTests(unittest.TestCase):
             obj = json.loads(out.read_text(encoding="utf-8"))
             self.assertEqual(obj["confusion_matrix_splits"], "test,train")
 
+    def test_eval_confusion_from_exports(self) -> None:
+        from scripts.eval import main
+
+        gt = {
+            "images": [
+                {
+                    "image_id": "a",
+                    "annotations": [{"bbox": [0, 0, 10, 10], "category_id": 0}],
+                }
+            ]
+        }
+        preds = {
+            "images": [
+                {
+                    "image_id": "a",
+                    "detections": [
+                        {"bbox": [0, 0, 10, 10], "category_id": 0, "score": 0.5}
+                    ],
+                }
+            ]
+        }
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            gt_path = root / "gt.json"
+            preds_path = root / "preds.json"
+            cm_path = root / "cm.json"
+            run_out = root / "eval_run.json"
+            gt_path.write_text(json.dumps(gt), encoding="utf-8")
+            preds_path.write_text(json.dumps(preds), encoding="utf-8")
+            weights = root / "w.pt"
+            weights.write_bytes(b"x")
+            rc = main(
+                [
+                    "--confusion-matrix-only",
+                    "--confusion-from-exports",
+                    "--export-gt-json",
+                    str(gt_path),
+                    "--export-preds-json",
+                    str(preds_path),
+                    "--confusion-matrix-out",
+                    str(cm_path),
+                    "--weights",
+                    str(weights),
+                    "--out",
+                    str(run_out),
+                ]
+            )
+            self.assertEqual(rc, 0)
+            cm = json.loads(cm_path.read_text(encoding="utf-8"))
+            self.assertEqual(cm["stats"]["tp"], 1)
+            self.assertEqual(cm["match"]["iou"], 0.3)
+            run_doc = json.loads(run_out.read_text(encoding="utf-8"))
+            self.assertTrue(run_doc.get("confusion_from_exports"))
+
 
 if __name__ == "__main__":
     unittest.main()

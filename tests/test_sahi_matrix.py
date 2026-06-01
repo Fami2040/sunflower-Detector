@@ -45,6 +45,8 @@ class SahiMatrixTests(unittest.TestCase):
                 "sahi": {"slice_size": 512, "overlap": 0.32, "nms_iou": 0.58, "label": "custom"},
             }
         )
+        self.assertIsNotNone(p)
+        assert p is not None
         self.assertEqual(p.slice_size, 512)
         self.assertEqual(p.label, "custom")
 
@@ -76,8 +78,11 @@ class SahiMatrixTests(unittest.TestCase):
         )
         rows = resolve_sahi_rows_for_bench(cfg, matrix_rows=matrix_rows, sahi_eval=True)
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].label, "bench_row")
-        self.assertEqual(rows[0].slice_size, 560)
+        row0 = rows[0]
+        self.assertIsNotNone(row0)
+        assert row0 is not None
+        self.assertEqual(row0.label, "bench_row")
+        self.assertEqual(row0.slice_size, 560)
 
     def test_expand_bench_configs_cross_product(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -90,8 +95,14 @@ class SahiMatrixTests(unittest.TestCase):
         )
         expanded = expand_bench_configs_with_sahi([cfg], matrix_rows=matrix_rows, sahi_eval=True)
         self.assertEqual(len(expanded), 2)
-        self.assertEqual(expanded[0][1].label, "a")
-        self.assertEqual(expanded[1][1].label, "b")
+        sahi_a = expanded[0][1]
+        sahi_b = expanded[1][1]
+        self.assertIsNotNone(sahi_a)
+        self.assertIsNotNone(sahi_b)
+        assert sahi_a is not None
+        assert sahi_b is not None
+        self.assertEqual(sahi_a.label, "a")
+        self.assertEqual(sahi_b.label, "b")
 
     def test_dry_run_sahi_eval_writes_plan_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:

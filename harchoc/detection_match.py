@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from harchoc.config_coerce import coerce_float
+
+
+def _optional_detection_score(ann: dict[str, Any]) -> float | None:
+    if "score" not in ann or ann.get("score") is None:
+        return None
+    return coerce_float(ann.get("score"))
+
 
 def _as_xyxy(box: Any) -> tuple[float, float, float, float]:
     """
@@ -76,7 +84,7 @@ def _extract_boxes(rec: dict[str, Any], *, key: str) -> list[dict[str, Any]]:
             {
                 "bbox": bbox,
                 "category_id": int(ann.get("category_id", ann.get("class_id", 0))),
-                "score": float(ann.get("score")) if "score" in ann and ann.get("score") is not None else None,
+                "score": _optional_detection_score(ann),
             }
         )
     return out

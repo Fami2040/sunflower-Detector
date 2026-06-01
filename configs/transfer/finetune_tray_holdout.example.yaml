@@ -1,0 +1,14 @@
+# Example transfer policy for weak-tray fine-tune (see docs/FINETUNE_WEAK_TRAYS.md).
+name: finetune_tray_holdout_example
+
+train_mode: tray_adapt
+tray_key: "349-10-2"
+
+freeze_backbone: true
+epochs: 25
+lr: 0.001
+seed: 0
+
+notes: >
+  tray_adapt trains on domain train+val lists for tray_key only;
+  never includes canonical test.txt paths. Use finetune.py --stage 1|2.

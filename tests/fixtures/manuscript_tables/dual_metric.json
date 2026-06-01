@@ -1,0 +1,40 @@
+{
+  "schema_version": "dual_metric_report.v1",
+  "status": "ok",
+  "inputs": {
+    "eval_test": "reports/hsp/eval_test_map.json",
+    "error_test": "reports/hsp/error_test_report.json",
+    "sweep_val": "reports/hsp/threshold_val.json"
+  },
+  "operating_point": {
+    "selected_conf": 0.15,
+    "locked_conf": 0.15,
+    "locked_source": "reports/hsp/threshold_val.json"
+  },
+  "rows": [
+    {
+      "split": "val",
+      "split_role_label": "in-training early-stop split (not generalization)",
+      "detection": { "mAP50": 0.172 },
+      "counting": {
+        "mae": 71.04587155963303,
+        "mae_ci": { "low": 61.0, "high": 81.0, "confidence": 0.95 }
+      },
+      "operating_conf": 0.15
+    },
+    {
+      "split": "test",
+      "split_role_label": "held-out manuscript split (generalization)",
+      "detection": { "mAP50": 0.18028741415651692, "mAP50_95": 0.09 },
+      "counting": {
+        "mae": 61.26605504587156,
+        "mae_ci": {
+          "low": 51.30183486238532,
+          "high": 71.28715596330274,
+          "confidence": 0.95
+        }
+      },
+      "operating_conf": 0.15
+    }
+  ]
+}

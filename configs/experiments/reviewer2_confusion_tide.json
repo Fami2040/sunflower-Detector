@@ -1,0 +1,12 @@
+{
+  "schema_version": "experiments.v1",
+  "reviewer2_confusion": {
+    "out": "reports/reviewer2_confusion_tide.json",
+    "gt_json": "reports/hsp/gt_test.json",
+    "preds_json": "reports/hsp/preds_test.json",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "error_report": "reports/hsp/error_test_report.json",
+    "tide_summary": "reports/hsp/tide_bucket_summary.json",
+    "confusion_iou_0_3": "reports/hsp/best2_test_confusion.json"
+  }
+}

@@ -131,6 +131,8 @@ class EvalScriptStrictTests(unittest.TestCase):
         sw = StrictWarnings()
         m50, m95, _ = _extract_ultralytics_metrics(_Res(), strict_warnings=sw)
         self.assertIsNone(m50)
+        self.assertIsNotNone(m95)
+        assert m95 is not None
         self.assertAlmostEqual(m95, 0.5)
         codes = [w["code"] for w in sw.items]
         self.assertIn("ultralytics_metrics_map50", codes)

@@ -99,9 +99,11 @@ def _get_yolo_net(weights: str | Path, cache: dict[str, Any]) -> Any:
 def _gradcam_scalar_target(out: Any, activations: list[Any]) -> Any:
     import torch  # type: ignore
 
+    if isinstance(out, torch.Tensor):
+        return out.sum()
     if isinstance(out, dict):
         scores = out.get("scores")
-        if isinstance(scores, torch.Tensor):
+        if scores is not None and isinstance(scores, torch.Tensor):
             return scores.sum()
         tensors = [v for v in out.values() if isinstance(v, torch.Tensor)]
         if tensors:
@@ -110,8 +112,6 @@ def _gradcam_scalar_target(out: Any, activations: list[Any]) -> Any:
         tensors = [o for o in out if isinstance(o, torch.Tensor)]
         if tensors:
             return sum(t.sum() for t in tensors)
-    if hasattr(out, "sum"):
-        return out.sum()
     return activations[0].mean()
 
 

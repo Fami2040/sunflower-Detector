@@ -1,0 +1,17 @@
+{
+  "schema_version": "figures_repro_bundle.v1",
+  "description": "Regenerate all manuscript figures with journal style and write reports/figures/manifest.json.",
+  "manuscript": "configs/experiments/manuscript_repro_bundle.json",
+  "figures-repro": {
+    "out_dir": "reports/figures",
+    "meta_out": "reports/figures/run.json",
+    "manifest_out": "reports/figures/manifest.json",
+    "split_drift_report": "reports/hsp/split_drift_p0.json",
+    "threshold_csv": "reports/hsp/threshold_val.csv",
+    "threshold_json": "reports/hsp/threshold_val.json",
+    "error_report": "reports/hsp/error_test_report.json",
+    "figure": "all",
+    "panel_size": 12,
+    "journal_style": true
+  }
+}

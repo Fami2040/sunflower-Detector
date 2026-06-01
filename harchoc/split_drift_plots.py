@@ -23,7 +23,9 @@ def emit_split_drift_plots(
         return {"status": "skipped", "reason": f"missing_dependency:matplotlib ({ex})"}
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    comps = report.get("comparisons") if isinstance(report.get("comparisons"), dict) else {}
+    from harchoc.config_coerce import as_dict, child_dict
+
+    comps = as_dict(report.get("comparisons"))
     written: list[str] = []
     panel_idx = 0
 
@@ -31,7 +33,7 @@ def emit_split_drift_plots(
         ("labels", "class_dist_l1", "Class L1 distance"),
         ("labels", "class_jsd_nats", "Class JSD (nats)"),
     ]
-    pairs = [k for k in ("train_vs_val", "val_vs_test", "train_vs_test") if k in comps]
+    pairs = [k for k in ("train_vs_val", "val_vs_test", "train_vs_test") if k in comps and isinstance(comps[k], dict)]
     if not pairs:
         return {"status": "skipped", "reason": "no comparisons in report"}
 
@@ -43,7 +45,7 @@ def emit_split_drift_plots(
             comp = comps.get(p)
             if not isinstance(comp, dict):
                 continue
-            sec = comp.get(section) if isinstance(comp.get(section), dict) else {}
+            sec = child_dict(comp, section)
             v = sec.get(key)
             if v is None:
                 continue
@@ -64,16 +66,19 @@ def emit_split_drift_plots(
         plt.close(fig)
         written.append(str(path))
 
-    ks_pairs: list[tuple[str, float | None]] = []
+    ks_pairs: list[tuple[str, float]] = []
     for p in pairs:
-        comp = comps[p]
-        img = comp.get("images") if isinstance(comp.get("images"), dict) else {}
-        wks = img.get("width_ks") if isinstance(img.get("width_ks"), dict) else {}
-        if wks.get("available") and wks.get("pvalue") is not None:
-            ks_pairs.append((p, float(wks["pvalue"])))
+        comp_raw = comps.get(p)
+        if not isinstance(comp_raw, dict):
+            continue
+        wks = child_dict(child_dict(comp_raw, "images"), "width_ks")
+        pvalue = wks.get("pvalue")
+        if wks.get("available") and pvalue is not None:
+            ks_pairs.append((p, float(pvalue)))
     if ks_pairs:
         fig, ax = plt.subplots(figsize=figsize)
-        ax.bar([x[0] for x in ks_pairs], [x[1] for x in ks_pairs])
+        heights = [float(x[1]) for x in ks_pairs]
+        ax.bar([x[0] for x in ks_pairs], heights)
         ax.axhline(0.05, color="orange", linestyle="--", label="p=0.05")
         ax.set_title("Width KS p-value")
         ax.legend()

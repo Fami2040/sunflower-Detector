@@ -28,6 +28,9 @@
 | Strict ML surfacing | `harchoc/strict_ml.py`, `scripts/strict_ml_smoke.py` |
 | Pre-train gate | `scripts/pre_train_gate.py` (manifest + unittest; `--full` + `HARCHOC_STRICT_ML=1`) |
 | Agent batch verify | `scripts/update_agent_batch_verify.py` → `reports/hsp/agent_batch_verify.json` |
+| Repro / preflight chains | `harchoc/repro_chain.py`, `reviewer2_repro.py`, `manuscript_preflight.py`, `figures_repro.py`, `manuscript_tables.py`, `manuscript_docx_repro.py` → `experiment.py repro` / `reviewer2-repro` / `manuscript-preflight` |
+| Config JSON coercion | `harchoc/config_coerce.py` (`pick_int`, `optional_str`, …) → experiment bundles + pyright-friendly merges |
+| Finetune tray splits | `harchoc/finetune_tray_splits.py`, `finetune_tray_audit.py` → `scripts/finetune.py` — [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) |
 
 **Rule:** Prefer extending `experiment.py` / existing scripts before adding `scripts/*.py` (see cursor rule).
 

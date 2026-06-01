@@ -100,15 +100,14 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(text, end="")
 
-    summary = report["summary"]  # type: ignore[assignment]
-    missing = int(summary["missing"])
+    from harchoc.config_coerce import as_dict, child_dict
+
+    summary = as_dict(report.get("summary"))
+    missing = int(summary.get("missing", 0))
     missing_manifest = int(summary.get("missing_from_manifest", 0))
     ext_missing = 0
-    external = report.get("external")
-    if isinstance(external, dict):
-        ext_summary = external.get("summary")
-        if isinstance(ext_summary, dict):
-            ext_missing = int(ext_summary.get("missing", 0))
+    ext_summary = child_dict(as_dict(report.get("external")), "summary")
+    ext_missing = int(ext_summary.get("missing", 0))
     repos_missing = 0
     external_repos = report.get("external_repos")
     if isinstance(external_repos, dict):

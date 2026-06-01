@@ -123,7 +123,10 @@ class ThresholdSweepLockedConfTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            self.assertAlmostEqual(load_locked_match_iou(p), 0.45)
+            locked_iou = load_locked_match_iou(p)
+            self.assertIsNotNone(locked_iou)
+            assert locked_iou is not None
+            self.assertAlmostEqual(locked_iou, 0.45)
 
 
 class GradcamPanelTests(unittest.TestCase):

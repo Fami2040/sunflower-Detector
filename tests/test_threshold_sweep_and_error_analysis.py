@@ -647,6 +647,7 @@ class ThresholdSweepAndErrorAnalysisTests(unittest.TestCase):
 
         parsed = yolo_label_line_to_xyxy("0 0.5 0.5 0.2 0.2", img_w=100, img_h=100)
         self.assertIsNotNone(parsed)
+        assert parsed is not None
         cls, (x1, y1, x2, y2) = parsed
         self.assertEqual(cls, 0)
         self.assertAlmostEqual(x1, 40.0)

@@ -1,4 +1,17 @@
-"""3×3 detection confusion matrix (classes 0, 1, background) at a locked operating point."""
+"""3×3 detection confusion matrix (classes 0, 1, background) at a locked operating point.
+
+Paths (pick one):
+
+- **CPU / frozen preds:** ``confusion_matrix_from_exports(gt, preds, …)`` — same matcher as
+  ``error_analysis_core.analyze_errors``; used by ``error_analysis.py --confusion-matrix-out``,
+  ``experiment.py reviewer2-confusion``, and ``eval.py --confusion-from-exports``.
+- **GPU streaming:** ``confusion_matrix_streaming`` / ``confusion_matrix_multi_split`` — Ultralytics
+  ``predict`` over split images (default device ``cuda``); ``eval.py --confusion-matrix-only`` without
+  ``--confusion-from-exports``.
+
+IoU: §11 / error-analysis tables use **0.5**; HSP counting / ``best2_*_confusion.json`` use val-locked
+conf with match IoU **0.3** (``resolve_match_settings`` + ``EXPORT_IOU``).
+"""
 
 from __future__ import annotations
 
@@ -294,6 +307,8 @@ def confusion_matrix_streaming(
     owned_model = model is None
     if owned_model:
         model = YOLO(str(weights))
+    if model is None:
+        raise RuntimeError("detection model is required")
 
     acc = ConfusionMatrixAccumulator()
     device_resolved = _default_streaming_device(device)

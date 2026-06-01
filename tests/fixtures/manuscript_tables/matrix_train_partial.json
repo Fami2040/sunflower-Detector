@@ -1,0 +1,15 @@
+{
+  "schema_version": "benchmark_matrix_train.v1",
+  "status": "train",
+  "runs": [
+    {
+      "status": "ok",
+      "name": "yolov8m",
+      "run_name": "yolov8m_e100_s0",
+      "mAP50": 0.36,
+      "mAP50_95": 0.18,
+      "test_count_mae": 72.5,
+      "weights": "runs/detect/yolov8m_e100_s0/weights/best.pt"
+    }
+  ]
+}

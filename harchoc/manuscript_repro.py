@@ -1,28 +1,24 @@
 from __future__ import annotations
 
-import json
-import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Callable
 
+from harchoc.repro_chain import (
+    format_repro_cmd,
+    load_json_bundle,
+    run_argv_chain,
+)
+
+MANUSCRIPT_REPRO_BUNDLE_SCHEMA = "manuscript_repro_bundle.v1"
+
 
 def load_manuscript_repro_bundle(path: str | Path) -> dict[str, Any]:
-    p = Path(path).expanduser().resolve()
-    obj = json.loads(p.read_text(encoding="utf-8"))
-    if obj.get("schema_version") != "manuscript_repro_bundle.v1":
-        raise ValueError(f"unsupported bundle schema: {obj.get('schema_version')!r}")
-    return obj
-
-
-from harchoc.ml_env import repo_python_cmd
+    return load_json_bundle(path, schema_version=MANUSCRIPT_REPRO_BUNDLE_SCHEMA)
 
 
 def _format_cmd(argv: list[str], *, mamba: bool) -> str:
-    if mamba:
-        return " ".join(repo_python_cmd(argv))
-    return " ".join([sys.executable, *argv])
+    """Backward-compatible alias; prefer ``harchoc.repro_chain.format_repro_cmd``."""
+    return format_repro_cmd(argv, mamba=mamba)
 
 
 def build_manuscript_repro_chain(
@@ -188,6 +184,7 @@ def run_manuscript_repro_chain(
     skip_gpu_check: bool = False,
     include_test_map: bool = False,
     on_step: Callable[[str, list[str]], None] | None = None,
+    run_argv: Callable[[list[str]], int] | None = None,
 ) -> int:
     rr = Path(repo_root or ".").expanduser().resolve()
     from harchoc.experiment_argv import argv_for_repro_steps
@@ -198,14 +195,12 @@ def run_manuscript_repro_chain(
         skip_gpu_check=skip_gpu_check,
         include_test_map=include_test_map,
     )
-    for step_id, argv in steps:
-        if on_step is not None:
-            on_step(step_id, argv)
-        if dry_run:
-            print(f"# {step_id}")
-            print(_format_cmd(argv, mamba=True))
-            continue
-        proc = subprocess.run([sys.executable, *argv], cwd=str(rr))
-        if proc.returncode != 0:
-            raise SystemExit(f"repro step {step_id!r} failed with exit code {proc.returncode}")
-    return 0
+    return run_argv_chain(
+        steps,
+        repo_root=rr,
+        dry_run=dry_run,
+        on_step=on_step,
+        run_argv=run_argv,
+        mamba_for_step=lambda _sid: True,
+        fail_label="repro",
+    )

@@ -43,10 +43,11 @@ def _extract_scalar(doc: dict[str, Any], keys: tuple[str, ...]) -> float | None:
                 break
             cur = cur[p]
         if ok and cur is not None:
-            try:
-                return float(cur)
-            except (TypeError, ValueError):
-                continue
+            from harchoc.config_coerce import coerce_float
+
+            parsed = coerce_float(cur)
+            if parsed is not None:
+                return parsed
     return None
 
 

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from harchoc.config_coerce import as_dict, child_dict
+
 
 @dataclass(frozen=True)
 class DriftAcceptanceConfig:
@@ -102,8 +104,8 @@ def evaluate_pair(
         elif sev == "warn" and worst != "fail":
             worst = "warn"
 
-    labels = comparison.get("labels") if isinstance(comparison.get("labels"), dict) else {}
-    images = comparison.get("images") if isinstance(comparison.get("images"), dict) else {}
+    labels = child_dict(comparison, "labels")
+    images = child_dict(comparison, "images")
 
     jsd = labels.get("class_jsd_nats")
     sev = _metric_severity(
@@ -126,8 +128,8 @@ def evaluate_pair(
         _bump(sev)
 
     for key in ("width_ks", "height_ks"):
-        ks = images.get(key) if isinstance(images.get(key), dict) else None
-        if not ks or not ks.get("available"):
+        ks = child_dict(images, key)
+        if not ks.get("available"):
             continue
         pv = ks.get("pvalue")
         sev = _ks_severity(float(pv) if pv is not None else None, cfg=cfg)
@@ -152,7 +154,7 @@ def evaluate_acceptance(
     cfg: DriftAcceptanceConfig | None = None,
 ) -> dict[str, Any]:
     cfg = cfg or DriftAcceptanceConfig()
-    comps = report.get("comparisons") if isinstance(report.get("comparisons"), dict) else {}
+    comps = as_dict(report.get("comparisons"))
     per_pair: dict[str, Any] = {}
     overall: Severity = "ok"
     for pair in cfg.pairs:

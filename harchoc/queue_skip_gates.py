@@ -216,3 +216,40 @@ def matrix_run_is_complete(repo_root: Path, run: dict[str, Any]) -> bool:
     if not run.get("weights"):
         return False
     return _matrix_run_has_test_mae(repo_root, run)
+
+
+def enrich_matrix_train_run_from_artifacts(
+    repo_root: Path,
+    run: dict[str, Any],
+    *,
+    runs_dir: Path | None = None,
+    hsp_out_dir: str = "reports/hsp",
+) -> dict[str, Any]:
+    """Fill test_count_mae / mAP on a matrix row from existing HSP + test_eval artifacts."""
+    out = dict(run)
+    run_name = str(out.get("run_name") or "").strip()
+    if not run_name:
+        return out
+    rr = repo_root.resolve()
+    if hsp_eval_artifacts_verified(rr, run_name=run_name, out_dir=hsp_out_dir):
+        paths = hsp_eval_prefix_paths(rr, run_name, hsp_out_dir)
+        mae, _ci = extract_count_mae(paths["error"])
+        if mae is not None:
+            out["test_count_mae"] = mae
+        try:
+            out["error_test_report"] = str(paths["error"].resolve().relative_to(rr))
+        except ValueError:
+            out["error_test_report"] = str(paths["error"].resolve())
+    if runs_dir is not None:
+        te = (runs_dir / run_name / "test_eval.json").resolve()
+        if te.is_file():
+            try:
+                obj = _read_json(te)
+            except Exception:
+                obj = {}
+            if out.get("mAP50") is None and isinstance(obj.get("mAP50"), (int, float)):
+                out["mAP50"] = float(obj["mAP50"])
+            if out.get("mAP50_95") is None and isinstance(obj.get("mAP50_95"), (int, float)):
+                out["mAP50_95"] = float(obj["mAP50_95"])
+            out.setdefault("test_eval", {"eval_out": str(te), "status": "ok"})
+    return out

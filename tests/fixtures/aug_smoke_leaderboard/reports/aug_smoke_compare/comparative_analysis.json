@@ -1,0 +1,282 @@
+{
+  "schema_version": "aug_comparative_analysis.v1",
+  "generated_at": "2026-06-01T09:19:07Z",
+  "primary_metric": "test_count_mae",
+  "epochs_smoke": 15,
+  "reference_best2": {
+    "smoke_id": "best2",
+    "run_name": "models/best2.pt",
+    "epochs": 100,
+    "test_count_mae": 61.26605504587156,
+    "test_count_mae_ci": {
+      "low": 51.30183486238532,
+      "high": 71.28715596330274,
+      "confidence": 0.95
+    },
+    "source": "reports/hsp/fp_budget_sweep_test.json (locked conf 0.15, test split)",
+    "key_overrides": "production YOLOv8m 100 ep; HSP primary reference"
+  },
+  "reference_aug_confirm_100ep": {
+    "id": "aug_confirm_100ep",
+    "run_name": "aug_confirm_winner_100ep",
+    "epochs": 100,
+    "aug_config": "configs/aug/robustness_minimal.yaml",
+    "test_count_mae": null,
+    "test_count_mae_ci": null,
+    "summary": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json",
+    "note": "100-ep production confirm on robustness_minimal.yaml"
+  },
+  "best_smoke_mae": 68.90825688073394,
+  "delta_best_smoke_vs_best2": 7.642201834862384,
+  "delta_confirm_100ep_vs_best2": null,
+  "rankings": [
+    {
+      "rank": 1,
+      "kind": "smoke",
+      "smoke_id": "S1",
+      "run_name": "aug_smoke_close3",
+      "test_count_mae": 68.90825688073394,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 68.90825688073394,
+        "low": 60.05550458715597,
+        "high": 78.50550458715597,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "close_mosaic=3 only",
+      "summary": "reports/aug_smoke/s1_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T11:11:03Z"
+    },
+    {
+      "rank": 2,
+      "kind": "smoke",
+      "smoke_id": "S5",
+      "run_name": "aug_smoke_mosaic03",
+      "test_count_mae": 125.66055045871559,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 125.66055045871559,
+        "low": 112.92614678899082,
+        "high": 139.6045871559633,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "mosaic=0.3, close_mosaic=3",
+      "summary": "reports/aug_smoke/s5_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-29T21:44:07Z"
+    },
+    {
+      "rank": 3,
+      "kind": "smoke",
+      "smoke_id": "S2",
+      "run_name": "aug_smoke_mosaic0",
+      "test_count_mae": 147.41284403669724,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 147.41284403669724,
+        "low": 134.50045871559632,
+        "high": 160.9105504587156,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "mosaic=0, close_mosaic=0",
+      "summary": "reports/aug_smoke/s2_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-29T17:50:43Z"
+    },
+    {
+      "rank": 4,
+      "kind": "smoke",
+      "smoke_id": "S3",
+      "run_name": "aug_smoke_photometric",
+      "test_count_mae": 151.73394495412845,
+      "test_count_mae_ci": null,
+      "key_overrides": "photometric only; erasing=0.2",
+      "summary": "reports/aug_smoke/s3_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T12:00:00Z"
+    }
+  ],
+  "audit_duplicate_rows": [
+    {
+      "kind": "smoke",
+      "smoke_id": "S0",
+      "run_name": "aug_smoke_baseline",
+      "test_count_mae": 68.90825688073394,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 68.90825688073394,
+        "low": 60.05550458715597,
+        "high": 78.50550458715597,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "production minimal; close_mosaic=15 (scales to 3 @ 15 ep)",
+      "summary": "reports/aug_smoke/s0_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T10:06:07Z"
+    },
+    {
+      "kind": "smoke",
+      "smoke_id": "S13",
+      "run_name": "aug_smoke_patience5",
+      "test_count_mae": 68.90825688073394,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 68.90825688073394,
+        "low": 60.05550458715597,
+        "high": 78.50550458715597,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "S1 + patience=5 only",
+      "summary": "reports/aug_smoke/s13_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T11:16:40Z"
+    },
+    {
+      "kind": "smoke",
+      "smoke_id": "S6",
+      "run_name": "aug_smoke_erasing0",
+      "test_count_mae": 151.73394495412845,
+      "test_count_mae_ci": null,
+      "key_overrides": "S3 + erasing=0",
+      "summary": "reports/aug_smoke/s6_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T12:00:00Z"
+    },
+    {
+      "kind": "smoke",
+      "smoke_id": "S7",
+      "run_name": "aug_smoke_erasing03",
+      "test_count_mae": 151.73394495412845,
+      "test_count_mae_ci": null,
+      "key_overrides": "S3 + erasing=0.3",
+      "summary": "reports/aug_smoke/s7_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T12:00:00Z"
+    }
+  ],
+  "eval_control_rows": [
+    {
+      "kind": "smoke",
+      "smoke_id": "S14",
+      "run_name": "aug_smoke_eval300",
+      "test_count_mae": 68.90825688073394,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 68.90825688073394,
+        "low": 60.05550458715597,
+        "high": 78.50550458715597,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "key_overrides": "S1 weights; eval max_det=300 only",
+      "summary": "reports/aug_smoke/s14_summary.json",
+      "status": "complete",
+      "generated_at": "2026-05-30T11:11:03Z",
+      "negative_control": true
+    }
+  ],
+  "equivalence_classes": {
+    "classes": [
+      {
+        "test_count_mae": 68.90825688073394,
+        "smoke_ids": [
+          "S0",
+          "S1",
+          "S13"
+        ],
+        "canonical_smoke_id": "S1",
+        "preds_sha256": "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8"
+      },
+      {
+        "test_count_mae": 151.73394495412845,
+        "smoke_ids": [
+          "S3",
+          "S6",
+          "S7"
+        ],
+        "canonical_smoke_id": "S3",
+        "preds_sha256": "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d"
+      }
+    ]
+  },
+  "mae_clusters": [
+    {
+      "test_count_mae": 68.908256880734,
+      "count": 4,
+      "smoke_ids": [
+        "S0",
+        "S13",
+        "S14",
+        "S1"
+      ],
+      "run_names": [
+        "aug_smoke_baseline",
+        "aug_smoke_patience5",
+        "aug_smoke_eval300",
+        "aug_smoke_close3"
+      ],
+      "preds_sha256": "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8",
+      "preds_sha256_distinct": 1,
+      "preds_sha256_verified_count": 1,
+      "interpretation": "identical test preds export (config equivalence or converged inference)"
+    },
+    {
+      "test_count_mae": 151.733944954128,
+      "count": 3,
+      "smoke_ids": [
+        "S3",
+        "S6",
+        "S7"
+      ],
+      "run_names": [
+        "aug_smoke_photometric",
+        "aug_smoke_erasing0",
+        "aug_smoke_erasing03"
+      ],
+      "preds_sha256": "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d",
+      "preds_sha256_distinct": 1,
+      "preds_sha256_verified_count": 1,
+      "interpretation": "identical test preds export (config equivalence or converged inference)"
+    }
+  ],
+  "rejected_arms": [
+    {
+      "smoke_id": "S2",
+      "run_name": "aug_smoke_mosaic0",
+      "aug_config": null,
+      "test_count_mae": 147.41284403669724,
+      "test_count_mae_ci": {
+        "stat": "mean",
+        "point": 147.41284403669724,
+        "low": 134.50045871559632,
+        "high": 160.9105504587156,
+        "confidence": 0.95,
+        "method": "bootstrap_percentile",
+        "n": 109
+      },
+      "delta_vs_canonical_s1": 78.50458715596329,
+      "versus_canonical": "S1",
+      "reason": "mosaic=0; large MAE regression vs close3 winner",
+      "summary": "reports/aug_smoke/s2_summary.json"
+    }
+  ],
+  "narrative_bullets": [
+    "Best 15-ep smoke: **S1** (`aug_smoke_close3`) at **68.9** test count MAE \u2014 close_mosaic=3 only.",
+    "Equivalence @ 68.9 MAE: S0, S1, S13 (canonical **S1**); do not re-train duplicates.",
+    "Equivalence @ 151.7 MAE: S3, S6, S7 (canonical **S3**); do not re-train duplicates.",
+    "Rejected **S2**: MAE **147.4** \u2014 mosaic=0; large MAE regression vs close3 winner",
+    "No 15-ep arm beats production **best2** (61.3 MAE); best smoke is **+7.6** MAE vs best2."
+  ]
+}

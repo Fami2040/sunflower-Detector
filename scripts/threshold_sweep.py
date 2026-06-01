@@ -7,8 +7,25 @@ import json
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
 
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
+
+from harchoc.config_coerce import (
+    as_dict,
+    as_float_list,
+    as_str_list,
+    optional_str,
+    pick_float,
+    pick_int,
+    pick_optional_float,
+    pick_optional_int,
+)
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.strict_ml import capture_failure, fail_or_warn
 from harchoc.detection_match import image_ids_union, match_counts_for_threshold
@@ -86,9 +103,6 @@ def write_compact_csv(path: str | Path, rows: list[dict[str, Any]]) -> Path:
         for r in rows:
             w.writerow({k: r.get(k) for k in fields})
     return out
-
-
-SelectMode = SelectMode  # re-export for tests
 
 
 def _best_f1(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -317,41 +331,41 @@ def main(argv: list[str] | None = None) -> int:
 
     args.manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
     args.default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    args.dataset_name = _pick_dataset("dataset_name", default=None)  # type: ignore[assignment]
-    args.dataset_root = _pick_dataset("dataset_root", default=None)  # type: ignore[assignment]
-    args.yolo_data_yaml = _pick_dataset("yolo_data_yaml", default=None)  # type: ignore[assignment]
+    args.dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
+    args.dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
+    args.yolo_data_yaml = optional_str(_pick_dataset("yolo_data_yaml", default=None))
 
     args.weights = str(_pick("weights", default=HSP_DETECTION_WEIGHTS))
     args.out = str(_pick("out", default="reports/thresholds/sweep.json"))
-    args.csv_out = str(_pick("csv_out", default=""))  # type: ignore[attr-defined]
-    args.tmin = float(_pick("tmin", default=0.05))
-    args.tmax = float(_pick("tmax", default=0.95))
-    args.steps = int(_pick("steps", default=19))
+    args.csv_out = str(_pick("csv_out", default=""))
+    args.tmin = pick_float(_pick("tmin", default=0.05), default=0.05)
+    args.tmax = pick_float(_pick("tmax", default=0.95), default=0.95)
+    args.steps = pick_int(_pick("steps", default=19), default=19)
     args.gt_json = str(_pick("gt_json", default=""))
     args.preds_json = str(_pick("preds_json", default=""))
-    args.iou = float(_pick("iou", default=0.5))
-    args.iou_grid = list(_pick("iou_grid", default=None) or [])  # type: ignore[attr-defined]
-    args.iou_min = _pick("iou_min", default=None)  # type: ignore[attr-defined]
-    args.iou_max = _pick("iou_max", default=None)  # type: ignore[attr-defined]
-    args.iou_steps = _pick("iou_steps", default=None)  # type: ignore[attr-defined]
-    args.split_file = str(_pick("split_file", default=""))  # type: ignore[attr-defined]
-    args.allow_test_tuning = bool(_pick("allow_test_tuning", default=False))  # type: ignore[attr-defined]
+    args.iou = pick_float(_pick("iou", default=0.5), default=0.5)
+    args.iou_grid = as_float_list(_pick("iou_grid", default=None))
+    args.iou_min = pick_optional_float(_pick("iou_min", default=None))
+    args.iou_max = pick_optional_float(_pick("iou_max", default=None))
+    args.iou_steps = pick_optional_int(_pick("iou_steps", default=None))
+    args.split_file = str(_pick("split_file", default=""))
+    args.allow_test_tuning = bool(_pick("allow_test_tuning", default=False))
     args.class_agnostic = bool(_pick("class_agnostic", default=False))
-    args.select = str(_pick("select", default="best_f1"))  # type: ignore[assignment]
-    args.min_recall = _pick("min_recall", default=None)  # type: ignore[assignment]
-    args.min_precision = _pick("min_precision", default=None)  # type: ignore[assignment]
-    args.max_fp_per_image = _pick("max_fp_per_image", default=None)  # type: ignore[assignment]
-    args.fixed_conf = _pick("fixed_conf", default=None)  # type: ignore[assignment]
-    args.locked_conf_from = str(_pick("locked_conf_from", default=""))  # type: ignore[attr-defined]
+    args.select = str(_pick("select", default="best_f1"))
+    args.min_recall = pick_optional_float(_pick("min_recall", default=None))
+    args.min_precision = pick_optional_float(_pick("min_precision", default=None))
+    args.max_fp_per_image = pick_optional_float(_pick("max_fp_per_image", default=None))
+    args.fixed_conf = pick_optional_float(_pick("fixed_conf", default=None))
+    args.locked_conf_from = str(_pick("locked_conf_from", default=""))
     args.run_yolo = bool(_pick("run_yolo", default=False))
-    args.images = list(_pick("images", default=[]))  # type: ignore[assignment]
+    args.images = as_str_list(_pick("images", default=[]))
     args.dry_run = bool(_pick("dry_run", default=False))
-    args.light = bool(_pick("light", default=False))  # type: ignore[attr-defined]
-    args.calibrate = str(_pick("calibrate", default="none"))  # type: ignore[attr-defined]
-    args.calibration_metrics = bool(_pick("calibration_metrics", default=False))  # type: ignore[attr-defined]
-    args.fp_budget_sweep_out = str(_pick("fp_budget_sweep_out", default=""))  # type: ignore[attr-defined]
-    args.fp_budget_grid = list(_pick("fp_budget_grid", default=None) or [])  # type: ignore[attr-defined]
-    args.sweep_from = str(_pick("sweep_from", default=""))  # type: ignore[attr-defined]
+    args.light = bool(_pick("light", default=False))
+    args.calibrate = str(_pick("calibrate", default="none"))
+    args.calibration_metrics = bool(_pick("calibration_metrics", default=False))
+    args.fp_budget_sweep_out = str(_pick("fp_budget_sweep_out", default=""))
+    args.fp_budget_grid = as_float_list(_pick("fp_budget_grid", default=None))
+    args.sweep_from = str(_pick("sweep_from", default=""))
 
     repo_root = Path(__file__).resolve().parents[1]
 
@@ -391,17 +405,19 @@ def main(argv: list[str] | None = None) -> int:
     spec = resolve_dataset(
         manifest_path=args.manifest,
         default_dataset_name=args.default_dataset_name,
-        dataset_name=args.dataset_name,
-        dataset_root=args.dataset_root,
-        yolo_data_yaml=args.yolo_data_yaml,
+        dataset_name=optional_str(args.dataset_name),
+        dataset_root=optional_str(args.dataset_root),
+        yolo_data_yaml=optional_str(args.yolo_data_yaml),
     )
     if args.light:
         dataset_desc: dict[str, Any] = (
-            describe_dataset(spec) if spec.root.is_dir() else {"note": "light mode without DATASET_ROOT"}
+            as_dict(describe_dataset(spec))
+            if spec.root.is_dir()
+            else {"note": "light mode without DATASET_ROOT"}
         )
     else:
         require_existing_dir(spec.root, what="Dataset root", hint="Export DATASET_ROOT=/path/to/extracted/dataset")
-        dataset_desc = describe_dataset(spec)
+        dataset_desc = as_dict(describe_dataset(spec))
 
     gt_obj: Any | None = read_json(gt_json) if gt_json else None
     preds_obj: Any | None = read_json(preds_json) if preds_json else None
@@ -424,15 +440,16 @@ def main(argv: list[str] | None = None) -> int:
             dets: list[dict[str, Any]] = []
             with capture_failure(f"parse YOLO boxes for {img_path}") as cap:
                 boxes = r.boxes
-                for i in range(len(boxes)):
-                    b = boxes.xyxy[i].tolist()
-                    dets.append(
-                        {
-                            "bbox": [float(b[0]), float(b[1]), float(b[2]), float(b[3])],
-                            "category_id": int(boxes.cls[i].item()),
-                            "score": float(boxes.conf[i].item()),
-                        }
-                    )
+                if boxes is not None:
+                    for i in range(len(boxes)):
+                        b = boxes.xyxy[i].tolist()
+                        dets.append(
+                            {
+                                "bbox": [float(b[0]), float(b[1]), float(b[2]), float(b[3])],
+                                "category_id": int(boxes.cls[i].item()),
+                                "score": float(boxes.conf[i].item()),
+                            }
+                        )
             if cap.failed:
                 fail_or_warn(f"{cap.context}: {cap.exc_type}: {cap.exc_msg}")
             preds_images.append({"image_id": img_path, "file_name": img_path, "detections": dets})

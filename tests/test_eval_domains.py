@@ -362,6 +362,7 @@ class EvalDomainsTests(unittest.TestCase):
             (domains / "test_200-3-1.txt").write_text("images/test/x.jpg\n", encoding="utf-8")
 
             def fake_eval(argv: list[str] | None) -> int:
+                assert argv is not None
                 out = Path(argv[argv.index("--out") + 1])
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.write_text(
@@ -450,19 +451,22 @@ class EvalDomainsTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            class Args:
-                out = str(eval_out)
-                dataset_root = str(root)
-                locked_conf_from = str(threshold)
-                weights = "models/best2.pt"
-                device = "cpu"
-                reports_dir = str(Path(td) / "reports")
-                domains_dir = str(Path(td) / "data" / "domains")
-                manifest = "data/manifest.json"
-                default_dataset_name = "sunflower"
-                dataset_name = None
-                yolo_data_yaml = None
-                count_mae_sidecar = str(Path(td) / "domain_count_mae.json")
+            from argparse import Namespace
+
+            args = Namespace(
+                out=str(eval_out),
+                dataset_root=str(root),
+                locked_conf_from=str(threshold),
+                weights="models/best2.pt",
+                device="cpu",
+                reports_dir=str(Path(td) / "reports"),
+                domains_dir=str(Path(td) / "data" / "domains"),
+                manifest="data/manifest.json",
+                default_dataset_name="sunflower",
+                dataset_name=None,
+                yolo_data_yaml=None,
+                count_mae_sidecar=str(Path(td) / "domain_count_mae.json"),
+            )
 
             old_env = os.environ.get("DATASET_ROOT")
             os.environ["DATASET_ROOT"] = str(root)
@@ -471,7 +475,7 @@ class EvalDomainsTests(unittest.TestCase):
                     "harchoc.domain_count_mae.run_tray_count_mae_eval",
                     side_effect=fake_run,
                 ):
-                    rc = _merge_tray_count_mae(Args(), Path(td))
+                    rc = _merge_tray_count_mae(args, Path(td))
             finally:
                 if old_env is None:
                     os.environ.pop("DATASET_ROOT", None)

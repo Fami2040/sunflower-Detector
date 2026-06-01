@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from harchoc.data_yaml import read_class_names
 from harchoc.hsp_eval_chain import DEFAULT_LOCKED_CONF_FROM, build_error_analysis_argv
@@ -17,6 +17,14 @@ from harchoc.hsp_export_protocol import (
 )
 from harchoc.ml_env import run_repo_python
 from harchoc.supergradients_train import _repo_splits_dir, materialize_yolo_staging
+
+
+def _sg_call(obj: object, attr: str, /, *args: Any, **kwargs: Any) -> Any:
+    """Call a SuperGradients method; stubs type ``test`` / ``predict`` as non-callable unions."""
+    fn = getattr(obj, attr, None)
+    if not callable(fn):
+        raise TypeError(f"{type(obj).__name__}.{attr} is not callable")
+    return cast(Callable[..., Any], fn)(*args, **kwargs)
 
 
 def eval_test_for_bench(
@@ -80,8 +88,16 @@ def eval_test_for_bench(
         model_id = "yolo_nas_s"
         model = models.get(model_id, num_classes=len(classes), pretrained_weights="coco")
         trainer = Trainer(experiment_name="sg_eval", ckpt_root_dir=str(staging_root / "ckpt"))
-        trainer.load_checkpoint(str(weights_path))
-        metrics_raw = trainer.test(model=model, test_loader=test_loader, test_metrics_list=None) or {}
+        _sg_call(trainer, "load_checkpoint", str(weights_path))
+        metrics_raw = _sg_call(
+            trainer,
+            "test",
+            model=model,
+            test_loader=test_loader,
+            test_metrics_list=None,
+        )
+        if not isinstance(metrics_raw, dict):
+            metrics_raw = {}
 
         map50, map50_95 = _extract_map_metrics(metrics_raw)
         payload: dict[str, Any] = {
@@ -206,7 +222,7 @@ def export_hsp_gt_preds_json(
     try:
         ckpt_dir = staging_root / "ckpt"
         trainer = Trainer(experiment_name="sg_hsp_export", ckpt_root_dir=str(ckpt_dir))
-        trainer.load_checkpoint(str(weights_path))
+        _sg_call(trainer, "load_checkpoint", str(weights_path))
         if device:
             model = model.to(device)
 
@@ -214,7 +230,14 @@ def export_hsp_gt_preds_json(
         for img_id, img_path, file_name in iter_split_image_paths(split_file, dataset_root=dataset_root):
             if not img_path.is_file():
                 continue
-            raw = model.predict(str(img_path), conf=float(conf), iou=float(iou), fp16=False)
+            raw = _sg_call(
+                model,
+                "predict",
+                str(img_path),
+                conf=float(conf),
+                iou=float(iou),
+                fp16=False,
+            )
             dets = sg_prediction_to_detections(raw, max_det=max_det)
             images.append({"image_id": img_id, "file_name": file_name, "detections": dets})
         preds_obj = {"images": images}

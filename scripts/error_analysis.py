@@ -5,8 +5,16 @@ import json
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
 
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
+
+from harchoc.config_coerce import as_dict, coerce_float, coerce_int, optional_str
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.experiment_config import load_config_json, merge_experiment_config, script_section_from_config
 from harchoc.error_analysis_core import analyze_errors, export_topk_fp_crops
@@ -113,21 +121,21 @@ def main(argv: list[str] | None = None) -> int:
 
     args.manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
     args.default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    args.dataset_name = _pick_dataset("dataset_name", default=None)  # type: ignore[assignment]
-    args.dataset_root = _pick_dataset("dataset_root", default=None)  # type: ignore[assignment]
-    args.yolo_data_yaml = _pick_dataset("yolo_data_yaml", default=None)  # type: ignore[assignment]
+    args.dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
+    args.dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
+    args.yolo_data_yaml = optional_str(_pick_dataset("yolo_data_yaml", default=None))
     args.weights = str(_pick("weights", default=HSP_DETECTION_WEIGHTS))
     args.out = str(_pick("out", default="reports/error_analysis/summary.json"))
     args.report = str(_pick("report", default="reports/error_analysis/report.json"))
-    args.topk = int(_pick("topk", default=50))
+    args.topk = coerce_int(_pick("topk", default=50)) or 50
     args.export_fp_crops = bool(_pick("export_fp_crops", default=False))
     args.fp_crops_dir = str(_pick("fp_crops_dir", default="reports/error_analysis/fp_crops"))
-    args.fp_crops_topk = int(_pick("fp_crops_topk", default=100))
+    args.fp_crops_topk = coerce_int(_pick("fp_crops_topk", default=100)) or 100
     args.gt_json = str(_pick("gt_json", default=""))
     args.preds_json = str(_pick("preds_json", default=""))
-    args.conf = float(_pick("conf", default=0.25))
-    args.iou = float(_pick("iou", default=0.5))
-    args.iou_bg = float(_pick("iou_bg", default=0.1))
+    args.conf = coerce_float(_pick("conf", default=0.25)) or 0.25
+    args.iou = coerce_float(_pick("iou", default=0.5)) or 0.5
+    args.iou_bg = coerce_float(_pick("iou_bg", default=0.1)) or 0.1
     args.locked_conf_from = str(_pick("locked_conf_from", default=""))
     args.tide_out = str(_pick("tide_out", default=""))
     args.tidecv = bool(_pick("tidecv", default=False))
@@ -183,17 +191,19 @@ def main(argv: list[str] | None = None) -> int:
     spec = resolve_dataset(
         manifest_path=args.manifest,
         default_dataset_name=args.default_dataset_name,
-        dataset_name=args.dataset_name,
-        dataset_root=args.dataset_root,
-        yolo_data_yaml=args.yolo_data_yaml,
+        dataset_name=optional_str(args.dataset_name),
+        dataset_root=optional_str(args.dataset_root),
+        yolo_data_yaml=optional_str(args.yolo_data_yaml),
     )
     if args.light:
         dataset_desc: dict[str, Any] = (
-            describe_dataset(spec) if spec.root.is_dir() else {"note": "light mode without DATASET_ROOT"}
+            as_dict(describe_dataset(spec))
+            if spec.root.is_dir()
+            else {"note": "light mode without DATASET_ROOT"}
         )
     else:
         require_existing_dir(spec.root, what="Dataset root", hint="Export DATASET_ROOT=/path/to/extracted/dataset")
-        dataset_desc = describe_dataset(spec)
+        dataset_desc = as_dict(describe_dataset(spec))
 
     gt_obj = read_json(gt_json)
     preds_obj = read_json(preds_json)
@@ -291,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
         tidecv_result = try_run_tidecv(gt=gt_obj, preds=preds_obj)
         compare_body = build_tidecv_compare(
             tide_bucket_summary=summary["tide_bucket_summary"],
-            tidecv_result=tidecv_result,
+            tidecv_result=tidecv_result or {},
         )
         compare_path = (args.tidecv_compare_out or "").strip() or default_tidecv_compare_path(args.report)
         compare_payload = with_schema_version(compare_body, schema_version="tidecv_compare.v1")
@@ -327,17 +337,26 @@ def main(argv: list[str] | None = None) -> int:
         from harchoc.detection_confusion import (
             confusion_matrix_from_exports,
             format_confusion_matrix_text,
+            resolve_match_settings,
         )
 
+        cm_conf = float(args.conf)
+        cm_iou = float(args.iou)
+        if locked_from:
+            cm_conf, cm_iou = resolve_match_settings(
+                conf=cm_conf,
+                iou=cm_iou,
+                locked_conf_from=locked_from,
+            )
         acc = confusion_matrix_from_exports(
             gt_obj,
             preds_obj,
-            conf_thr=float(args.conf),
-            iou_thr=float(args.iou),
+            conf_thr=cm_conf,
+            iou_thr=cm_iou,
         )
         cm_payload = acc.to_payload(
-            conf_thr=float(args.conf),
-            iou_thr=float(args.iou),
+            conf_thr=cm_conf,
+            iou_thr=cm_iou,
             weights=str(Path(args.weights)),
         )
         cm_path = write_json(confusion_out, cm_payload)

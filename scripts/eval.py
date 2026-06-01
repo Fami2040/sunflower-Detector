@@ -6,7 +6,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.hsp_weights import HSP_DETECTION_WEIGHTS, resolve_detection_weights
@@ -302,6 +309,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip val() mAP; only run confusion matrix (requires --confusion-matrix-out or --confusion-matrix-splits).",
     )
+    p.add_argument(
+        "--confusion-from-exports",
+        action="store_true",
+        help="Build confusion from existing --export-gt-json / --export-preds-json (CPU, no predict). "
+        "Incompatible with --confusion-matrix-splits.",
+    )
     args = p.parse_args(argv)
 
     weights = _resolve_weights(args.weights)
@@ -313,6 +326,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     if confusion_splits_raw and not confusion_out:
         raise SystemExit("--confusion-matrix-splits requires --confusion-matrix-out as output prefix.")
+    if args.confusion_from_exports and confusion_splits_raw:
+        raise SystemExit(
+            "--confusion-from-exports does not support --confusion-matrix-splits; "
+            "run once per split with matching gt/preds exports."
+        )
+    if args.confusion_from_exports and not (args.export_gt_json and args.export_preds_json):
+        raise SystemExit(
+            "--confusion-from-exports requires --export-gt-json and --export-preds-json."
+        )
 
     # Resolve dataset + split source even in dry-run, but do not require anything to exist.
     spec = resolve_dataset(
@@ -355,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
                 "confusion_matrix_out": confusion_out or None,
                 "confusion_matrix_splits": confusion_splits_raw or None,
                 "confusion_matrix_only": bool(args.confusion_matrix_only),
+                "confusion_from_exports": bool(args.confusion_from_exports),
                 "strict_warnings": [],
                 "out": str(Path(args.out)),
                 },
@@ -364,68 +387,92 @@ def main(argv: list[str] | None = None) -> int:
         cli_print(f"Wrote {out_path}")
         return 0
 
-    require_existing_dir(spec.root, what="Dataset root", hint="Export DATASET_ROOT=/path/to/extracted/dataset")
-    if not weights.expanduser().is_file():
-        raise SystemExit(f"Model weights do not exist: {weights}")
-
-    # Validate split path now that we're doing real work.
-    sp = split_path.expanduser()
-    if split_source.get("kind") == "split_file":
-        if not sp.is_file():
-            raise SystemExit(f"Split file does not exist: {sp}")
+    export_gt_early = (args.export_gt_json or "").strip()
+    export_preds_early = (args.export_preds_json or "").strip()
+    exports_only_cm = bool(
+        args.confusion_matrix_only
+        and args.confusion_from_exports
+        and export_gt_early
+        and export_preds_early
+    )
+    if exports_only_cm:
+        for label, rel in (("GT export", export_gt_early), ("preds export", export_preds_early)):
+            p = Path(rel).expanduser()
+            if not p.is_file():
+                raise SystemExit(f"{label} does not exist: {p}")
     else:
-        require_existing_dir(sp, what="Split directory")
+        require_existing_dir(spec.root, what="Dataset root", hint="Export DATASET_ROOT=/path/to/extracted/dataset")
+        if not weights.expanduser().is_file():
+            raise SystemExit(f"Model weights do not exist: {weights}")
 
-    # Pull class names if an existing data.yaml is available.
-    names: dict[int, str] | None = None
-    nc: int | None = None
-    yolo_data_yaml = spec.yolo_data_yaml or (spec.root / "data.yaml" if (spec.root / "data.yaml").is_file() else None)
-    if yolo_data_yaml is not None and yolo_data_yaml.is_file():
-        names, nc = parse_names_and_nc(yolo_data_yaml)
-    elif split_source.get("kind") == "dir":
-        # Ultralytics expects `names` or `nc` in the data.yaml. If the dataset has no yaml,
-        # infer `nc` from the labels for the selected split as a fallback.
-        nc = _infer_nc_from_labels(dataset_root=spec.root, split_dir=sp)
-    elif split_source.get("kind") == "split_file":
-        img_split = _image_split_dir_from_split_file(dataset_root=spec.root, split_file=sp)
-        if img_split is not None:
-            nc = _infer_nc_from_labels(dataset_root=spec.root, split_dir=img_split)
-
-    if nc is None:
-        nc = 2
-    if names is None and nc == 2:
-        from harchoc.sunflower_dataset import CLASS_NAMES_DICT
-
-        names = dict(CLASS_NAMES_DICT)
+    export_gt = export_gt_early
+    export_preds = export_preds_early
 
     out_path = Path(args.out)
-    data_yaml_path = _write_eval_data_yaml(
-        out_dir=out_path.parent,
-        dataset_root=spec.root,
-        val_source=sp,
-        names=names,
-        nc=nc,
-    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    export_gt = (args.export_gt_json or "").strip()
-    export_preds = (args.export_preds_json or "").strip()
+    sp = split_path.expanduser()
+    data_yaml_path: Path | None = None
+    if exports_only_cm:
+        split_role = "test"
+        export_lower = f"{export_gt} {export_preds}".lower()
+        if "val" in export_lower:
+            split_role = "val"
+        elif "train" in export_lower:
+            split_role = "train"
+    else:
+        if split_source.get("kind") == "split_file":
+            if not sp.is_file():
+                raise SystemExit(f"Split file does not exist: {sp}")
+        else:
+            require_existing_dir(sp, what="Split directory")
+
+        names: dict[int, str] | None = None
+        nc: int | None = None
+        yolo_data_yaml = spec.yolo_data_yaml or (
+            spec.root / "data.yaml" if (spec.root / "data.yaml").is_file() else None
+        )
+        if yolo_data_yaml is not None and yolo_data_yaml.is_file():
+            names, nc = parse_names_and_nc(yolo_data_yaml)
+        elif split_source.get("kind") == "dir":
+            nc = _infer_nc_from_labels(dataset_root=spec.root, split_dir=sp)
+        elif split_source.get("kind") == "split_file":
+            img_split = _image_split_dir_from_split_file(dataset_root=spec.root, split_file=sp)
+            if img_split is not None:
+                nc = _infer_nc_from_labels(dataset_root=spec.root, split_dir=img_split)
+
+        if nc is None:
+            nc = 2
+        if names is None and nc == 2:
+            from harchoc.sunflower_dataset import CLASS_NAMES_DICT
+
+            names = dict(CLASS_NAMES_DICT)
+
+        data_yaml_path = _write_eval_data_yaml(
+            out_dir=out_path.parent,
+            dataset_root=spec.root,
+            val_source=sp,
+            names=names,
+            nc=nc,
+        )
+
+        split_role = "test"
+        split_name = sp.name.lower()
+        if "val" in split_name:
+            split_role = "val"
+        elif "train" in split_name:
+            split_role = "train"
+
     if export_gt or export_preds:
         if not export_gt or not export_preds:
             raise SystemExit("--export-gt-json and --export-preds-json must be set together.")
-
-    split_role = "test"
-    split_name = sp.name.lower()
-    if "val" in split_name:
-        split_role = "val"
-    elif "train" in split_name:
-        split_role = "train"
 
     from harchoc.strict_ml import StrictWarnings
 
     strict_warnings = StrictWarnings()
     map50: float | None = None
     map50_95: float | None = None
-    per_class: dict[str, Any] | None = None
+    per_class: list[dict[str, object]] | None = None
     runtime_s = 0.0
     eval_device: str | None = None
     cuda_visible_prior: str | None = None
@@ -438,6 +485,8 @@ def main(argv: list[str] | None = None) -> int:
             eval_device = (os.getenv("HARCHOC_EXPORT_DEVICE") or "").strip() or None
         if str(eval_device or "").lower() == "cpu":
             cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
+        if data_yaml_path is None:
+            raise SystemExit("internal: data_yaml missing for validation eval")
         t0 = time.perf_counter()
         res = run_val(
             weights,
@@ -460,7 +509,8 @@ def main(argv: list[str] | None = None) -> int:
         "eval_target": {"split_role": split_role},
         "max_det": args.max_det,
         "imgsz": args.imgsz,
-        "generated_data_yaml": str(data_yaml_path),
+        "generated_data_yaml": str(data_yaml_path) if data_yaml_path is not None else None,
+        "confusion_from_exports": bool(args.confusion_from_exports),
         "export_only": bool(args.export_only),
         "device": eval_device,
         "mAP50": map50,
@@ -472,7 +522,7 @@ def main(argv: list[str] | None = None) -> int:
         schema_version="eval_run.v1",
     )
 
-    if export_gt and export_preds:
+    if export_gt and export_preds and not exports_only_cm:
         from harchoc.eval_export import export_gt_preds_json
 
         locked_from = (args.locked_conf_from or "").strip()
@@ -529,6 +579,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if confusion_out or confusion_splits_raw:
         from harchoc.detection_confusion import (
+            confusion_matrix_from_exports,
             confusion_matrix_multi_split,
             confusion_matrix_out_path,
             confusion_matrix_streaming,
@@ -548,6 +599,8 @@ def main(argv: list[str] | None = None) -> int:
         export_device = args.export_device
         if export_device is None:
             export_device = (os.getenv("HARCHOC_EXPORT_DEVICE") or "").strip() or "cuda"
+        if args.confusion_from_exports:
+            export_device = "cpu"
 
         confusion_payloads: dict[str, Any] = {}
         if confusion_splits_raw:
@@ -586,19 +639,33 @@ def main(argv: list[str] | None = None) -> int:
                 confusion_payloads[role] = {"path": str(cm_path), **cm_payload}
             payload["confusion_matrices"] = confusion_payloads
         else:
-            acc, cm_runtime_s = confusion_matrix_streaming(
-                weights=weights,
-                split_file=sp,
-                dataset_root=spec.root,
-                conf_thr=cm_conf,
-                iou_thr=cm_iou,
-                export_conf=float(args.export_conf),
-                export_iou=float(args.export_iou),
-                max_det=int(export_max_det),
-                device=export_device,
-                imgsz=args.imgsz,
-                strict_warnings=strict_warnings,
-            )
+            if args.confusion_from_exports:
+                from harchoc.json_io import load_json
+
+                t0 = time.perf_counter()
+                gt_obj = load_json(Path(export_gt).expanduser())
+                preds_obj = load_json(Path(export_preds).expanduser())
+                acc = confusion_matrix_from_exports(
+                    gt_obj,
+                    preds_obj,
+                    conf_thr=cm_conf,
+                    iou_thr=cm_iou,
+                )
+                cm_runtime_s = time.perf_counter() - t0
+            else:
+                acc, cm_runtime_s = confusion_matrix_streaming(
+                    weights=weights,
+                    split_file=sp,
+                    dataset_root=spec.root,
+                    conf_thr=cm_conf,
+                    iou_thr=cm_iou,
+                    export_conf=float(args.export_conf),
+                    export_iou=float(args.export_iou),
+                    max_det=int(export_max_det),
+                    device=export_device,
+                    imgsz=args.imgsz,
+                    strict_warnings=strict_warnings,
+                )
             cm_payload = acc.to_payload(
                 conf_thr=cm_conf,
                 iou_thr=cm_iou,

@@ -4,7 +4,15 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
+from harchoc.config_coerce import as_dict, child_dict, split_lists_from_source
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.strict_ml import capture_failure, fail_or_warn
 from harchoc.schemas import with_schema_version
@@ -306,8 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     splits_dir = root / str(args.splits_dir)
     payload["leakage_audit"] = audit_split_leakage(splits_from_split_dir(splits_dir))
     if bool(args.extended):
-        src = payload.get("source") if isinstance(payload.get("source"), dict) else {}
-        split_lists = src.get("split_lists") if isinstance(src.get("split_lists"), dict) else {}
+        split_lists = split_lists_from_source(payload)
         catalog_path = Path(args.catalog).expanduser() if (args.catalog or "").strip() else None
         payload["extended"] = build_extended_drift_block(
             dataset_root=root,
@@ -317,8 +324,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     if bool(args.with_ks):
         # Add best-effort KS tests without changing the base schema.
-        src = payload.get("source") if isinstance(payload.get("source"), dict) else {}
-        split_lists = src.get("split_lists") if isinstance(src.get("split_lists"), dict) else {}
+        split_lists = split_lists_from_source(payload)
+
         def _ls(name: str) -> list[str]:
             v = split_lists.get(name)
             return list(v) if isinstance(v, list) else []
@@ -327,22 +334,25 @@ def main(argv: list[str] | None = None) -> int:
         v_w, v_h, v_b = _collect_proxy_series(dataset_root=root, split_list=_ls("val"), limit=int(args.ks_limit))
         t_w, t_h, t_b = _collect_proxy_series(dataset_root=root, split_list=_ls("test"), limit=int(args.ks_limit))
 
-        comps = payload.get("comparisons") if isinstance(payload.get("comparisons"), dict) else {}
+        comps = as_dict(payload.get("comparisons"))
         def _add(dst: dict[str, Any], *, a: tuple[list[float], list[float], list[float]], b: tuple[list[float], list[float], list[float]]) -> None:
-            img = dst.get("images") if isinstance(dst.get("images"), dict) else {}
-            lbl = dst.get("labels") if isinstance(dst.get("labels"), dict) else {}
+            img = child_dict(dst, "images")
+            lbl = child_dict(dst, "labels")
             img["width_ks"] = _try_ks_payload(a[0], b[0])
             img["height_ks"] = _try_ks_payload(a[1], b[1])
             lbl["boxes_per_image_ks"] = _try_ks_payload(a[2], b[2])
             dst["images"] = img
             dst["labels"] = lbl
 
-        if isinstance(comps.get("train_vs_val"), dict):
-            _add(comps["train_vs_val"], a=(a_w, a_h, a_b), b=(v_w, v_h, v_b))
-        if isinstance(comps.get("train_vs_test"), dict):
-            _add(comps["train_vs_test"], a=(a_w, a_h, a_b), b=(t_w, t_h, t_b))
-        if isinstance(comps.get("val_vs_test"), dict):
-            _add(comps["val_vs_test"], a=(v_w, v_h, v_b), b=(t_w, t_h, t_b))
+        train_vs_val = comps.get("train_vs_val")
+        if isinstance(train_vs_val, dict):
+            _add(train_vs_val, a=(a_w, a_h, a_b), b=(v_w, v_h, v_b))
+        train_vs_test = comps.get("train_vs_test")
+        if isinstance(train_vs_test, dict):
+            _add(train_vs_test, a=(a_w, a_h, a_b), b=(t_w, t_h, t_b))
+        val_vs_test = comps.get("val_vs_test")
+        if isinstance(val_vs_test, dict):
+            _add(val_vs_test, a=(v_w, v_h, v_b), b=(t_w, t_h, t_b))
         payload["comparisons"] = comps
 
     acc_cfg = DriftAcceptanceConfig()

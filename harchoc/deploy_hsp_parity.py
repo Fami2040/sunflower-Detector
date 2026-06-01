@@ -292,12 +292,14 @@ def resolve_parity_image_sample(
         try:
             from harchoc.datasets import resolve_dataset
 
+            from harchoc.config_coerce import optional_str
+
             spec = resolve_dataset(
-                manifest_path=manifest_path,
-                default_dataset_name=default_dataset_name,
-                dataset_name=dataset_name,
+                manifest_path=optional_str(manifest_path) or "data/manifest.json",
+                default_dataset_name=optional_str(default_dataset_name) or "sunflower-cvat-2500",
+                dataset_name=optional_str(dataset_name),
                 dataset_root=None,
-                yolo_data_yaml=yolo_data_yaml,
+                yolo_data_yaml=optional_str(yolo_data_yaml),
             )
             root = Path(spec.root).resolve()
         except Exception as exc:

@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 class EvalConfigResolutionTests(unittest.TestCase):
@@ -207,6 +208,56 @@ class EvalConfigResolutionTests(unittest.TestCase):
                 self.assertEqual(rc, 0)
                 obj = json.loads(out.read_text("utf-8"))
                 self.assertEqual(obj.get("max_det"), 300)
+        finally:
+            os.chdir(old_cwd)
+            if old_dataset_root is None:
+                os.environ.pop("DATASET_ROOT", None)
+            else:
+                os.environ["DATASET_ROOT"] = old_dataset_root
+
+    def test_non_dry_run_out_path_before_eval_data_yaml(self) -> None:
+        """Regression: finetune tray eval hit UnboundLocalError on out_path."""
+        from scripts.eval import main
+
+        old_cwd = os.getcwd()
+        old_dataset_root = os.environ.get("DATASET_ROOT")
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                td_path = Path(td)
+                os.chdir(td_path)
+                root = td_path / "dataset"
+                (root / "images" / "test").mkdir(parents=True)
+                (root / "labels" / "test").mkdir(parents=True)
+                (root / "data.yaml").write_text(
+                    "nc: 2\nnames:\n  0: developed\n  1: aborted\n",
+                    encoding="utf-8",
+                )
+                split_file = td_path / "data" / "splits" / "tray.txt"
+                split_file.parent.mkdir(parents=True, exist_ok=True)
+                split_file.write_text("images/test/a.jpg\n", encoding="utf-8")
+                weights = td_path / "model.pt"
+                weights.write_bytes(b"stub")
+                out = td_path / "reports" / "nested" / "eval.json"
+                os.environ["DATASET_ROOT"] = str(root)
+                with mock.patch(
+                    "scripts.eval._write_eval_data_yaml",
+                    return_value=td_path / "eval_data.yaml",
+                ) as mock_yaml:
+                    rc = main(
+                        [
+                            "--out",
+                            str(out),
+                            "--weights",
+                            str(weights),
+                            "--split-file",
+                            str(split_file),
+                            "--export-only",
+                        ]
+                    )
+                self.assertEqual(rc, 0)
+                mock_yaml.assert_called_once()
+                self.assertEqual(mock_yaml.call_args.kwargs["out_dir"], out.parent)
+                self.assertTrue(out.is_file())
         finally:
             os.chdir(old_cwd)
             if old_dataset_root is None:

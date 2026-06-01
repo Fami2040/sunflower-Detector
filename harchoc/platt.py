@@ -55,8 +55,10 @@ def _fit_platt_model(
 
         lr = LogisticRegression(solver="lbfgs", max_iter=1000)
         lr.fit([[x] for x in xs], ys)
-        a = float(lr.coef_[0][0])
-        b = float(lr.intercept_[0])
+        coef: Any = lr.coef_
+        intercept: Any = lr.intercept_
+        a = float(coef.reshape(-1)[0])
+        b = float(intercept.reshape(-1)[0])
         return PlattModel(a=a, b=b), {"calibrator": "sklearn_platt"}
     except Exception:
         from scipy.optimize import minimize  # type: ignore
@@ -173,7 +175,7 @@ def apply_calibration_to_preds(
         new_scores, iso_meta = _fit_isotonic_scores(scores=scores, targets=labels)
         meta.update(iso_meta)
     elif mode == "platt":
-        model, platt_meta = _fit_platt_model(scores=scores, targets=labels)
+        model, platt_meta = _fit_platt_model(scores=scores, targets=[float(x) for x in labels])
         meta.update(platt_meta)
         new_scores = model.predict(scores)
     else:

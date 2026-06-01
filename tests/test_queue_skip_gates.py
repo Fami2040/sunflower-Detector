@@ -47,6 +47,25 @@ class TestQueueSkipGates(unittest.TestCase):
             self.assertIn("HSP eval artifacts complete", reason)
             self.assertTrue(summary.is_file())
 
+    def test_enrich_matrix_train_run_from_hsp_artifacts(self) -> None:
+        from harchoc.queue_skip_gates import enrich_matrix_train_run_from_artifacts
+
+        repo = Path(__file__).resolve().parents[1]
+        err = repo / "reports/hsp/yolo26m_e100_s0_error.json"
+        if not err.is_file():
+            self.skipTest("yolo26m_e100_s0_error.json missing")
+        row = enrich_matrix_train_run_from_artifacts(
+            repo,
+            {
+                "status": "ok",
+                "run_name": "yolo26m_e100_s0",
+                "weights": str(repo / "runs/hsp_zoo/yolo26m_e100_s0/weights/best.pt"),
+            },
+            runs_dir=repo / "runs/hsp_zoo",
+        )
+        self.assertIsNotNone(row.get("test_count_mae"))
+        self.assertTrue(str(row.get("error_test_report") or "").endswith("_error.json"))
+
     def test_matrix_train_verified_fixture(self) -> None:
         from harchoc.queue_skip_gates import matrix_train_verified
 

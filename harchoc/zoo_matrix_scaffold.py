@@ -78,8 +78,10 @@ def _row_groups(row: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _infer_block(row: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
-    base = defaults.get("infer") if isinstance(defaults.get("infer"), dict) else {}
-    overlay = row.get("infer") if isinstance(row.get("infer"), dict) else {}
+    from harchoc.config_coerce import child_dict
+
+    base = child_dict(defaults, "infer")
+    overlay = child_dict(row, "infer")
     out = {str(k): v for k, v in base.items()}
     out.update({str(k): v for k, v in overlay.items()})
     return out
@@ -240,7 +242,9 @@ def scaffold_zoo_matrix(
     root = repo_root or _repo_root()
     manifest = load_matrix_rows_manifest(manifest_path)
     mpath = (manifest_path or (root / DEFAULT_MANIFEST)).resolve()
-    defaults = manifest.get("defaults") if isinstance(manifest.get("defaults"), dict) else {}
+    from harchoc.config_coerce import as_dict
+
+    defaults = as_dict(manifest.get("defaults"))
     report = ZooScaffoldReport(manifest_path=mpath, mode="scaffold" if write else "scaffold_dry")
 
     bench_dir = root / "configs" / "bench"
@@ -311,7 +315,9 @@ def validate_zoo_matrix(
     root = repo_root or _repo_root()
     manifest = load_matrix_rows_manifest(manifest_path)
     mpath = (manifest_path or (root / DEFAULT_MANIFEST)).resolve()
-    defaults = manifest.get("defaults") if isinstance(manifest.get("defaults"), dict) else {}
+    from harchoc.config_coerce import as_dict
+
+    defaults = as_dict(manifest.get("defaults"))
     report = ZooScaffoldReport(manifest_path=mpath, mode="validate")
 
     bench_dir = root / "configs" / "bench"

@@ -1,0 +1,23 @@
+{
+  "include": ["harchoc", "scripts", "tests"],
+  "exclude": [
+    "**/__pycache__",
+    "data/**",
+    "runs/**",
+    "reports/**",
+    "figures/**",
+    "yolo-sunflower-seed-detector/**"
+  ],
+  "ignore": ["external/**"],
+  "extraPaths": [
+    "external/DEIM",
+    "external/D-FINE",
+    "external/RT-DETR/rtdetrv2_pytorch"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none",
+  "reportSelfClsParameterName": "none",
+  "reportUnusedExpression": "none"
+}

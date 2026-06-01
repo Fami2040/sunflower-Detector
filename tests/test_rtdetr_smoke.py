@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("HARCHOC_ALLOW_BASE_PYTHON", "1")
 
@@ -29,8 +29,8 @@ class RtdetrSmokeTests(unittest.TestCase):
     def test_run_train_marks_complete_without_failure_phase(
         self,
         _reexec: object,
-        mock_gpu: object,
-        mock_run: object,
+        mock_gpu: MagicMock,
+        mock_run: MagicMock,
     ) -> None:
         from scripts.rtdetr_smoke import main as smoke_main
 
@@ -59,8 +59,8 @@ class RtdetrSmokeTests(unittest.TestCase):
     def test_run_train_failure_sets_failure_phase(
         self,
         _reexec: object,
-        mock_gpu: object,
-        mock_run: object,
+        mock_gpu: MagicMock,
+        mock_run: MagicMock,
     ) -> None:
         from scripts.rtdetr_smoke import main as smoke_main
 

@@ -194,4 +194,4 @@ Exports sunflower splits to COCO under `runs/<run_name>/coco_export/`, writes a 
 
 ## Aug dedup before zoo
 
-15-ep aug smokes finished before **`zoo_core`** trains. Duplicate recipe classes (**S0≡S1≡S13**, **S3≡S6≡S7**) must not consume GPU ahead of matrix work — audit: [`reports/aug_smoke/dedup_root_cause.md`](../reports/aug_smoke/dedup_root_cause.md). Canonical registry: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) `equivalence_classes`. GPU tier order: [backlog § GPU execution tiers](../backlog.md#gpu-execution-tiers-post-aug_pending).
+15-ep aug smokes finished before **`zoo_core`** trains. Duplicate recipe classes (**S0≡S1≡S13**, **S3≡S6≡S7**) must not consume GPU ahead of matrix work — audit: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) `equivalence_classes`. GPU tier order: [backlog § GPU execution tiers](../backlog.md#gpu-execution-tiers-post-aug_pending).

@@ -226,7 +226,8 @@ def build_tide_bucket_summary(
     }
     if delta_ap_estimate is not None:
         out["delta_ap_estimate"] = delta_ap_estimate
-        out["map50_reference"] = float(map50)
+        if map50 is not None:
+            out["map50_reference"] = float(map50)
     return out
 
 

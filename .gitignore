@@ -41,7 +41,8 @@ add_bot_token_railway.py
 add_token_railway_cli.bat
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/settings.json.example
 .idea/
 *.swp
 *.swo

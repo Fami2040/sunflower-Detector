@@ -1,0 +1,20 @@
+{
+  "schema_version": "reviewer2_repro_bundle.v1",
+  "description": "Post-zoo reviewer-2 pack: counting → mAP50 → §11 confusion → Word paste gate (CPU; needs HSP exports from experiment.py repro or benchmark_matrix HSP eval).",
+  "hsp_artifacts": {
+    "gt_test": "reports/hsp/gt_test.json",
+    "preds_test": "reports/hsp/preds_test.json",
+    "dual_metric": "reports/hsp/dual_metric.json",
+    "eval_test_map": "reports/hsp/eval_test_map.json"
+  },
+  "configs": {
+    "reviewer_counting": "configs/experiments/reviewer_counting.json",
+    "reviewer2_confusion": "configs/experiments/reviewer2_confusion_tide.json"
+  },
+  "outputs": {
+    "counting": "reports/reviewer2_counting_metrics_computed.json",
+    "map50": "reports/reviewer2_map50_computed.json",
+    "confusion": "reports/reviewer2_confusion_tide.json",
+    "paste_check": "reports/reviewer2_paste_check.json"
+  }
+}

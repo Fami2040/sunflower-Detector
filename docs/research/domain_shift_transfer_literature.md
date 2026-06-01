@@ -165,7 +165,7 @@ Today’s catalog-only payload omits `domains[].metrics`; see `scripts/eval_doma
 
 ## 5. Fine-tuning workflow (`finetune.py`, `configs/transfer/`)
 
-**Status:** scaffold only — `finetune.py` writes `finetune_run.v1` metadata (`build_versioned_scaffold_payload`); `--dry-run` for CI. Training loop and before/after eval **not implemented**.
+**Status (2026-06-01):** Live train via `scripts/train.py`; tray **before/after** eval; **`train_mode tray_adapt`** composes domain split lists (`harchoc/finetune_tray_splits.py`) with canonical **test leak guard**. Playbook: [FINETUNE_WEAK_TRAYS.md](../FINETUNE_WEAK_TRAYS.md). **Open:** GPU runs on ranked weak trays + LOFO canonical MAE gate.
 
 Placeholder config:
 

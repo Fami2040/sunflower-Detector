@@ -14,6 +14,7 @@ class ThresholdSweepSelectionTests(unittest.TestCase):
         ]
         sel = select_operating_point(rows, mode="best_f1")
         self.assertIsNotNone(sel)
+        assert sel is not None
         self.assertAlmostEqual(float(sel["conf_thr"]), 0.10)
 
     def test_constraints_min_recall_then_best_f1(self) -> None:
@@ -26,6 +27,7 @@ class ThresholdSweepSelectionTests(unittest.TestCase):
         ]
         sel = select_operating_point(rows, mode="constraints", min_recall=0.65)
         self.assertIsNotNone(sel)
+        assert sel is not None
         self.assertAlmostEqual(float(sel["conf_thr"]), 0.20)
 
     def test_constraints_max_fp_per_image(self) -> None:
@@ -38,6 +40,7 @@ class ThresholdSweepSelectionTests(unittest.TestCase):
         ]
         sel = select_operating_point(rows, mode="constraints", max_fp_per_image=0.22)
         self.assertIsNotNone(sel)
+        assert sel is not None
         self.assertAlmostEqual(float(sel["conf_thr"]), 0.20)
 
     def test_min_count_mae_picks_lowest_mae(self) -> None:
@@ -58,6 +61,7 @@ class ThresholdSweepSelectionTests(unittest.TestCase):
             ]
             sel = select_min_count_mae(rows, gt={}, preds={}, iou_thr=0.5, category_aware=True)
         self.assertIsNotNone(sel)
+        assert sel is not None
         self.assertAlmostEqual(float(sel["conf_thr"]), 0.10)
         self.assertAlmostEqual(float(sel["count_mae"]), 3.0)
 
@@ -97,4 +101,3 @@ class ThresholdSweepSelectionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

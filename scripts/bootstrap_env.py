@@ -324,7 +324,9 @@ def main(argv: list[str] | None = None) -> int:
         with_external_detr=bool(args.with_external_detr),
     )
     print(f"\nEnv health: {health['status']}")
-    pip = health.get("pip_check") if isinstance(health.get("pip_check"), dict) else {}
+    from harchoc.config_coerce import child_dict
+
+    pip = child_dict(health, "pip_check")
     if pip.get("ignored_sg_numpy") and args.with_super_gradients:
         print("  pip check: SG-related numpy warnings suppressed (expected after --with-super-gradients)")
     if pip.get("issues"):

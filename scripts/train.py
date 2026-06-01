@@ -98,7 +98,12 @@ def _split_entry_for_yaml(
         return str(split_source.resolve())
 
 
-def _prepare_ultralytics_data_yaml(*, source_yaml: str) -> str:
+def _prepare_ultralytics_data_yaml(
+    *,
+    source_yaml: str,
+    train_split_file: str | Path | None = None,
+    val_split_file: str | Path | None = None,
+) -> str:
     """
     Materialize a data.yaml with absolute split sources so Ultralytics does not resolve
     list entries relative to the process cwd.
@@ -118,15 +123,22 @@ def _prepare_ultralytics_data_yaml(*, source_yaml: str) -> str:
         sp = Path(raw).expanduser()
         return (base_dir / sp).resolve() if not sp.is_absolute() else sp.resolve()
 
+    train_source = Path(train_split_file).expanduser() if train_split_file else None
+    if train_source is not None and not train_source.is_absolute():
+        train_source = (Path.cwd() / train_source).resolve()
+    val_source = Path(val_split_file).expanduser() if val_split_file else None
+    if val_source is not None and not val_source.is_absolute():
+        val_source = (Path.cwd() / val_source).resolve()
+
     train_entry = _split_entry_for_yaml(
         dataset_root=base_dir,
-        split_source=_resolve_split("train", "images/train"),
+        split_source=train_source if train_source is not None else _resolve_split("train", "images/train"),
         out_dir=splits_dir,
         split_name="train",
     )
     val_entry = _split_entry_for_yaml(
         dataset_root=base_dir,
-        split_source=_resolve_split("val", "images/val"),
+        split_source=val_source if val_source is not None else _resolve_split("val", "images/val"),
         out_dir=splits_dir,
         split_name="val",
     )
@@ -266,6 +278,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional aug recipe YAML (e.g. configs/aug/robustness_minimal.yaml); merges ultralytics: keys.",
     )
     p.add_argument(
+        "--train-split-file",
+        default=None,
+        help="Override train split list (.txt, one image path per line).",
+    )
+    p.add_argument(
+        "--val-split-file",
+        default=None,
+        help="Override val split list for Ultralytics early-stop (.txt).",
+    )
+    p.add_argument(
         "--skip-eval",
         action="store_true",
         help="Do not run test-split eval after training.",
@@ -331,6 +353,8 @@ def main(argv: list[str] | None = None) -> int:
             aug_path = (repo_root / aug_path).resolve()
         aug_path_resolved = aug_path
     train_cfg = effective_train_aug_merged(train_cfg, repo_root=repo_root)
+    train_split_override = args.train_split_file or train_cfg.get("train_split_file")
+    val_split_override = args.val_split_file or train_cfg.get("val_split_file")
     test_split_file = _resolve_test_split_file(repo_root=repo_root, dataset_root=spec.root)
     ml_warnings = ml_warnings_sink()
     _, freeze_policy, freeze_warnings = resolve_freeze_policy(train_cfg)
@@ -349,6 +373,8 @@ def main(argv: list[str] | None = None) -> int:
         "ultralytics_train": {"forwarded_keys": forwarded_keys_from_train_cfg(train_cfg)},
         "resources": snapshot_from_train_cfg(train_cfg),
         "split_roles": _train_split_roles(repo_root=repo_root, test_split_file=test_split_file),
+        "train_split_file": str(train_split_override) if train_split_override else None,
+        "val_split_file": str(val_split_override) if val_split_override else None,
         "run_metadata": collect_run_metadata(
             repo_root=repo_root,
             dataset_manifest=Path(args.manifest),
@@ -404,7 +430,11 @@ def main(argv: list[str] | None = None) -> int:
 
     model_id = _resolve_ultralytics_model(str(train_cfg.get("model", _BASELINE_DEFAULTS["model"])))
     source_yaml = ensure_data_yaml(dataset_root=spec.root, yolo_data_yaml=spec.yolo_data_yaml)
-    data_yaml = _prepare_ultralytics_data_yaml(source_yaml=source_yaml)
+    data_yaml = _prepare_ultralytics_data_yaml(
+        source_yaml=source_yaml,
+        train_split_file=train_split_override,
+        val_split_file=val_split_override,
+    )
 
     t0 = time.perf_counter()
     model = load_ultralytics_train_model(model_id)

@@ -1,0 +1,31 @@
+{
+  "schema_version": "experiments.v1",
+  "reviewer_counting": {
+    "out": "reports/reviewer2_counting_metrics_computed.json",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "gt_test": "reports/hsp/gt_test.json",
+    "preds_test": "reports/hsp/preds_test.json",
+    "gt_val": "reports/hsp/gt_val.json",
+    "preds_val": "reports/hsp/preds_val.json",
+    "eval_test": "reports/hsp/eval_test.json",
+    "dual_metric": "reports/hsp/dual_metric.json",
+    "split_file": "data/splits/test.txt",
+    "weights": "models/best2.pt",
+    "manuscript_docx": {
+      "mean_relative_pct": 13.2,
+      "pct_below_2": 80
+    },
+    "comparisons": [
+      {
+        "label": "aug_confirm_100ep",
+        "gt_json": "reports/hsp/gt_test.json",
+        "preds_json": "reports/aug_smoke/aug_confirm_winner_100ep_preds.json"
+      },
+      {
+        "label": "yolo26m_e100_s0",
+        "gt_json": "reports/hsp/yolo26m_e100_s0_gt.json",
+        "preds_json": "reports/hsp/yolo26m_e100_s0_preds.json"
+      }
+    ]
+  }
+}
