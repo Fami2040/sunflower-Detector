@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_aug_s1_close3_smoke.json",
+  "amp": false,
+  "notes": "P1-AUG S12: S1 + amp=false (may OOM on 8 GiB)."
+}

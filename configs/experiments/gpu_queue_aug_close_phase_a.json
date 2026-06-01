@@ -1,0 +1,46 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "P1-AUG-CLOSE Phase A only: close10 + close25 @ 15 ep (train + HSP test eval). Does not block zoo — run before or after P0-5 as needed.",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_EXPORT_DEVICE": "cpu",
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "preflight",
+      "kind": "preflight",
+      "backlog": ["gate"],
+      "estimated_minutes": 2
+    },
+    {
+      "id": "aug_sweep_15_close10",
+      "kind": "aug_sweep_15",
+      "backlog": ["P1-AUG-CLOSE"],
+      "train_config": "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+      "aug_config": "configs/aug/robustness_smoke_close10.yaml",
+      "run_name": "aug_sweep_close10_15ep",
+      "summary_path": "reports/aug_smoke/sweep_close10_15ep_summary.json",
+      "estimated_minutes": 45,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close10_15ep_summary.json"},
+      "notes": "Phase A: close_mosaic=2 @ 15 ep (scaled from 100-ep 10). Promotion gate to Phase B: test MAE ≤ 72.3."
+    },
+    {
+      "id": "aug_sweep_15_close25",
+      "kind": "aug_sweep_15",
+      "backlog": ["P1-AUG-CLOSE"],
+      "train_config": "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+      "aug_config": "configs/aug/robustness_smoke_close25.yaml",
+      "run_name": "aug_sweep_close25_15ep",
+      "summary_path": "reports/aug_smoke/sweep_close25_15ep_summary.json",
+      "estimated_minutes": 45,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close25_15ep_summary.json"},
+      "notes": "Phase A: close_mosaic=4 @ 15 ep (scaled from 100-ep 25). Promotion gate to Phase B: test MAE ≤ 72.3."
+    }
+  ]
+}

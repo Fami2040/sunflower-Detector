@@ -1,0 +1,7 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 15,
+  "patience": 12,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "notes": "P1-AUG-MOSAIC / P1-AUG-CLOSE 15-ep ranking sweeps (smoke tier). Swap aug_config per arm in gpu_queue manifest; default close_mosaic=3 @ 15 ep."
+}

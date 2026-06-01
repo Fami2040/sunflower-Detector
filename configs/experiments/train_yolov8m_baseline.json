@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_bench_base.json",
+  "model": "yolov8m.pt",
+  "batch": 1
+}

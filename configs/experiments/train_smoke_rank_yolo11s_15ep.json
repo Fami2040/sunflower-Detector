@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_bench_yolo11s.json",
+  "epochs": 15,
+  "patience": 12
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_aug_winner_100ep.json",
+  "patience": 25,
+  "notes": "P1-AUG-SCHEDULE-SMOKE: robustness_minimal + patience=25 @ 100 ep — verify stop_epoch ≥ epochs−close_mosaic(15). Run only if confirm schedule audit shows tail never fired."
+}

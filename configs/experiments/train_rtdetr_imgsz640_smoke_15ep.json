@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_rtdetr_smoke_15ep.json",
+  "imgsz": 640,
+  "notes": "P1-RTDETR-IMG: RT-DETR-L 15-ep smoke @ imgsz 640."
+}

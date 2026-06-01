@@ -1,0 +1,308 @@
+{
+  "schema_version": "aug_smoke_index.v1",
+  "notes": "P1-AUG 15-epoch aug smokes; primary metric test count MAE at val-locked conf. Leaderboard ranking uses S1 (close3 reference), not S0/S13 (training-equivalent duplicates). S14 (aug_smoke_eval300) is eval-only \u2014 P0-1 eval-cap negative control; same weights as S1, eval max_det=300; do not rank as a model. See docs/research/training_tech_scan_2026_augmentation.md \u00a75.",
+  "epochs": 15,
+  "primary_metric": "test_count_mae",
+  "smokes": [
+    {
+      "id": "S0",
+      "name": "aug_smoke_baseline",
+      "train_config": "configs/experiments/train_aug_s0_baseline_smoke.json",
+      "aug_config": "configs/aug/robustness_minimal.yaml",
+      "run_name": "aug_smoke_baseline",
+      "status": "complete",
+      "key_overrides": "production minimal; close_mosaic=15 (scales to 3 @ 15 ep)",
+      "summary": "reports/aug_smoke/s0_summary.json",
+      "test_count_mae": 68.90825688073394
+    },
+    {
+      "id": "S1",
+      "name": "aug_smoke_close3",
+      "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_close3",
+      "status": "complete",
+      "key_overrides": "close_mosaic=3 only; mosaic active ep 0\u201311",
+      "summary": "reports/aug_smoke/s1_summary.json",
+      "test_count_mae": 68.90825688073394
+    },
+    {
+      "id": "S2",
+      "name": "aug_smoke_mosaic0",
+      "train_config": "configs/experiments/train_aug_s2_mosaic0_smoke.json",
+      "aug_config": "configs/aug/robustness_mosaic_off.yaml",
+      "run_name": "aug_smoke_mosaic0",
+      "status": "complete",
+      "key_overrides": "mosaic=0, close_mosaic=0; translate=0.05, scale=0.15, fliplr=0.5",
+      "summary": "reports/aug_smoke/s2_summary.json",
+      "test_count_mae": 147.41284403669724
+    },
+    {
+      "id": "S3",
+      "name": "aug_smoke_photometric",
+      "train_config": "configs/experiments/train_aug_s3_photometric_smoke.json",
+      "aug_config": "configs/aug/robustness_photometric_only.yaml",
+      "run_name": "aug_smoke_photometric",
+      "status": "complete",
+      "key_overrides": "mosaic=0, mixup=0, translate=0, scale=0, fliplr=0, hsv_s=0.45, hsv_v=0.40, erasing=0.2",
+      "summary": "reports/aug_smoke/s3_summary.json",
+      "test_count_mae": 151.73394495412845
+    },
+    {
+      "id": "S4",
+      "name": "aug_smoke_mosaic01",
+      "train_config": "configs/experiments/train_aug_s4_mosaic01_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_mosaic01.yaml",
+      "run_name": "aug_smoke_mosaic01",
+      "status": "complete",
+      "key_overrides": "mosaic=0.1, close_mosaic=3, translate=0.10 (\u2260 S1 close3 @ 0.05)",
+      "summary": "reports/aug_smoke/s4_summary.json",
+      "test_count_mae": 145.07339449541286
+    },
+    {
+      "id": "S5",
+      "name": "aug_smoke_mosaic03",
+      "train_config": "configs/experiments/train_aug_s5_mosaic03_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_mosaic03.yaml",
+      "run_name": "aug_smoke_mosaic03",
+      "status": "complete",
+      "key_overrides": "mosaic=0.3, close_mosaic=3",
+      "summary": "reports/aug_smoke/s5_summary.json",
+      "test_count_mae": 125.66055045871559
+    },
+    {
+      "id": "S6",
+      "name": "aug_smoke_erasing0",
+      "train_config": "configs/experiments/train_aug_s6_erasing0_smoke.json",
+      "aug_config": "configs/aug/robustness_photometric_erasing0.yaml",
+      "run_name": "aug_smoke_erasing0",
+      "status": "complete",
+      "key_overrides": "S3 + erasing=0",
+      "fifteen_ep_preds": "aug differs from S3 (erasing=0.2) and S7 (0.3); 15-ep test preds may match that cluster \u2014 see equivalence_classes",
+      "summary": "reports/aug_smoke/s6_summary.json",
+      "test_count_mae": 151.73394495412845
+    },
+    {
+      "id": "S7",
+      "name": "aug_smoke_erasing03",
+      "train_config": "configs/experiments/train_aug_s7_erasing03_smoke.json",
+      "aug_config": "configs/aug/robustness_photometric_erasing03.yaml",
+      "run_name": "aug_smoke_erasing03",
+      "status": "complete",
+      "key_overrides": "S3 + erasing=0.3",
+      "summary": "reports/aug_smoke/s7_summary.json",
+      "test_count_mae": 151.73394495412845
+    },
+    {
+      "id": "S8",
+      "name": "aug_smoke_hsv_v045",
+      "train_config": "configs/experiments/train_aug_s8_hsv_v045_smoke.json",
+      "aug_config": "configs/aug/robustness_photometric_hsv_v045.yaml",
+      "run_name": "aug_smoke_hsv_v045",
+      "status": "complete",
+      "key_overrides": "S3 + hsv_v=0.45",
+      "summary": "reports/aug_smoke/s8_summary.json",
+      "test_count_mae": 125.88073394495413
+    },
+    {
+      "id": "S9",
+      "name": "aug_smoke_no_aug_yaml",
+      "train_config": "configs/experiments/train_aug_s9_no_aug_yaml_smoke.json",
+      "aug_config": null,
+      "run_name": "aug_smoke_no_aug_yaml",
+      "status": "complete",
+      "key_overrides": "no aug_config; inline _BASELINE_DEFAULTS",
+      "summary": "reports/aug_smoke/s9_summary.json",
+      "test_count_mae": 73.24770642201835
+    },
+    {
+      "id": "S10",
+      "name": "aug_smoke_yolo11s",
+      "train_config": "configs/experiments/train_aug_s10_yolo11s_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_yolo11s",
+      "status": "complete",
+      "key_overrides": "train_bench_yolo11s fields + epochs=15",
+      "summary": "reports/aug_smoke/s10_summary.json",
+      "test_count_mae": 116.08256880733946
+    },
+    {
+      "id": "S11",
+      "name": "aug_smoke_musgd",
+      "train_config": "configs/experiments/train_aug_s11_musgd_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_musgd",
+      "status": "complete",
+      "key_overrides": "S10 + optimizer MuSGD, lr0=0.0001",
+      "summary": "reports/aug_smoke/s11_summary.json",
+      "test_count_mae": 136.25688073394497
+    },
+    {
+      "id": "S12",
+      "name": "aug_smoke_amp_off",
+      "train_config": "configs/experiments/train_aug_s12_amp_off_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_amp_off",
+      "status": "complete",
+      "key_overrides": "S1 + amp=false",
+      "summary": "reports/aug_smoke/s12_summary.json",
+      "test_count_mae": 91.13761467889908
+    },
+    {
+      "id": "S13",
+      "name": "aug_smoke_patience5",
+      "train_config": "configs/experiments/train_aug_s13_patience5_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_patience5",
+      "status": "complete",
+      "key_overrides": "S1 + patience=5 only; same test MAE as S1 expected @ 15 ep when no early stop",
+      "summary": "reports/aug_smoke/s13_summary.json",
+      "test_count_mae": 68.90825688073394
+    },
+    {
+      "id": "S14",
+      "name": "aug_smoke_eval300",
+      "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
+      "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+      "run_name": "aug_smoke_eval300",
+      "weights_run_name": "aug_smoke_close3",
+      "eval_only": true,
+      "max_det": 300,
+      "negative_control": true,
+      "status": "complete",
+      "key_overrides": "S1 weights (aug_smoke_close3); eval --max-det 300 only \u2014 P0-1 truncation control, not aug ablation",
+      "summary": "reports/aug_smoke/s14_summary.json",
+      "compare_to": {
+        "smoke_id": "S1",
+        "test_count_mae": 68.90825688073394,
+        "note": "higher MAE expected from pred cap, not worse model"
+      },
+      "test_count_mae": 265.8348623853211
+    }
+  ],
+  "sweeps_15ep": {
+    "ticket": "P1-AUG-CLOSE",
+    "primary_metric": "test_count_mae",
+    "arms": [
+      {
+        "id": "close10",
+        "train_config": "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+        "aug_config": "configs/aug/robustness_smoke_close10.yaml",
+        "run_name": "aug_sweep_close10_15ep",
+        "status": "complete",
+        "key_overrides": "close_mosaic=2 @ 15 ep (scaled from 100-ep 10)",
+        "summary": "reports/aug_smoke/sweep_close10_15ep_summary.json",
+        "queue_job_id": "aug_sweep_15_close10",
+        "test_count_mae": 96.69724770642202
+      },
+      {
+        "id": "close15",
+        "train_config": "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
+        "aug_config": "configs/aug/robustness_smoke_close15.yaml",
+        "run_name": "aug_sweep_close15_15ep",
+        "status": "skipped",
+        "skip_reason": "recipe duplicate of S0/S1 (effective close_mosaic=3)",
+        "summary": "reports/aug_smoke/sweep_close15_15ep_summary.json",
+        "queue_job_id": "aug_sweep_15_close15"
+      },
+      {
+        "id": "close25",
+        "train_config": "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+        "aug_config": "configs/aug/robustness_smoke_close25.yaml",
+        "run_name": "aug_sweep_close25_15ep",
+        "status": "complete",
+        "key_overrides": "close_mosaic=4 @ 15 ep (production 25)",
+        "summary": "reports/aug_smoke/sweep_close25_15ep_summary.json",
+        "queue_job_id": "aug_sweep_15_close25",
+        "test_count_mae": 68.90825688073394
+      }
+    ]
+  },
+  "sweeps_100ep": {
+    "ticket": "P1-AUG-CLOSE-100EP",
+    "primary_metric": "test_count_mae",
+    "promotion_gate_mae": 72.3,
+    "promotion_gate_note": "Enable Phase B queue job when matching 15-ep arm test MAE \u2264 72.3 (S1 68.9 + 5%)",
+    "baseline_confirm_mae": 64.12844036697248,
+    "baseline_confirm_summary": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json",
+    "manifest": "configs/experiments/gpu_queue_aug_close_100ep.json",
+    "arms": [
+      {
+        "id": "close10_100",
+        "train_config": "configs/experiments/train_aug_close10_100ep.json",
+        "aug_config": "configs/aug/robustness_close10.yaml",
+        "run_name": "aug_sweep_close10_100ep",
+        "status": "conditional_skip",
+        "key_overrides": "close_mosaic=10 @ 100 ep",
+        "summary": "reports/aug_smoke/sweep_close10_100ep_summary.json",
+        "queue_job_id": "aug_sweep_100_close10",
+        "requires_15ep_arm": "close10"
+      },
+      {
+        "id": "close25_100",
+        "train_config": "configs/experiments/train_aug_close25_100ep.json",
+        "aug_config": "configs/aug/robustness_close25.yaml",
+        "run_name": "aug_sweep_close25_100ep",
+        "status": "conditional_skip",
+        "key_overrides": "close_mosaic=25 @ 100 ep",
+        "summary": "reports/aug_smoke/sweep_close25_100ep_summary.json",
+        "queue_job_id": "aug_sweep_100_close25",
+        "requires_15ep_arm": "close25"
+      }
+    ]
+  },
+  "schedule_smoke_100ep": {
+    "ticket": "P1-AUG-SCHEDULE-SMOKE",
+    "train_config": "configs/experiments/train_aug_schedule_patience25_100ep.json",
+    "run_name": "aug_schedule_patience25_100ep",
+    "status": "conditional_skip",
+    "summary": "reports/aug_smoke/schedule_patience25_100ep_summary.json",
+    "queue_job_id": "aug_schedule_patience25_100ep",
+    "notes": "patience=25 vs confirm patience=30; enable only if mosaic-off tail did not fire on confirm run"
+  },
+  "arch_mosaic0_ab": {
+    "ticket": "ARCH-MOSAIC0-AB",
+    "smoke_epochs": 15,
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "comparison": {
+      "S0_baseline_mae": 68.90825688073394,
+      "S2_mosaic0_mae": 147.41284403669724,
+      "delta_mosaic0_minus_baseline": 78.5045871559633,
+      "interpretation": "S0 re-run (robustness_minimal.yaml, close_mosaic scaled to 3 @ 15 ep) matches S1 close3 MAE. S2 mosaic0 MAE retained (+78.5 vs baseline)."
+    },
+    "summaries": [
+      "reports/aug_smoke/s2_summary.json"
+    ]
+  },
+  "equivalence_classes": {
+    "ticket": "P1-AUG-DUP-MAE",
+    "audited_at": "2026-05-30",
+    "s0_s1_s13_preds_equivalent": true,
+    "notes": "S0 (robustness_minimal close_mosaic=15 scaled to 3 @ 15 ep) is training-equivalent to S1 close3 YAML. S13 is patience-only. CLOSE25 @ 15 ep (close_mosaic=4, patience=11) is schedule-equivalent to S1 @ 15 ep. S3/S6/S7 share preds @ 15 ep (erasing inert). Re-verified preds SHA 2026-05-30.",
+    "classes": [
+      {
+        "test_count_mae": 68.90825688073394,
+        "smoke_ids": [
+          "S0",
+          "S1",
+          "S13",
+          "CLOSE25"
+        ],
+        "canonical_smoke_id": "S1",
+        "cause": "S0/S1: identical effective aug after close_mosaic scale; S13: patience-only, no early stop @ 15 ep; CLOSE25: close_mosaic=4, patience=11 @ 15 ep (schedule-equivalent outcome)",
+        "preds_sha256": "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8"
+      },
+      {
+        "test_count_mae": 151.73394495412845,
+        "smoke_ids": [
+          "S3",
+          "S6",
+          "S7"
+        ],
+        "canonical_smoke_id": "S3",
+        "cause": "erasing inert @ 15 ep (S3 erasing=0.2, S6=0, S7=0.3 \u2192 identical test preds)",
+        "preds_sha256": "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d"
+      }
+    ]
+  }
+}

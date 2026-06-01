@@ -1,0 +1,19 @@
+name: aug_robustness_smoke_base
+version: 1
+notes: >
+  Shared 15-ep smoke / sweep defaults (P0 aug-smoke DRY). Delta YAMLs set mosaic,
+  close_mosaic, and translate only.
+
+ultralytics:
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.35
+  hsv_v: 0.35
+  scale: 0.15
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  erasing: 0.2

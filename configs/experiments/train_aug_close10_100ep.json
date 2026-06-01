@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_aug_winner_100ep.json",
+  "aug_config": "configs/aug/robustness_close10.yaml",
+  "notes": "P1-AUG-CLOSE-100EP: close_mosaic=10 @ 100 ep (patience=30). Enable after Phase A gate: close10 @ 15 ep test MAE ≤ 72.3 (S1+5%)."
+}

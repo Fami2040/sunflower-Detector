@@ -1,0 +1,22 @@
+name: aug_robustness_close10
+version: 1
+notes: >
+  P1-AUG-CLOSE sweep arm: close_mosaic=10 on 100-ep runs (~10% tail, YOLO26 default).
+  Pair with patience=30 so epochs - patience >= close_mosaic. See training_tech_scan §2.6.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 10
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.35
+  hsv_v: 0.35
+  translate: 0.05
+  scale: 0.15
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  erasing: 0.2

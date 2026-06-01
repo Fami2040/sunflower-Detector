@@ -1,0 +1,11 @@
+extends: configs/aug/robustness_smoke_base.yaml
+name: aug_robustness_smoke_close3
+version: 3
+notes: >
+  Close-tail arm (P1-AUG S1): mosaic=0.1, close_mosaic=3, translate=0.05. S4 mosaic01 uses
+  translate=0.10 — distinct low-mosaic sweep recipe. See training_tech_scan_2026_augmentation.md §5.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 3
+  translate: 0.05

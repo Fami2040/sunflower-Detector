@@ -1,0 +1,23 @@
+name: aug_robustness_photometric_only
+version: 1
+notes: >
+  Photometric-only aug (P1-AUG S3): no mosaic/mixup; zero spatial jitter; stronger HSV
+  + erasing for lighting/occlusion DR without density shift. Distinct from S2 mosaic_off
+  (LWCD-style spatial aug). See training_tech_scan_2026_augmentation.md §5.
+
+ultralytics:
+  mosaic: 0.0
+  close_mosaic: 0
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.45
+  hsv_v: 0.40
+  translate: 0.0
+  scale: 0.0
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.0
+  flipud: 0.0
+  erasing: 0.2

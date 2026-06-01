@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_smoke_rank_15ep.json",
+  "aug_config": "configs/aug/robustness_smoke_mosaic03.yaml",
+  "notes": "P1-AUG S5: mosaic=0.3, close_mosaic=3; upper-bound mosaic sweep (test count MAE primary)."
+}

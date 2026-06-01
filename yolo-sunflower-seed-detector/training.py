@@ -1,59 +1,28 @@
-import kagglehub
-from ultralytics import YOLO
+"""
+Legacy entrypoint — delegates to ``scripts/train.py``.
 
-# ========================================
-# Dataset Download (Kaggle)
-# ========================================
-dataset_path = kagglehub.dataset_download("linaaabrahim/dataset1")
-print("📁 Dataset path:", dataset_path)
+Prefer: ``mamba run -n harchoc python scripts/train.py --config configs/experiments/train_yolov8m_baseline.json``
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
 
 
-# ========================================
-# YOLOv8 Training — Sunflower Seed Detection
-# Fertilized / Unfertilized Classification
-# ========================================
+def main(argv: list[str] | None = None) -> int:
+    repo_root = Path(__file__).resolve().parents[1]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    try:
+        from scripts import _path  # type: ignore # noqa: F401
+    except Exception:
+        import scripts._path as _path  # type: ignore # noqa: F401
 
-# Load pretrained YOLOv8 model
-model = YOLO("yolov8m.pt")
+    from scripts.train import main as train_main
 
-# Train model
-results = model.train(
-    data=f"{dataset_path}/data.yaml",
+    return int(train_main(argv))
 
-    # Core training settings
-    epochs=100,
-    imgsz=1280,
-    batch=1,          # Kaggle GPU constraint
-    device=0,
 
-    optimizer="AdamW",
-
-    # Detection settings
-    conf=0.05,
-    iou=0.3,
-    max_det=3000,
-
-    # Augmentation
-    mosaic=0.1,
-    hsv_h=0.02,
-    hsv_s=0.3,
-    hsv_v=0.3,
-    translate=0.05,
-    scale=0.15,
-
-    # Learning rate
-    lr0=0.0002,
-    lrf=0.01,
-    momentum=0.97,
-    weight_decay=0.0005,
-
-    # Stability
-    patience=50,
-    workers=2,
-
-    # Experiment name
-    name="sunflower_seed_detection_v1",
-    verbose=True
-)
-
-print("\n✅ Training completed successfully!")
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,22 @@
+name: aug_robustness_mosaic_off
+version: 1
+notes: >
+  Mosaic-off recipe (P1-AUG S2 / ARCH-MOSAIC0-AB precursor). Photometric-only geometry;
+  LWCD-YOLO-style dense benchtop precedent. See training_tech_scan_2026_augmentation.md §5.
+
+ultralytics:
+  mosaic: 0.0
+  close_mosaic: 0
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.35
+  hsv_v: 0.35
+  translate: 0.05
+  scale: 0.15
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  erasing: 0.2

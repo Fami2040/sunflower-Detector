@@ -1,0 +1,11 @@
+{
+  "email": "recipient@example.com",
+  "from": "sender@yandex.ru",
+  "smtp": {
+    "host": "smtp.yandex.ru",
+    "port": 465,
+    "user": "sender@yandex.ru",
+    "password": "app-password-not-commit",
+    "use_ssl": true
+  }
+}

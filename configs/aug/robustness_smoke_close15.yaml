@@ -1,0 +1,11 @@
+extends: configs/aug/robustness_smoke_base.yaml
+name: aug_robustness_smoke_close15
+version: 1
+notes: >
+  P1-AUG-CLOSE 15-ep ranking arm: production close_mosaic=15 scales to 3 @ 15 ep
+  (same effective tail as S1 close3; distinct 100-ep sweep intent).
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 15
+  translate: 0.05

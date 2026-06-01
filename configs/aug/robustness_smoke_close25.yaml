@@ -1,0 +1,11 @@
+extends: configs/aug/robustness_smoke_base.yaml
+name: aug_robustness_smoke_close25
+version: 2
+notes: >
+  P1-AUG-CLOSE 15-ep ranking arm: close_mosaic=4 (15-ep effective for production 25 @ 100 ep).
+  Distinct from close3 (3) and close10 (2). Not equivalent to robustness_smoke_close3.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 4
+  translate: 0.05

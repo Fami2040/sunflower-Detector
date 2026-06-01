@@ -1,0 +1,38 @@
+{
+  "schema_version": "aug_smoke_summary.v1",
+  "smoke_id": "S14",
+  "run_name": "aug_smoke_eval300",
+  "arch_ticket": "P1-AUG",
+  "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
+  "status": "complete",
+  "train": {
+    "epochs": null,
+    "runtime_s": 2081.64,
+    "val_map50_95": null
+  },
+  "test_eval": {
+    "split": "test",
+    "device": "cpu",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "eval_json": "reports/aug_smoke/aug_smoke_eval300_eval.json",
+    "error_json": "reports/aug_smoke/aug_smoke_eval300_error.json"
+  },
+  "artifacts": {
+    "preds_json": {
+      "path": "reports/aug_smoke/aug_smoke_eval300_preds.json",
+      "sha256": "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8"
+    }
+  },
+  "test_count_mae": 68.90825688073394,
+  "test_count_mae_ci": {
+    "stat": "mean",
+    "point": 68.90825688073394,
+    "low": 60.05550458715597,
+    "high": 78.50550458715597,
+    "confidence": 0.95,
+    "method": "bootstrap_percentile",
+    "n": 109
+  },
+  "n_test_images": 109,
+  "generated_at": "2026-05-30T11:11:03Z"
+}

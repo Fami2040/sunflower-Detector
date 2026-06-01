@@ -1,0 +1,7 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 100,
+  "patience": 30,
+  "aug_config": "configs/aug/robustness_minimal.yaml",
+  "notes": "P1-AUG-100EP-WINNER: 100-ep confirm with production aug robustness_minimal (mosaic 0.1, close_mosaic 15), aligned with best2/S0 — not the 15-ep close3 smoke YAML. Context: 15-ep rank S1≡S0 68.9 MAE (+7.6 vs best2 61.3). Inherits eval chain + max_det=3000 from baseline. GPU queue: gpu_queue_aug_confirm.json → aug_confirm_winner_100ep."
+}

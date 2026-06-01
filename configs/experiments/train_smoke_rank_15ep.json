@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 15,
+  "patience": 12
+}

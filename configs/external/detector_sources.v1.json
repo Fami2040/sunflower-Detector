@@ -1,0 +1,99 @@
+{
+  "schema_version": "detector_sources.v1",
+  "notes": "Canonical upstream repos and COCO pretrained checkpoints for non-Ultralytics matrix rows. Fine-tune via each stack's train.py on sunflower COCO-format export (num_classes=2, remap_mscoco_category=false). Clone specs for unique train_stack values are derived at load time; optional generated mirror: external_repos.v1.json.",
+  "train_stacks": {
+    "rtdetrv2_pytorch": {
+      "ref": "main",
+      "cache_dirname": "RT-DETR",
+      "train_script": "tools/train.py",
+      "subdir": "rtdetrv2_pytorch"
+    },
+    "dfine": {
+      "ref": "master",
+      "cache_dirname": "D-FINE",
+      "train_script": "train.py"
+    },
+    "deim": {
+      "ref": "main",
+      "cache_dirname": "DEIM",
+      "train_script": "train.py"
+    }
+  },
+  "entries": {
+    "rtdetrv2_l": {
+      "label": "RT-DETRv2-L",
+      "family": "rtdetrv2",
+      "train_stack": "rtdetrv2_pytorch",
+      "repos": {
+        "primary": "https://github.com/lyuwenyu/RT-DETR",
+        "subdir": "rtdetrv2_pytorch",
+        "paper": "https://arxiv.org/abs/2407.17140"
+      },
+      "config_relpath": "configs/rtdetrv2/rtdetrv2_r50vd_6x_coco.yml",
+      "checkpoint": {
+        "url": "https://github.com/lyuwenyu/storage/releases/download/v0.1/rtdetrv2_r50vd_6x_coco_ema.pth",
+        "cache_name": "rtdetrv2_r50vd_6x_coco_ema.pth"
+      },
+      "coco_ap": 53.4,
+      "params_m": 42
+    },
+    "dfine_l": {
+      "label": "D-FINE-L",
+      "family": "dfine",
+      "train_stack": "dfine",
+      "repos": {
+        "primary": "https://github.com/Peterande/D-FINE",
+        "paper": "https://arxiv.org/abs/2410.13842"
+      },
+      "config_relpath": "configs/dfine/dfine_hgnetv2_l_coco.yml",
+      "checkpoint": {
+        "url": "https://github.com/Peterande/storage/releases/download/dfinev1.0/dfine_l_coco.pth",
+        "cache_name": "dfine_l_coco.pth"
+      },
+      "coco_ap": 54.0,
+      "params_m": 31
+    },
+    "deim_rtdetrv2_l": {
+      "label": "DEIM-RT-DETRv2-L",
+      "family": "rtdetrv2",
+      "train_stack": "deim",
+      "repos": {
+        "primary": "https://github.com/Intellindust-AI-Lab/DEIM",
+        "upstream_rtdetr": "https://github.com/lyuwenyu/RT-DETR",
+        "paper": "https://arxiv.org/abs/2412.04234"
+      },
+      "config_relpath": "configs/deim_rtdetrv2/deim_r50vd_60e_coco.yml",
+      "checkpoint": {
+        "url": "https://drive.google.com/file/d/1mWknAXD5JYknUQ94WCEvPfXz13jcNOTI/view?usp=drive_link",
+        "direct_url": null,
+        "cache_name": "deim_rtdetrv2_l_coco.pth",
+        "gdown_id": "1mWknAXD5JYknUQ94WCEvPfXz13jcNOTI"
+      },
+      "baseline_source_id": "rtdetrv2_l",
+      "coco_ap": 54.3,
+      "coco_ap_baseline": 53.4,
+      "params_m": 42
+    },
+    "deim_dfine_l": {
+      "label": "DEIM-D-FINE-L",
+      "family": "dfine",
+      "train_stack": "deim",
+      "repos": {
+        "primary": "https://github.com/Intellindust-AI-Lab/DEIM",
+        "upstream_dfine": "https://github.com/Peterande/D-FINE",
+        "paper": "https://arxiv.org/abs/2412.04234"
+      },
+      "config_relpath": "configs/deim_dfine/deim_hgnetv2_l_coco.yml",
+      "checkpoint": {
+        "url": "https://drive.google.com/file/d/1PIRf02XkrA2xAD3wEiKE2FaamZgSGTAr/view?usp=drive_link",
+        "direct_url": null,
+        "cache_name": "deim_dfine_l_coco.pth",
+        "gdown_id": "1PIRf02XkrA2xAD3wEiKE2FaamZgSGTAr"
+      },
+      "baseline_source_id": "dfine_l",
+      "coco_ap": 54.7,
+      "coco_ap_baseline": 54.0,
+      "params_m": 31
+    }
+  }
+}

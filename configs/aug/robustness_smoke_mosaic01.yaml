@@ -1,0 +1,12 @@
+extends: configs/aug/robustness_smoke_base.yaml
+name: aug_robustness_smoke_mosaic01
+version: 3
+notes: >
+  Low-mosaic sweep arm (P1-AUG S4): mosaic=0.1, close_mosaic=3, translate=0.10 (vs S1 close3 @ 0.05).
+  Distinct ultralytics recipe from robustness_smoke_close3 — not MAE-equivalent by construction.
+  See training_tech_scan_2026_augmentation.md §5.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 3
+  translate: 0.10

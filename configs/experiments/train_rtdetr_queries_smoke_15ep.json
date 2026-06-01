@@ -1,0 +1,16 @@
+{
+  "extends": "configs/experiments/train_bench_rtdetr-l_nq1024.json",
+  "epochs": 15,
+  "eval": {
+    "skip": true,
+    "max_det": 1024,
+    "device": "cpu",
+    "notes": "Train-only smoke; run scripts/eval.py on test @ max_det=1024 CPU after train (8 GiB VRAM)."
+  },
+  "notes": "15-epoch GPU smoke for query-cap ablation: scratch RT-DETR-L nq=1024, batch=1 imgsz=1280 workers=0 amp=false; requires exclusive 8 GiB GPU (concurrent YOLO + nq1024 OOM ep1).",
+  "amp": false,
+  "patience": 12,
+  "workers": 0,
+  "batch": 1,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml"
+}

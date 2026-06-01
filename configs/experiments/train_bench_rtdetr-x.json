@@ -1,0 +1,6 @@
+{
+  "extends": "configs/experiments/train_bench_rtdetr-l.json",
+  "model": "rtdetr-x.pt",
+  "notes": "Matrix/bench @ 1280 for rtdetr-x.pt (Ultralytics RT-DETR-X; 300 queries, accept truncation vs peak GT 1015).",
+  "cache": false
+}

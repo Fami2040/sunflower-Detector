@@ -4,5 +4,5 @@ train: images/train
 val: images/val
 nc: 2
 names:
-  0: fertilized
-  1: unfertilized
+  0: developed
+  1: aborted

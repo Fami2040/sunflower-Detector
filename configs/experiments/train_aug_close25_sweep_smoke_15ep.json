@@ -1,0 +1,6 @@
+{
+  "extends": "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
+  "patience": 11,
+  "aug_config": "configs/aug/robustness_smoke_close25.yaml",
+  "notes": "P1-AUG-CLOSE close25 @ 15 ep: close_mosaic=4 effective; patience=11 so epochs−patience≥4."
+}

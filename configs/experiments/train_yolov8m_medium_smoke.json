@@ -1,0 +1,28 @@
+{
+  "model": "yolov8m.pt",
+  "epochs": 15,
+  "imgsz": 1280,
+  "batch": 1,
+  "device": 0,
+  "optimizer": "AdamW",
+  "conf": 0.05,
+  "iou": 0.3,
+  "max_det": 3000,
+  "mosaic": 0.1,
+  "hsv_h": 0.02,
+  "hsv_s": 0.3,
+  "hsv_v": 0.3,
+  "translate": 0.05,
+  "scale": 0.15,
+  "lr0": 0.0002,
+  "lrf": 0.01,
+  "momentum": 0.97,
+  "weight_decay": 0.0005,
+  "patience": 50,
+  "eval": {
+    "max_det": 3000
+  },
+  "workers": 2,
+  "verbose": true,
+  "seed": 0
+}

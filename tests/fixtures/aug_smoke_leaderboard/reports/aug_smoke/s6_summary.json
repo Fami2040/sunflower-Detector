@@ -1,0 +1,14 @@
+{
+  "schema_version": "aug_smoke_summary.v1",
+  "smoke_id": "S6",
+  "run_name": "aug_smoke_erasing0",
+  "status": "complete",
+  "artifacts": {
+    "preds_json": {
+      "path": "reports/aug_smoke/aug_smoke_erasing0_preds.json",
+      "sha256": "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d"
+    }
+  },
+  "test_count_mae": 151.73394495412845,
+  "generated_at": "2026-05-30T12:00:00Z"
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_smoke_rank_yolo11s_15ep.json",
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "notes": "P1-AUG S10: YOLO11s @ 1280, 15 ep smoke; close_mosaic=3 scaled for 15 ep."
+}

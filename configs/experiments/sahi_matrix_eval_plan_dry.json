@@ -1,0 +1,33 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "run": {
+    "kind": "sahi_matrix_eval",
+    "dry_run": true,
+    "bench_dir": "configs/bench",
+    "pattern": "*.yaml",
+    "group": ["yolov8_scales"],
+    "sahi_rows": [
+      {
+        "label": "deploy_default",
+        "slice_size": 500,
+        "overlap": 0.35,
+        "nms_iou": 0.5,
+        "conf_fertilized": 0.06,
+        "conf_unfertilized": 0.04
+      },
+      {
+        "label": "recall_512",
+        "slice_size": 512,
+        "overlap": 0.35,
+        "nms_iou": 0.58,
+        "conf_fertilized": 0.06,
+        "conf_unfertilized": 0.06
+      }
+    ],
+    "out": "reports/ci/sahi_matrix_eval.plan.json"
+  }
+}

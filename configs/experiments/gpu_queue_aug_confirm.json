@@ -1,0 +1,26 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Optional manifest: P1-AUG-100EP-WINNER 100-ep confirm (not in gpu_queue_full.json). Train + HSP test eval vs best2 (~61.3 MAE).",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_EXPORT_DEVICE": "cpu",
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "aug_confirm_winner_100ep",
+      "kind": "aug_sweep_100",
+      "backlog": ["P1-AUG-100EP-WINNER", "ARCH-MOSAIC0-AB"],
+      "train_config": "configs/experiments/train_aug_winner_100ep.json",
+      "run_name": "aug_confirm_winner_100ep",
+      "summary_path": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json",
+      "estimated_minutes": 480,
+      "env": {"HARCHOC_MAX_EPOCHS": "100"},
+      "notes": "Train + HSP test eval (locked conf); summary reports/aug_smoke/aug_confirm_winner_100ep_summary.json vs best2 ~61.3 MAE.",
+      "skip_if": {"summary": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json"}
+    }
+  ]
+}

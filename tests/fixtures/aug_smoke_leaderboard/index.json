@@ -1,0 +1,78 @@
+{
+  "schema_version": "aug_smoke_index.v1",
+  "epochs": 15,
+  "primary_metric": "test_count_mae",
+  "smokes": [
+    {
+      "id": "S0",
+      "run_name": "aug_smoke_baseline",
+      "key_overrides": "production minimal; close_mosaic=15 (scales to 3 @ 15 ep)",
+      "summary": "reports/aug_smoke/s0_summary.json"
+    },
+    {
+      "id": "S1",
+      "run_name": "aug_smoke_close3",
+      "key_overrides": "close_mosaic=3 only",
+      "summary": "reports/aug_smoke/s1_summary.json"
+    },
+    {
+      "id": "S2",
+      "run_name": "aug_smoke_mosaic0",
+      "key_overrides": "mosaic=0, close_mosaic=0",
+      "summary": "reports/aug_smoke/s2_summary.json"
+    },
+    {
+      "id": "S3",
+      "run_name": "aug_smoke_photometric",
+      "key_overrides": "photometric only; erasing=0.2",
+      "summary": "reports/aug_smoke/s3_summary.json"
+    },
+    {
+      "id": "S5",
+      "run_name": "aug_smoke_mosaic03",
+      "key_overrides": "mosaic=0.3, close_mosaic=3",
+      "summary": "reports/aug_smoke/s5_summary.json"
+    },
+    {
+      "id": "S6",
+      "run_name": "aug_smoke_erasing0",
+      "key_overrides": "S3 + erasing=0",
+      "summary": "reports/aug_smoke/s6_summary.json"
+    },
+    {
+      "id": "S7",
+      "run_name": "aug_smoke_erasing03",
+      "key_overrides": "S3 + erasing=0.3",
+      "summary": "reports/aug_smoke/s7_summary.json"
+    },
+    {
+      "id": "S13",
+      "run_name": "aug_smoke_patience5",
+      "key_overrides": "S1 + patience=5 only",
+      "summary": "reports/aug_smoke/s13_summary.json"
+    },
+    {
+      "id": "S14",
+      "run_name": "aug_smoke_eval300",
+      "negative_control": true,
+      "key_overrides": "S1 weights; eval max_det=300 only",
+      "summary": "reports/aug_smoke/s14_summary.json"
+    }
+  ],
+  "equivalence_classes": {
+    "classes": [
+      {
+        "test_count_mae": 68.90825688073394,
+        "smoke_ids": ["S0", "S1", "S13"],
+        "canonical_smoke_id": "S1",
+        "preds_sha256": "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8"
+      },
+      {
+        "test_count_mae": 151.73394495412845,
+        "smoke_ids": ["S3", "S6", "S7"],
+        "canonical_smoke_id": "S3",
+        "preds_sha256": "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d"
+      }
+    ]
+  }
+}

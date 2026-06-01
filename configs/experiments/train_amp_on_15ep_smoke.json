@@ -1,0 +1,9 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 15,
+  "patience": 12,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "amp": true,
+  "eval": { "skip": true },
+  "notes": "P1-AMP-SMOKE 15-ep yolov8m AMP on; close_mosaic=3 scaled for 15 ep."
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "configs/experiments/train_bench_base.json",
+  "model": "rtdetr-l.pt",
+  "batch": 1,
+  "amp": true,
+  "grad_clip": 0.1,
+  "num_queries": 300,
+  "documented_peak_gt_boxes_per_image": 1015,
+  "accept_rtdetr_query_truncation": true,
+  "eval": {
+    "max_det": 300,
+    "device": "cpu",
+    "notes": "RT-DETR eval cap follows decoder num_queries (300), not YOLO max_det=3000."
+  },
+  "notes": "Matrix/bench @ 1280, batch=1. Policy: keep num_queries=300 (Ultralytics default); peak GT=1015/image on frozen splits — accept_rtdetr_query_truncation=true documents known decoder truncation until a custom RTDETRDecoder YAML ablation (e.g. 512–1024 queries) is GPU-validated. Raising queries via train kwargs alone does not retune a frozen rtdetr-l.pt head; see docs/training_budget.md.",
+  "cache": false
+}

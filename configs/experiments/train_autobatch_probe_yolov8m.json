@@ -1,0 +1,25 @@
+{
+  "_canonical": false,
+  "notes": "P1-AUTOBATCH: 1-epoch Ultralytics AutoBatch probe (batch=-1) @ imgsz=1280; train-only (no post-train eval).",
+  "model": "yolov8m.pt",
+  "epochs": 1,
+  "imgsz": 1280,
+  "batch": -1,
+  "device": 0,
+  "optimizer": "AdamW",
+  "conf": 0.05,
+  "iou": 0.3,
+  "max_det": 3000,
+  "lr0": 0.0002,
+  "lrf": 0.01,
+  "momentum": 0.97,
+  "weight_decay": 0.0005,
+  "patience": 50,
+  "eval": {
+    "skip": true
+  },
+  "workers": 2,
+  "verbose": true,
+  "seed": 0,
+  "cache": false
+}

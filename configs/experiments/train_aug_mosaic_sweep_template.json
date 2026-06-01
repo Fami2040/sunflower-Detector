@@ -1,0 +1,7 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 100,
+  "patience": 30,
+  "aug_config": "configs/aug/robustness_minimal.yaml",
+  "notes": "P1-AUG-MOSAIC / P1-AUG-CLOSE 100-ep sweep template. Copy per arm; swap aug_config per harchoc.train_config.MOSAIC_SWEEP_VALUES / CLOSE_MOSAIC_SWEEP_100EP. Smokes: S0/S2/S4/S5 @ 15 ep. See docs/EXPERIMENTS.md § P1-AUG sweeps and docs/research/training_tech_scan_2026_augmentation.md §2.6."
+}

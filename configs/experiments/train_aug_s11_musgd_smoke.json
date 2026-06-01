@@ -1,0 +1,6 @@
+{
+  "extends": "configs/experiments/train_aug_s10_yolo11s_smoke.json",
+  "optimizer": "MuSGD",
+  "lr0": 0.0001,
+  "notes": "P1-AUG S11: S10 + MuSGD optimizer."
+}

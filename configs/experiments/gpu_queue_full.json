@@ -1,0 +1,230 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Full sequential GPU backlog queue (Phase A→C). 8 GiB path: RT-DETR skipped; Tier 2 close sweeps + amp/sg eval → P0-5 zoo_core_8gb. Optional aug tails: gpu_queue_aug_close_phase_a.json (15 ep only), gpu_queue_aug_close_100ep.json (100 ep post-zoo).",
+  "aug_smoke_from_index": true,
+  "aug_smoke_index": "configs/experiments/aug_smoke_index.json",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_EXPORT_DEVICE": "cpu",
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "preflight",
+      "kind": "preflight",
+      "backlog": ["gate"],
+      "estimated_minutes": 2
+    },
+    {
+      "id": "vram_probe_rtdetr",
+      "kind": "vram_probe",
+      "backlog": ["P1-VRAM-RTDETR"],
+      "train_config": "configs/experiments/train_batch_probe_rtdetr-l.json",
+      "run_name": "batch_probe_rtdetr-l",
+      "estimated_minutes": 15,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip": true,
+      "skip_reason": "8 GiB GPU: RT-DETR @ 1280 batch=1 OOM (vram_probe failed); defer Ultralytics RT-DETR to >8 GiB",
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/vram_probe_rtdetr.json",
+        "require_weights": true
+      }
+    },
+    {
+      "id": "rtdetr_queries_smoke",
+      "kind": "rtdetr_smoke",
+      "backlog": ["P1-RTDETR-Q", "P1-RTDETR-COUNT-REFRESH"],
+      "train_config": "configs/experiments/train_rtdetr_queries_smoke_15ep.json",
+      "run_name": "rtdetr_queries_smoke_15ep",
+      "max_det": 1024,
+      "estimated_minutes": 90,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip": true,
+      "skip_reason": "8 GiB GPU: defer Ultralytics RT-DETR smokes (OOM); zoo_core_8gb excludes rtdetr_l_nq1024",
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/rtdetr_queries_smoke.json",
+        "eval_error_json": "reports/gpu_queue/eval/rtdetr_queries_smoke_15ep_error.json"
+      }
+    },
+    {
+      "id": "rtdetr_imgsz640",
+      "kind": "train_compare",
+      "backlog": ["P1-RTDETR-IMG", "P1-RTDETR-COUNT-REFRESH"],
+      "train_config": "configs/experiments/train_rtdetr_imgsz640_smoke_15ep.json",
+      "run_name": "rtdetr_imgsz640_smoke_15ep",
+      "max_det": 300,
+      "estimated_minutes": 90,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip": true,
+      "skip_reason": "8 GiB GPU: defer Ultralytics RT-DETR smokes (OOM)",
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/rtdetr_imgsz640.json",
+        "eval_error_json": "reports/gpu_queue/eval/rtdetr_imgsz640_smoke_15ep_error.json"
+      }
+    },
+    {
+      "id": "rtdetr_imgsz1280",
+      "kind": "train_compare",
+      "backlog": ["P1-RTDETR-IMG", "P1-RTDETR-COUNT-REFRESH"],
+      "train_config": "configs/experiments/train_rtdetr_smoke_15ep.json",
+      "run_name": "rtdetr_imgsz1280_smoke_15ep",
+      "max_det": 300,
+      "estimated_minutes": 90,
+      "notes": "15-ep RT-DETR-L @ 1280; required before zoo_core rtdetr-x 100 ep on >8 GiB GPUs.",
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip": true,
+      "skip_reason": "8 GiB GPU: defer Ultralytics RT-DETR smokes (OOM)",
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/rtdetr_imgsz1280.json",
+        "eval_error_json": "reports/gpu_queue/eval/rtdetr_imgsz1280_smoke_15ep_error.json"
+      }
+    },
+    {
+      "id": "amp_smoke_15ep_on",
+      "kind": "amp_smoke",
+      "backlog": ["P1-AMP-SMOKE"],
+      "train_config": "configs/experiments/train_amp_on_15ep_smoke.json",
+      "run_name": "amp_on_smoke_15ep",
+      "skip_eval": true,
+      "eval_out_dir": "reports/hsp",
+      "summary_path": "reports/hsp/amp_on_smoke_15ep_summary.json",
+      "estimated_minutes": 55,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {
+        "summary": "reports/hsp/amp_on_smoke_15ep_summary.json",
+        "weights_run_name": "amp_on_smoke_15ep"
+      },
+      "notes": "Train only (--skip-eval); HSP test export via amp_smoke_15ep_on_hsp_eval"
+    },
+    {
+      "id": "amp_smoke_15ep_on_hsp_eval",
+      "kind": "amp_smoke",
+      "backlog": ["P1-AMP-HSP-EVAL"],
+      "train_config": "configs/experiments/train_amp_on_15ep_smoke.json",
+      "run_name": "amp_on_smoke_15ep",
+      "eval_only": true,
+      "eval_out_dir": "reports/hsp",
+      "summary_path": "reports/hsp/amp_on_smoke_15ep_summary.json",
+      "estimated_minutes": 15,
+      "skip_if": {"summary": "reports/hsp/amp_on_smoke_15ep_summary.json"},
+      "notes": "Eval-only HSP test export for amp_on weights (compare vs S12 amp off 91.1)"
+    },
+    {
+      "id": "sg_yolo_nas_s_smoke",
+      "kind": "sg_smoke",
+      "backlog": ["P1-SG"],
+      "train_config": "configs/experiments/train_sg_yolo_nas_s_smoke_15ep.json",
+      "run_name": "sg_yolo_nas_s_smoke_15ep",
+      "model_id": "yolo_nas_s",
+      "skip_eval": true,
+      "eval_out_dir": "reports/aug_smoke",
+      "summary_path": "reports/aug_smoke/sg_yolo_nas_s_smoke_15ep_summary.json",
+      "estimated_minutes": 60,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {
+        "summary": "reports/aug_smoke/sg_yolo_nas_s_smoke_15ep_summary.json",
+        "weights_run_name": "sg_yolo_nas_s_smoke_15ep"
+      },
+      "notes": "SuperGradients yolo_nas_s train only; HSP test export via sg_yolo_nas_s_hsp_eval"
+    },
+    {
+      "id": "sg_yolo_nas_s_hsp_eval",
+      "kind": "sg_smoke",
+      "backlog": ["P1-SG-HSP-EVAL"],
+      "train_config": "configs/experiments/train_sg_yolo_nas_s_smoke_15ep.json",
+      "run_name": "sg_yolo_nas_s_smoke_15ep",
+      "model_id": "yolo_nas_s",
+      "eval_only": true,
+      "eval_out_dir": "reports/aug_smoke",
+      "summary_path": "reports/aug_smoke/sg_yolo_nas_s_smoke_15ep_summary.json",
+      "estimated_minutes": 15,
+      "skip_if": {"summary": "reports/aug_smoke/sg_yolo_nas_s_smoke_15ep_summary.json"},
+      "notes": "Eval-only HSP test export for sg_yolo_nas_s_smoke_15ep weights"
+    },
+    {
+      "id": "aug_sweep_15_close10",
+      "kind": "aug_sweep_15",
+      "backlog": ["P1-AUG-CLOSE"],
+      "train_config": "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+      "aug_config": "configs/aug/robustness_smoke_close10.yaml",
+      "run_name": "aug_sweep_close10_15ep",
+      "summary_path": "reports/aug_smoke/sweep_close10_15ep_summary.json",
+      "estimated_minutes": 45,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close10_15ep_summary.json"},
+      "notes": "Phase A (P1-AUG-CLOSE): close_mosaic=2 @ 15 ep. Phase B gate: MAE ≤ 72.3 → enable gpu_queue_aug_close_100ep close10 job."
+    },
+    {
+      "id": "aug_sweep_15_close15",
+      "kind": "aug_sweep_15",
+      "backlog": ["P1-AUG-CLOSE"],
+      "train_config": "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
+      "aug_config": "configs/aug/robustness_smoke_close15.yaml",
+      "run_name": "aug_sweep_close15_15ep",
+      "summary_path": "reports/aug_smoke/sweep_close15_15ep_summary.json",
+      "estimated_minutes": 45,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "notes": "P1-AUG-DUP-MAE: close15.yaml scales to close_mosaic=3 @ 15 ep (≡ complete S0/S1). Auto-skipped by recipe dedup; 100-ep arm remains in CLOSE_MOSAIC_SWEEP_100EP.",
+      "skip": true,
+      "skip_reason": "recipe duplicate of complete smoke S0 (effective close_mosaic=3)",
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close15_15ep_summary.json"}
+    },
+    {
+      "id": "aug_sweep_15_close25",
+      "kind": "aug_sweep_15",
+      "backlog": ["P1-AUG-CLOSE"],
+      "train_config": "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+      "aug_config": "configs/aug/robustness_smoke_close25.yaml",
+      "run_name": "aug_sweep_close25_15ep",
+      "summary_path": "reports/aug_smoke/sweep_close25_15ep_summary.json",
+      "estimated_minutes": 45,
+      "env": {"HARCHOC_MAX_EPOCHS": "15"},
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close25_15ep_summary.json"}
+    },
+    {
+      "id": "aug_confirm_winner_100ep",
+      "kind": "aug_sweep_100",
+      "backlog": ["P1-AUG-100EP-WINNER", "ARCH-MOSAIC0-AB"],
+      "train_config": "configs/experiments/train_aug_winner_100ep.json",
+      "run_name": "aug_confirm_winner_100ep",
+      "summary_path": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json",
+      "estimated_minutes": 480,
+      "env": {"HARCHOC_MAX_EPOCHS": "100"},
+      "skip": true,
+      "skip_reason": "Optional: run via gpu_queue_aug_confirm.json (separate manifest; avoids blocking full queue ~8h)",
+      "skip_if": {"summary": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json"},
+      "notes": "100-ep robustness_minimal confirm; use GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_aug_confirm.json"
+    },
+    {
+      "id": "zoo_matrix_p0_5",
+      "kind": "zoo_matrix_train",
+      "backlog": ["P0-5"],
+      "matrix_group": "zoo_core_8gb",
+      "runs_dir": "runs/hsp_zoo",
+      "out": "reports/hsp/matrix_train.json",
+      "plan_out": "reports/hsp/matrix_plan.json",
+      "estimated_minutes": 1600,
+      "skip_if": {
+        "matrix_train_out": "reports/hsp/matrix_train.json",
+        "matrix_group": "zoo_core_8gb"
+      },
+      "notes": "8 GiB P0-5: zoo_core_8gb = 4× YOLO *m (v8/v10/11/26) + 4× external DETR stack @ batch=1. Excludes Ultralytics rtdetr_l_nq1024/rtdetr_x (OOM @ 1280). Full zoo_core (10 rows) on >8 GiB only.",
+      "env": {"HARCHOC_MAX_EPOCHS": "120"}
+    },
+    {
+      "id": "cv_fold_train",
+      "kind": "cv_fold_train",
+      "backlog": ["P1-CV-TRAIN"],
+      "folds": 5,
+      "splits_out": "reports/cv_folds",
+      "train_config": "configs/experiments/train_yolov8m_baseline.json",
+      "estimated_minutes": 3000,
+      "env": {"HARCHOC_MAX_EPOCHS": "120"},
+      "skip": true,
+      "skip_reason": "Defer on 8 GiB zoo path; run separately after P0-5 matrix_train.json"
+    }
+  ]
+}

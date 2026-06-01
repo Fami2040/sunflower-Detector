@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/train_smoke_rank_15ep.json",
+  "aug_config": "configs/aug/robustness_minimal.yaml",
+  "notes": "P1-AUG S0: 15-ep baseline smoke; production minimal (close_mosaic=15 scales to 3 @ 15 ep). Distinct YAML from S1 explicit close3."
+}

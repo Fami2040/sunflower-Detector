@@ -1,0 +1,11 @@
+extends: configs/aug/robustness_smoke_base.yaml
+name: aug_robustness_smoke_close10
+version: 2
+notes: >
+  P1-AUG-CLOSE 15-ep ranking arm: close_mosaic=2 (scaled from 100-ep close10).
+  Pair with patience=12 so epochs - patience >= close_mosaic.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 2
+  translate: 0.05

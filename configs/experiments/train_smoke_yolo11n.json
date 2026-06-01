@@ -1,0 +1,11 @@
+{
+  "model": "yolo11n.pt",
+  "epochs": 1,
+  "imgsz": 640,
+  "batch": 4,
+  "patience": 50,
+  "eval": {
+    "max_det": 3000
+  },
+  "seed": 0
+}

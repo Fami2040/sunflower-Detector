@@ -1,0 +1,11 @@
+{
+  "extends": "configs/experiments/train_bench_rtdetr-l.json",
+  "epochs": 15,
+  "patience": 12,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "eval": {
+    "skip": true,
+    "notes": "P0-4 smoke: train-only; run HSP eval separately (HARCHOC_EXPORT_DEVICE=cpu). Avoids post-train GPU val OOM on 8 GiB after RT-DETR train."
+  },
+  "notes": "15-epoch GPU smoke before sota_2026 matrix: rtdetr-l @ 1280 batch=1; close_mosaic=3 scaled for 15 ep."
+}

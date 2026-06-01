@@ -1,0 +1,38 @@
+{
+  "schema_version": "external_repos.v1",
+  "notes": "GENERATED from configs/external/detector_sources.v1.json train_stacks + entries. Do not edit by hand; refresh via: python scripts/check_weights_cache.py --sync-repos-manifest",
+  "repos": {
+    "deim": {
+      "train_stack": "deim",
+      "url": "https://github.com/Intellindust-AI-Lab/DEIM.git",
+      "ref": "main",
+      "cache_dirname": "DEIM",
+      "train_script": "train.py",
+      "source_ids": [
+        "deim_dfine_l",
+        "deim_rtdetrv2_l"
+      ]
+    },
+    "dfine": {
+      "train_stack": "dfine",
+      "url": "https://github.com/Peterande/D-FINE.git",
+      "ref": "master",
+      "cache_dirname": "D-FINE",
+      "train_script": "train.py",
+      "source_ids": [
+        "dfine_l"
+      ]
+    },
+    "rtdetrv2_pytorch": {
+      "train_stack": "rtdetrv2_pytorch",
+      "url": "https://github.com/lyuwenyu/RT-DETR.git",
+      "ref": "main",
+      "cache_dirname": "RT-DETR",
+      "train_script": "tools/train.py",
+      "subdir": "rtdetrv2_pytorch",
+      "source_ids": [
+        "rtdetrv2_l"
+      ]
+    }
+  }
+}

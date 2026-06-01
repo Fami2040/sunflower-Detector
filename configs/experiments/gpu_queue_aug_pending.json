@@ -1,0 +1,22 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Unique gpu_pending smokes only (index-expanded). Mosaic sweeps removed (≡ S2/S4/S5 smokes). P1-AUG-CLOSE 15-ep arms (close10, close25; close15 dedup-skipped) live in gpu_queue_full.json only.",
+  "aug_smoke_from_index": true,
+  "aug_smoke_index": "configs/experiments/aug_smoke_index.json",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_EXPORT_DEVICE": "cpu",
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "preflight",
+      "kind": "preflight",
+      "backlog": ["gate"],
+      "estimated_minutes": 2
+    }
+  ]
+}

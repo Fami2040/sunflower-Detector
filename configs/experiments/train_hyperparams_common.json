@@ -1,0 +1,6 @@
+{
+  "epochs": 100,
+  "imgsz": 1280,
+  "patience": 50,
+  "seed": 0
+}

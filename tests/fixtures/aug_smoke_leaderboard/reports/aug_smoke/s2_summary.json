@@ -1,0 +1,32 @@
+{
+  "schema_version": "aug_smoke_summary.v1",
+  "smoke_id": "S2",
+  "run_name": "aug_smoke_mosaic0",
+  "arch_ticket": "P1-AUG / ARCH-MOSAIC0-AB",
+  "train_config": "configs/experiments/train_aug_s2_mosaic0_smoke.json",
+  "status": "complete",
+  "train": {
+    "epochs": 15,
+    "runtime_s": 2094.192667480558,
+    "val_map50_95": 0.12557071861387945
+  },
+  "test_eval": {
+    "split": "test",
+    "device": "cpu",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "eval_json": "reports/aug_smoke/aug_smoke_mosaic0_eval.json",
+    "error_json": "reports/aug_smoke/aug_smoke_mosaic0_error.json"
+  },
+  "test_count_mae": 147.41284403669724,
+  "test_count_mae_ci": {
+    "stat": "mean",
+    "point": 147.41284403669724,
+    "low": 134.50045871559632,
+    "high": 160.9105504587156,
+    "confidence": 0.95,
+    "method": "bootstrap_percentile",
+    "n": 109
+  },
+  "n_test_images": 109,
+  "generated_at": "2026-05-29T17:50:43Z"
+}

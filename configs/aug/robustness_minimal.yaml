@@ -1,0 +1,34 @@
+name: aug_robustness_minimal
+version: 1
+notes: >
+  Conservative robustness recipe for dense sunflower-seed counting @ imgsz 1280.
+  Photometric-heavy; low mosaic; no mixup. Pair with test-split count metrics.
+  See docs/research/augmentation_robustness_literature.md.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 15
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.35
+  hsv_v: 0.35
+  translate: 0.05
+  scale: 0.15
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  erasing: 0.2
+
+ablation_variants:
+  robustness_photometric_only:
+    mosaic: 0.0
+    mixup: 0.0
+    translate: 0.0
+    scale: 0.0
+    fliplr: 0.0
+  robustness_mosaic_off:
+    mosaic: 0.0
+    close_mosaic: 0

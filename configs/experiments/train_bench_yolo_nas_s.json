@@ -1,0 +1,7 @@
+{
+  "extends": "configs/experiments/train_bench_base.json",
+  "model_id": "yolo_nas_s",
+  "batch": 1,
+  "notes": "Matrix/bench training recipe for YOLO-NAS-S via SuperGradients @ 1280.",
+  "cache": false
+}

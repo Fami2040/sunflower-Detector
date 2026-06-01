@@ -1,0 +1,8 @@
+{
+  "extends": "configs/experiments/train_bench_yolo_nas_s.json",
+  "epochs": 15,
+  "patience": 12,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "eval": { "skip": true },
+  "notes": "P1-SG 15-ep smoke (SuperGradients yolo_nas_s); close_mosaic=3 scaled for 15 ep."
+}

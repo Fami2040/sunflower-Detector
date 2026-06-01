@@ -1,0 +1,21 @@
+{
+  "extends": "configs/experiments/train_hyperparams_common.json",
+  "device": 0,
+  "optimizer": "AdamW",
+  "conf": 0.05,
+  "iou": 0.3,
+  "max_det": 3000,
+  "aug_config": "configs/aug/robustness_minimal.yaml",
+  "lr0": 0.0002,
+  "lrf": 0.01,
+  "momentum": 0.97,
+  "weight_decay": 0.0005,
+  "eval": {
+    "max_det": 3000,
+    "device": "cpu",
+    "notes": "Post-train eval uses CPU on 8 GiB-class GPUs (see docs/training_budget.md). Override eval.device or HARCHOC_POST_TRAIN_EVAL_DEVICE for large VRAM."
+  },
+  "workers": 2,
+  "verbose": true,
+  "cache": false
+}

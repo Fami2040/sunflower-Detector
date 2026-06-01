@@ -1,0 +1,22 @@
+name: aug_micro_close1
+version: 1
+notes: >
+  Micro-smoke tier (3 ep): same as robustness_smoke_close3 but close_mosaic=1
+  (scale_close_mosaic_for_epochs(3)). For CI only — GPU rank smokes use close_mosaic=3 @ 15 ep.
+
+ultralytics:
+  mosaic: 0.1
+  close_mosaic: 1
+  mixup: 0.0
+  cutmix: 0.0
+  hsv_h: 0.02
+  hsv_s: 0.35
+  hsv_v: 0.35
+  translate: 0.05
+  scale: 0.15
+  degrees: 0.0
+  shear: 0.0
+  perspective: 0.0
+  fliplr: 0.5
+  flipud: 0.0
+  erasing: 0.2

@@ -1,0 +1,62 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "P1-AUG-CLOSE Phase B (100-ep close_mosaic arms) + P1-AUG-SCHEDULE-SMOKE. Post-zoo optional tail — jobs default skip=true until Phase A gate / schedule audit. Clear skip on winning arm(s) only.",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_EXPORT_DEVICE": "cpu",
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "preflight",
+      "kind": "preflight",
+      "backlog": ["gate"],
+      "estimated_minutes": 2
+    },
+    {
+      "id": "aug_sweep_100_close10",
+      "kind": "aug_sweep_100",
+      "backlog": ["P1-AUG-CLOSE-100EP"],
+      "train_config": "configs/experiments/train_aug_close10_100ep.json",
+      "run_name": "aug_sweep_close10_100ep",
+      "summary_path": "reports/aug_smoke/sweep_close10_100ep_summary.json",
+      "estimated_minutes": 480,
+      "env": {"HARCHOC_MAX_EPOCHS": "100"},
+      "skip": true,
+      "skip_reason": "Phase B conditional: set skip=false when close10 @ 15 ep test MAE ≤ 72.3 (S1 68.9 + 5%)",
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close10_100ep_summary.json"},
+      "notes": "100-ep robustness_close10.yaml (close_mosaic=10). Compare vs aug_confirm 64.1 MAE."
+    },
+    {
+      "id": "aug_sweep_100_close25",
+      "kind": "aug_sweep_100",
+      "backlog": ["P1-AUG-CLOSE-100EP"],
+      "train_config": "configs/experiments/train_aug_close25_100ep.json",
+      "run_name": "aug_sweep_close25_100ep",
+      "summary_path": "reports/aug_smoke/sweep_close25_100ep_summary.json",
+      "estimated_minutes": 480,
+      "env": {"HARCHOC_MAX_EPOCHS": "100"},
+      "skip": true,
+      "skip_reason": "Phase B conditional: set skip=false when close25 @ 15 ep test MAE ≤ 72.3 (S1 68.9 + 5%)",
+      "skip_if": {"summary": "reports/aug_smoke/sweep_close25_100ep_summary.json"},
+      "notes": "100-ep robustness_close25.yaml (close_mosaic=25). Compare vs aug_confirm 64.1 MAE."
+    },
+    {
+      "id": "aug_schedule_patience25_100ep",
+      "kind": "aug_sweep_100",
+      "backlog": ["P1-AUG-SCHEDULE-SMOKE"],
+      "train_config": "configs/experiments/train_aug_schedule_patience25_100ep.json",
+      "run_name": "aug_schedule_patience25_100ep",
+      "summary_path": "reports/aug_smoke/schedule_patience25_100ep_summary.json",
+      "estimated_minutes": 480,
+      "env": {"HARCHOC_MAX_EPOCHS": "100"},
+      "skip": true,
+      "skip_reason": "Phase C optional: set skip=false only if confirm run stop_epoch < epochs−close_mosaic (tail never fired)",
+      "skip_if": {"summary": "reports/aug_smoke/schedule_patience25_100ep_summary.json"},
+      "notes": "Same robustness_minimal as confirm; patience=25 only. vs aug_confirm_winner_100ep 64.1 MAE."
+    }
+  ]
+}

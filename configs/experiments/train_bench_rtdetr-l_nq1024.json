@@ -1,0 +1,13 @@
+{
+  "extends": "configs/experiments/train_bench_rtdetr-l.json",
+  "model": "configs/models/rtdetr-l_nq1024.yaml",
+  "num_queries": 1024,
+  "accept_rtdetr_query_truncation": false,
+  "eval": {
+    "max_det": 1024,
+    "device": "cpu",
+    "notes": "eval.max_det aligned with RTDETRDecoder nq=1024 (>= peak GT 1015/image)."
+  },
+  "notes": "Matrix/bench @ 1280, batch=1, scratch RT-DETR-L with decoder nq=1024. Not rtdetr-l.pt — full decoder width.",
+  "cache": false
+}

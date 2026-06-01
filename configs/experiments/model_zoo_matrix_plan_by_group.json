@@ -1,0 +1,15 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "run": {
+    "kind": "benchmark_matrix",
+    "dry_run": true,
+    "bench_dir": "configs/bench",
+    "pattern": "*.yaml",
+    "group": ["yolov8_scales", "sota_2026"],
+    "out": "reports/ci/benchmark_matrix.plan.json"
+  }
+}

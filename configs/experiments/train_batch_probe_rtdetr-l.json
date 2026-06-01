@@ -1,0 +1,9 @@
+{
+  "_canonical": false,
+  "extends": "configs/experiments/train_bench_rtdetr-l.json",
+  "notes": "Non-canonical 1-epoch VRAM probe @ imgsz=1280 (8 GiB V100). batch=1 per train_bench_rtdetr-l.json. Use with --skip-eval.",
+  "epochs": 1,
+  "eval": {
+    "skip": true
+  }
+}
