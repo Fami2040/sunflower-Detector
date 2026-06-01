@@ -1,6 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
-  "patience": 5,
-  "notes": "P1-AUG S13: S1 + patience=5 only (epochs=15, close_mosaic=3 unchanged). Stress early-stop × close_mosaic; guard 15−5≥3. Same test count MAE as S1 is expected when stop_epoch=15 (no early stop on this val curve); byte-identical preds if best.pt epoch matches S1."
-}

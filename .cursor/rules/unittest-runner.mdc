@@ -1,0 +1,14 @@
+# Unittest (agents)
+
+Do **not** run `python -m unittest discover … | grep` twice to learn pass/fail and failure names.
+
+Use one command from repo root:
+
+```bash
+PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/run_tests.py
+```
+
+- **`-q`** — minimal progress; still prints summary + `PROBLEMS` block.
+- **`-v`** — include full tracebacks under each problem.
+
+Implementation: [`harchoc/unittest_report.py`](../../harchoc/unittest_report.py), entrypoint [`scripts/run_tests.py`](../../scripts/run_tests.py).

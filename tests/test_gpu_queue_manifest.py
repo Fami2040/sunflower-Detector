@@ -79,7 +79,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         )
         self.assertEqual(
             by_id["aug_sweep_15_close10"]["train_config"],
-            "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+            "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
         )
         self.assertEqual(
             by_id["aug_sweep_15_close15"]["aug_config"],
@@ -91,7 +91,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         )
         self.assertEqual(
             by_id["aug_sweep_15_close25"]["train_config"],
-            "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+            "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
         )
 
     def test_sweeps_15ep_index_matches_full_queue(self) -> None:

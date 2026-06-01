@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 DEFAULT_AUG_SMOKE_TRAIN_BASE = "configs/experiments/train_smoke_rank_15ep.json"
+AUG_SMOKE_GENERATED_DIR = "configs/experiments/.aug_smoke_generated"
 
 # Committed train JSON exceptions (non-default extends / model / schedule).
 AUG_SMOKE_COMMITTED_TRAIN_STEMS = frozenset(
     {
-        "train_aug_s9_no_aug_yaml_smoke",
         "train_aug_s10_yolo11s_smoke",
         "train_aug_s11_musgd_smoke",
-        "train_aug_s12_amp_off_smoke",
-        "train_aug_s13_patience5_smoke",
-        "train_aug_close10_sweep_smoke_15ep",
-        "train_aug_close25_sweep_smoke_15ep",
         "train_aug_close10_100ep",
         "train_aug_close25_100ep",
         "train_aug_mosaic_sweep_smoke_15ep",
@@ -34,6 +31,44 @@ def _entry_train_config_spec(entry: dict[str, Any]) -> str | None:
     return spec or None
 
 
+def _entry_train_overrides(entry: dict[str, Any]) -> dict[str, Any] | None:
+    raw = entry.get("train_overrides")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise TypeError("train_overrides must be a JSON object")
+    return dict(raw)
+
+
+def _generated_train_config_path(repo_root: Path, smoke_id: str) -> Path:
+    sid = str(smoke_id or "unknown").strip().lower().replace("/", "_")
+    return (repo_root / AUG_SMOKE_GENERATED_DIR / f"{sid}.json").resolve()
+
+
+def materialize_aug_smoke_train_config(
+    entry: dict[str, Any],
+    *,
+    repo_root: Path,
+    smoke_id: str,
+    base_config: str | None = None,
+) -> str:
+    """Write merged train JSON for index ``train_overrides``; return repo-relative path."""
+    overrides = _entry_train_overrides(entry)
+    if not overrides:
+        raise ValueError(f"smoke {smoke_id}: materialize requires train_overrides")
+    from harchoc.train_config import load_train_config_json
+
+    base = str(base_config or entry.get("train_base") or DEFAULT_AUG_SMOKE_TRAIN_BASE).strip()
+    merged = load_train_config_json((repo_root / base).resolve(), repo_root=repo_root)
+    merged = dict(merged)
+    merged.update(overrides)
+    merged.pop("extends", None)
+    out = _generated_train_config_path(repo_root, smoke_id)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(merged, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return str(out.relative_to(repo_root))
+
+
 def is_committed_aug_smoke_train_config(path: str | Path) -> bool:
     stem = Path(str(path)).name
     if stem.endswith(".json"):
@@ -46,6 +81,7 @@ def resolve_aug_smoke_train_config_path(
     *,
     repo_root: Path,
     job_train_config: str | None = None,
+    smoke_id: str | None = None,
 ) -> str:
     """Return ``--config`` path for an aug smoke job or index entry."""
     for spec in (_entry_train_config_spec(entry), job_train_config):
@@ -56,6 +92,12 @@ def resolve_aug_smoke_train_config_path(
             return spec
         if p.is_file():
             return spec
+    overrides = _entry_train_overrides(entry)
+    if overrides:
+        sid = smoke_id or str(entry.get("id") or entry.get("name") or "override")
+        return materialize_aug_smoke_train_config(
+            entry, repo_root=repo_root, smoke_id=str(sid)
+        )
     return DEFAULT_AUG_SMOKE_TRAIN_BASE
 
 
@@ -88,14 +130,22 @@ def resolve_aug_smoke_train_raw(
     repo_root: Path,
     job_train_config: str | None = None,
     job_aug_config: str | None = None,
+    smoke_id: str | None = None,
 ) -> dict[str, Any]:
     """Fully merged train config dict (for recipe fingerprint / parity tests)."""
     from harchoc.train_config import load_train_config_json
 
     tc = resolve_aug_smoke_train_config_path(
-        entry, repo_root=repo_root, job_train_config=job_train_config
+        entry,
+        repo_root=repo_root,
+        job_train_config=job_train_config,
+        smoke_id=smoke_id or str(entry.get("id") or entry.get("name") or "") or None,
     )
     cfg = load_train_config_json(repo_root / tc, repo_root=repo_root)
+    overrides = _entry_train_overrides(entry)
+    if overrides:
+        cfg = dict(cfg)
+        cfg.update(overrides)
     aug = resolve_aug_smoke_aug_config(
         entry,
         repo_root=repo_root,
@@ -110,7 +160,8 @@ def resolve_aug_smoke_train_raw(
 
 _DEFAULT_INDEX = "configs/experiments/aug_smoke_index.json"
 _RUNTIME_ONLY_SMOKE_IDS = frozenset({f"S{i}" for i in range(9)} | {"S14"})
-_COMMITTED_SMOKE_IDS = frozenset({f"S{i}" for i in range(9, 14)})
+_TRAIN_OVERRIDE_SMOKE_IDS = frozenset({"S9", "S12", "S13"})
+_COMMITTED_SMOKE_IDS = frozenset({"S10", "S11"})
 _EQUIVALENCE_SWEEP_ALIASES = frozenset({"CLOSE25", "CLOSE10"})
 
 
@@ -173,21 +224,33 @@ def validate_aug_smoke_configs(
         sid = str(entry.get("id") or "").upper()
         label = f"smoke {sid}"
         has_tc = "train_config" in entry and bool(str(entry.get("train_config") or "").strip())
+        has_overrides = _entry_train_overrides(entry) is not None
 
         if sid in _RUNTIME_ONLY_SMOKE_IDS:
             if has_tc:
                 errors.append(f"{label}: runtime-only smoke must not set train_config")
+            if has_overrides:
+                errors.append(f"{label}: runtime-only smoke must not set train_overrides")
+        elif sid in _TRAIN_OVERRIDE_SMOKE_IDS:
+            if has_tc:
+                errors.append(f"{label}: use train_overrides in index, not train_config file")
+            if not has_overrides:
+                errors.append(f"{label}: requires train_overrides in aug_smoke_index")
         elif sid in _COMMITTED_SMOKE_IDS:
             tc = entry.get("train_config")
             if not tc:
                 errors.append(f"{label}: committed smoke requires train_config")
             else:
                 _validate_train_config_ref(root, str(tc), label=label, errors=errors)
+            if has_overrides:
+                errors.append(f"{label}: committed smoke must not set train_overrides")
         elif has_tc:
             _validate_train_config_ref(root, str(entry["train_config"]), label=label, errors=errors)
 
         try:
-            tc_path = resolve_aug_smoke_train_config_path(entry, repo_root=root)
+            tc_path = resolve_aug_smoke_train_config_path(
+                entry, repo_root=root, smoke_id=sid
+            )
             if not (root / tc_path).is_file():
                 errors.append(f"{label}: resolved train config missing: {tc_path!r}")
         except (ValueError, TypeError) as exc:
@@ -223,6 +286,13 @@ def validate_aug_smoke_configs(
         ac = arm.get("aug_config")
         if ac is not None and not _aug_path_exists(root, str(ac)):
             errors.append(f"{prefix}: missing aug_config {ac!r}")
+        try:
+            arm_id = str(arm.get("id") or prefix)
+            raw = resolve_aug_smoke_train_raw(arm, repo_root=root, smoke_id=arm_id or None)
+            if raw.get("aug_config") is not None:
+                validate_epochs_patience_close_mosaic(raw, repo_root=root, label=prefix)
+        except (ValueError, TypeError) as exc:
+            errors.append(f"{prefix}: schedule guard failed: {exc}")
 
     sweeps_15 = index.get("sweeps_15ep")
     if isinstance(sweeps_15, dict):
@@ -245,7 +315,10 @@ def validate_aug_smoke_configs(
     exp_dir = root / "configs" / "experiments"
     for path in sorted(exp_dir.glob("train_aug_s*_smoke.json")):
         if path.stem not in AUG_SMOKE_COMMITTED_TRAIN_STEMS:
-            errors.append(f"orphan aug smoke train JSON: {path.relative_to(root)}")
+            errors.append(
+                f"orphan aug smoke train JSON (use aug_smoke_index train_overrides): "
+                f"{path.relative_to(root)}"
+            )
 
     equiv = index.get("equivalence_classes")
     if isinstance(equiv, dict):

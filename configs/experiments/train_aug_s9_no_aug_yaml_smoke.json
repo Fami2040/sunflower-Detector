@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": null,
-  "notes": "P1-AUG S9: no aug_config; inline train.py _BASELINE_DEFAULTS only (legacy merge test)."
-}

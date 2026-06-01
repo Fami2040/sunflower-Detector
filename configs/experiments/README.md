@@ -26,9 +26,10 @@ Extend `experiment.py` / `train.py` / `benchmark_matrix.py` before new top-level
 
 Files without `"schema_version": "experiments.v1"` are consumed by `train.py` (and matrix via `train_bench_<stem>.json`):
 
-- Baselines: `train_yolov8m_baseline.json`, smokes, batch probes (`train_batch_probe.template.json` + per-model copies; `"_canonical": false`)
+- Baselines: `train_yolov8m_baseline.json`, smokes, batch probes (`train_batch_probe.template.json` + thin `extends` overlays; `"_canonical": false`)
+- AMP 1-ep probes: `train_amp_probe.template.json` + `train_amp_on_probe_1ep.json` / `train_amp_off_probe_1ep.json`
 - Matrix: `train_bench_base.json` + per-model overlays; aug via `configs/aug/robustness_minimal.yaml`
-- Aug smokes: [`aug_smoke_index.json`](aug_smoke_index.json) + [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json)
+- Aug smokes: [`aug_smoke_index.json`](aug_smoke_index.json) (canonical arms; `train_overrides` for S9/S12/S13) + [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json) + S10/S11 committed JSON only
 
 RT-DETR query-cap policy: `train_bench_rtdetr-l.json` — see [`docs/training_budget.md`](../../docs/training_budget.md#rt-detr-query-cap-dense-trays). External DETR: [`configs/external/README.md`](../external/README.md).
 

@@ -1,6 +1,6 @@
 # Aug comparative analysis
 
-Generated: `2026-06-01T14:03:12Z` · schema `aug_comparative_analysis.v1`
+Generated: `2026-06-01T14:29:43Z` · schema `aug_comparative_analysis.v1`
 
 CPU-only synthesis from [`aug_smoke_index.json`](../../configs/experiments/aug_smoke_index.json) and existing `*_summary.json` artifacts — no re-training.
 

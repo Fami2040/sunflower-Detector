@@ -19,7 +19,7 @@ Single entry point for **how we train, evaluate, and improve** sunflower seed de
 | [§6 Training recipe](#6-training-recipe) | Defaults @ 1280, schedule, VRAM |
 | [§7 Augmentation](#7-augmentation) | Recipe + S0–S14 smokes |
 | [§8 Model zoo & DETR](#8-model-zoo--detr) | YOLO matrix + RT-DETR policy |
-| [§9 Eval & HSP protocol](#9-eval--hsp-protocol) | Val tune → lock → test |
+| [§9 Eval & HSP protocol](#9-eval--hsp-protocol) | Manuscript counting eval (HSP = internal): val tune → lock → test |
 | [§10 Error / FP / explainability](#10-error--fp--explainability) | TIDE-style analysis, crops, XAI |
 | [§11 Domain shift](#11-domain-shift--transfer) | Tray keys, catalog, finetune |
 | [§12 Env & libraries](#12-environment--optional-libraries) | What to add to `harchoc` env |
@@ -307,6 +307,8 @@ Details: [training_tech_scan_2026_detectors.md](research/training_tech_scan_2026
 
 ## 9. Eval & HSP protocol
 
+**HSP** is internal shorthand for the counting-first manuscript eval chain and `reports/hsp/` artifacts (no published acronym expansion).
+
 **Stack step 3** ([backlog stack](../backlog.md#model-improvement-stack-test-count-mae)): tune on **val** → lock conf → report on **test**; select operating point with **`--select min_count_mae`** (**P1-FP-BUDGET**). Graded trust on detections (**MS-FUZZY-BOUND**: locked conf + low-conf score band + `ambiguous_summary`; not a third class — §10).
 
 **Baseline weights:** [HSP_BASELINE_MODELS.md](HSP_BASELINE_MODELS.md) (`best2.pt` vs `classifier.pt`, deploy SAHI vs manuscript export). Checksums: [baseline_models_manifest](../reports/hsp/baseline_models_manifest.json). Spec: `configs/experiments/eval_hsp_baseline.json`.
@@ -444,6 +446,6 @@ Aligned with [backlog stack defer](../backlog.md#model-improvement-stack-test-co
 
 - When a research doc changes, update its **Validated** footer; bump this doc’s roadmap table if P0/P1 shifts.
 - **Single task tracker:** [backlog.md](../backlog.md) — do not duplicate open tasks here long-term.
-- **CI:** `PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 HARCHOC_QUIET=1 python -m unittest discover -s tests` (203+ tests).
+- **CI / local unittest:** `PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python scripts/run_tests.py` (summary + all FAIL/ERROR in one run; `-q` quiet progress, `-v` tracebacks).
 
 *Consolidated 2026-05-29 from validated `docs/research/*`, `EXPERIMENTS.md`, `training_budget.md`, and `backlog.md`.*

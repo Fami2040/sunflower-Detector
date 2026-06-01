@@ -10,7 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 _REPO = Path(__file__).resolve().parents[1]
 _DEFAULT_OUT = _REPO / "reports/hsp/agent_batch_verify.json"
 _MAMBA_ENV = "harchoc"
@@ -56,12 +61,7 @@ def _run_unittest() -> dict[str, Any]:
         "run",
         "-n",
         _MAMBA_ENV,
-        "python",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests",
+        "scripts/run_tests.py",
         "-q",
     ]
     proc = subprocess.run(
@@ -79,7 +79,7 @@ def _run_unittest() -> dict[str, Any]:
     errors = len(re.findall(r"^ERROR:", proc.stdout + proc.stderr, re.MULTILINE))
     status = "ok" if proc.returncode == 0 else "failed"
     return {
-        "command": "PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 mamba run -n harchoc python -m unittest discover -s tests -q",
+        "command": "PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 mamba run -n harchoc python scripts/run_tests.py -q",
         "exit_code": proc.returncode,
         "tests_run": tests_run,
         "failures": failures,

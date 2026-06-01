@@ -98,7 +98,7 @@
     {
       "id": "S9",
       "name": "aug_smoke_no_aug_yaml",
-      "train_config": "configs/experiments/train_aug_s9_no_aug_yaml_smoke.json",
+      "train_overrides": { "aug_config": null },
       "aug_config": null,
       "run_name": "aug_smoke_no_aug_yaml",
       "status": "complete",
@@ -131,7 +131,7 @@
     {
       "id": "S12",
       "name": "aug_smoke_amp_off",
-      "train_config": "configs/experiments/train_aug_s12_amp_off_smoke.json",
+      "train_overrides": { "amp": false },
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_amp_off",
       "status": "complete",
@@ -142,7 +142,7 @@
     {
       "id": "S13",
       "name": "aug_smoke_patience5",
-      "train_config": "configs/experiments/train_aug_s13_patience5_smoke.json",
+      "train_overrides": { "patience": 5 },
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_patience5",
       "status": "complete",
@@ -176,7 +176,7 @@
     "arms": [
       {
         "id": "close10",
-        "train_config": "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+        "train_config": "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
         "aug_config": "configs/aug/robustness_smoke_close10.yaml",
         "run_name": "aug_sweep_close10_15ep",
         "status": "complete",
@@ -197,11 +197,12 @@
       },
       {
         "id": "close25",
-        "train_config": "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+        "train_config": "configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
+        "train_overrides": { "patience": 11 },
         "aug_config": "configs/aug/robustness_smoke_close25.yaml",
         "run_name": "aug_sweep_close25_15ep",
         "status": "complete",
-        "key_overrides": "close_mosaic=4 @ 15 ep (production 25)",
+        "key_overrides": "close_mosaic=4 @ 15 ep (production 25); patience=11 for epochs−patience≥close_mosaic",
         "summary": "reports/aug_smoke/sweep_close25_15ep_summary.json",
         "queue_job_id": "aug_sweep_15_close25",
         "test_count_mae": 68.90825688073394

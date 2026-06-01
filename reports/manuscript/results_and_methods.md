@@ -1,6 +1,6 @@
 # Methods and Results (HSP reproduction)
 
-This document is the canonical Methods and Results text for journal submission. It describes the frozen HARCHOC Sunflower Phenotyping (HSP) protocol and primary quantitative results for `models/best2.pt` on the CVAT-annotated corpus (1093 images; train/validation/test 875/109/109). Tables and figures are regenerated from HSP exports (`experiment.py manuscript-docx-repro`).
+This document is the canonical Methods and Results text for journal submission. It describes the frozen **counting-first eval protocol** (repo shorthand **HSP** — internal label for `reports/hsp/` exports, not a published acronym) and primary quantitative results for `models/best2.pt` on the CVAT-annotated corpus (1093 images; train/validation/test 875/109/109). Tables and figures are regenerated from those exports (`experiment.py manuscript-docx-repro`).
 
 We retained the upstream production checkpoint from the public [sunflower-Detector](https://github.com/Fami2040/sunflower-Detector) repository and re-evaluated it under a pre-registered counting protocol on versioned splits. Comparative training (augmentation grid and detector zoo) tests whether any recipe beats that anchor on the **same** test split at the **same** validation-locked confidence—not whether a new architecture was invented.
 

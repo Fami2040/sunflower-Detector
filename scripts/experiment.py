@@ -742,6 +742,12 @@ def main(argv: list[str] | None = None) -> int:
     pd.add_argument("--split-file", action="append", default=argparse.SUPPRESS)
     pd.add_argument("--out", default=argparse.SUPPRESS)
 
+    pdr = sp.add_parser(
+        "dataset-root",
+        help="Print resolved dataset root from data/manifest.json (replaces scripts/dataset_from_manifest.py).",
+    )
+    pdr.add_argument("--dataset-name", default=argparse.SUPPRESS)
+
     # `eval` legacy args
     pe = sp.add_parser("eval", help="Evaluate a trained model.")
     add_dataset_args(pe, suppress_defaults=True)
@@ -1117,7 +1123,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pgq = sp.add_parser(
         "gpu-queue",
-        help="Sequential GPU backlog queue from gpu_queue manifest (dry-run or --run).",
+        help="[deprecated] Use scripts/run_gpu_queue.sh or scripts/run_gpu_queue.py instead.",
     )
     pgq.add_argument(
         "--manifest",
@@ -1503,7 +1509,24 @@ def main(argv: list[str] | None = None) -> int:
         return rc
     if cmd == "aug-compare":
         return _run_aug_compare(merged_fields)
+    if cmd == "dataset-root":
+        from harchoc.datasets import dataset_root_from_manifest
+
+        name = str(
+            merged_fields.get("dataset_name")
+            or os.environ.get("DATASET_NAME", "sunflower-cvat-1093")
+        )
+        print(dataset_root_from_manifest(dataset_name=name))
+        return 0
     if cmd == "gpu-queue":
+        import warnings
+
+        warnings.warn(
+            "experiment.py gpu-queue is deprecated; prefer ./scripts/run_gpu_queue.sh "
+            "or: mamba run -n harchoc python scripts/run_gpu_queue.py --manifest <path>",
+            DeprecationWarning,
+            stacklevel=1,
+        )
         from harchoc.experiment_argv import argv_for_gpu_queue
         from scripts.run_gpu_queue import main as run_gpu_queue_main
 

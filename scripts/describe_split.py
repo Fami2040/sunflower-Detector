@@ -2,9 +2,16 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import statistics
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+from pathlib import Path
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.yaml_minimal import parse_minimal_yaml_flat
 from harchoc.run_metadata import collect_run_metadata

@@ -1,16 +1,6 @@
 {
   "_canonical": false,
-  "notes": "Non-canonical 1-epoch VRAM probe @ imgsz=1280 (8 GiB V100). batch=1 per train_bench_yolov8m.json. Use: mamba run -n harchoc python scripts/train.py --config configs/experiments/train_batch_probe_yolov8m.json --name batch_probe_yolov8m --skip-eval",
+  "extends": "configs/experiments/train_batch_probe.template.json",
   "model": "yolov8m.pt",
-  "epochs": 1,
-  "imgsz": 1280,
-  "batch": 1,
-  "patience": 50,
-  "seed": 0,
-  "workers": 2,
-  "device": 0,
-  "cache": false,
-  "eval": {
-    "skip": true
-  }
+  "notes": "VRAM probe yolov8m @ 1280 batch=1 (8 GiB). See training_budget.md."
 }

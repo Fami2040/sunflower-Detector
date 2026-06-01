@@ -1,6 +1,8 @@
 # HSP canonical reports (`reports/hsp/`)
 
-This directory is the **single source of truth** for the HSP (harchoc sunflower-seed) **P0 credibility gate** on frozen splits (`875` train / `109` val / `109` test). Manuscript metrics, threshold locking, and dual-metric tables should cite paths here—not stale exports at the repo root.
+**HSP** is an **internal repo shorthand** for manuscript counting eval artifacts (val tune → lock conf → test; full-frame `eval.py` @ 1280, not deploy SAHI). There is no official acronym expansion in the project docs—use **counting-first eval protocol** or **manuscript eval exports** in external prose.
+
+This directory is the **single source of truth** for the **P0 credibility gate** on frozen splits (`875` train / `109` val / `109` test). Manuscript metrics, threshold locking, and dual-metric tables should cite paths here—not stale exports at the repo root.
 
 **Tree index:** [../README.md](../README.md) (all `reports/` layers). **Publication exports:** [../manuscript/README.md](../manuscript/README.md).
 

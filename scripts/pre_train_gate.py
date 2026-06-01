@@ -25,7 +25,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 
 from harchoc.ml_env import default_mamba_env
 from harchoc.strict_ml import strict_ml_enabled
@@ -62,11 +67,7 @@ def _run_unittest() -> dict[str, Any]:
         "-n",
         env_name,
         "python",
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests",
+        "scripts/run_tests.py",
         "-q",
     ]
     proc = subprocess.run(

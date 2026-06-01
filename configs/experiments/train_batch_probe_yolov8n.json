@@ -1,13 +1,8 @@
 {
   "_canonical": false,
-  "notes": "Non-canonical train-only probe config (no experiments.v1). Use with scripts/train.py --config only.",
+  "extends": "configs/experiments/train_batch_probe.template.json",
   "model": "yolov8n.pt",
-  "epochs": 1,
-  "imgsz": 1280,
-  "batch": 2,
-  "patience": 50,
-  "seed": 0,
-  "workers": 2,
-  "device": 0,
-  "notes": "Short probe @ imgsz=1280 on RTX 5050 (7.5 GiB). 2026-05-27: batch=1 OK (~4.1G), batch=2 OK (peak ~7.2G); batch=4 not confirmed (expect OOM on 8m). Production yolov8m @ 1280: use batch=1. Run from repo root with DATASET_ROOT set; delete dataset/images/*.cache if Ultralytics cache goes stale."
+  "imgsz": 640,
+  "batch": 4,
+  "notes": "VRAM ladder probe yolov8n @ 640 (manual batch ladder)."
 }

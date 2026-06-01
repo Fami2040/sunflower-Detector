@@ -1,11 +1,6 @@
 {
   "_canonical": false,
-  "extends": "configs/experiments/train_yolov8m_baseline.json",
-  "epochs": 1,
+  "extends": "configs/experiments/train_amp_probe.template.json",
   "amp": true,
-  "eval": {
-    "skip": true,
-    "notes": "P1-AMP-SMOKE 1-ep probe: train-only; compare loss/time vs amp_off in reports/hsp/amp_smoke_1ep.json."
-  },
-  "notes": "yolov8m @ 1280 batch=1, AMP on, 1 epoch GPU smoke (P1-AMP-SMOKE)."
+  "notes": "yolov8m @ 1280 batch=1, AMP on, 1 epoch (P1-AMP-SMOKE)."
 }

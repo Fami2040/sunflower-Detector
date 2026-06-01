@@ -107,6 +107,33 @@ Report: [`reports/manuscript/now_todos_smoke.json`](../../reports/manuscript/now
 
 - HSP anchor **61.3** / aug grid closed / literature audit **11/11**
 - Smoke harness + [`gpu_queue_post_zoo_smoke.json`](../../configs/experiments/gpu_queue_post_zoo_smoke.json)
+- **Sprawl Phase 1–2 (2026-06):** canonical status hub; GPU queues archived; [`experiment_cli`](../../harchoc/experiment_cli.py); `experiment.py threshold-sweep` / `error-analysis` / `split-drift`; HSP default outs under `reports/hsp/`
+
+---
+
+## Terminology
+
+| Term | Meaning |
+|------|---------|
+| **HARCHOC** | Project: *Helianthus annuus rapid classification heuristics for capitula* ([`README.md`](../../README.md)) |
+| **HSP** | **Internal repo shorthand** for manuscript counting eval + [`reports/hsp/`](../../reports/hsp/README.md) JSON — **not** a defined acronym in this project; say *counting-first eval protocol* in external prose |
+
+---
+
+## Repo hygiene — DRY / sprawl follow-ups
+
+Full checklist: [`docs/plans/dry-refactor-plan.md`](../plans/dry-refactor-plan.md). **Do not** expand scope into 1093↔cohort merge, `telegram_bot.py`, or re-enabling archived `gpu_queue_full` on 8 GiB.
+
+| ID | Status | Notes |
+|----|--------|--------|
+| **DRY-2c-train** | **Done** | Batch/AMP `extends` templates; aug S9/S12/S13 → index `train_overrides` (materialized under `.aug_smoke_generated/`); 15ep close sweeps share `train_aug_mosaic_sweep_smoke_15ep.json`; S10/S11 JSON only |
+| **DRY-3-narrative** | **Done** | `narrative_from_backlog.md` gitignored (preflight regenerates) |
+| **DRY-2d-bootstrap** | **Done** | All `scripts/*.py` entrypoints use [`script_entry`](../../harchoc/script_entry.py) bootstrap block |
+| **DRY-3-reports** | **Done** | [`reports/README.md`](../../reports/README.md) tracking table; `.gitignore` allows `manuscript/reviewer2/` |
+| **DRY-entrypoints** | **Done** | `experiment.py dataset-root`; `gpu-queue` + `dataset_from_manifest.py` deprecated (warn) |
+| **DRY-reviewer2-index** | **Done** | [`reports/manuscript/reviewer2/README.md`](../../reports/manuscript/reviewer2/README.md) |
+
+**Branch note:** `git diff origin/main...HEAD` is mostly manuscript/literature/1093 rename — not config/doc sprawl; scope reviews separately.
 
 ---
 

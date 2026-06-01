@@ -3,7 +3,7 @@
   "smoke_id": "S13",
   "run_name": "aug_smoke_patience5",
   "arch_ticket": "P1-AUG",
-  "train_config": "configs/experiments/train_aug_s13_patience5_smoke.json",
+  "train_config": "configs/experiments/.aug_smoke_generated/s13.json",
   "status": "complete",
   "train": {
     "epochs": null,

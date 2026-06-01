@@ -47,7 +47,7 @@
     },
     {
       "id": "S13",
-      "train_config": "configs/experiments/train_aug_s13_patience5_smoke.json",
+      "train_overrides": { "patience": 5 },
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_patience5",
       "key_overrides": "S1 + patience=5 only",

@@ -119,7 +119,12 @@ reports/manuscript/*
 !reports/manuscript/**/*.md
 !reports/manuscript/lit_audit/
 !reports/manuscript/lit_audit/**
+!reports/manuscript/reviewer2/
+!reports/manuscript/reviewer2/**
 reports/manuscript/**/*.json
+reports/manuscript/narrative_from_backlog.md
+# Index-only aug smokes (materialized by validate-aug-smoke / gpu queue)
+configs/experiments/.aug_smoke_generated/
 # Ad-hoc agent probes (belong under scripts/ or harchoc/, not reports/)
 reports/gpu_queue/debug_*.py
 reports/gpu_queue/probe_*.py

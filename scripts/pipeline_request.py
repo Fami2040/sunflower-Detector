@@ -9,7 +9,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
+import sys
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+from harchoc.script_entry import bootstrap_repo_imports
+
+bootstrap_repo_imports()
 from harchoc.model_zoo import backend_availability
 from harchoc.hsp_weights import HSP_DETECTION_WEIGHTS
 from scripts._common_cli import write_json

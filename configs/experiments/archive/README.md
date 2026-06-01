@@ -15,3 +15,7 @@ Closed programs (aug smokes, historical full backlog). **Do not** add new jobs h
 - [`gpu_queue_zoo_p0_5.json`](../gpu_queue_zoo_p0_5.json) — P0-5 zoo only
 - [`gpu_queue_post_zoo.json`](../gpu_queue_post_zoo.json) — domain audit + finetune
 - [`gpu_queue_post_zoo_smoke.json`](../gpu_queue_post_zoo_smoke.json) — 1-ep wiring smoke
+
+## Unused train JSON (`unused_train/`)
+
+Legacy smokes with no repo references (superseded by `train_smoke_rank_15ep.json` + `aug_smoke_index.json`).

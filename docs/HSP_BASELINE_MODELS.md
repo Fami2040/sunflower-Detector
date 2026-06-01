@@ -1,6 +1,8 @@
 # HSP baseline weights (`models/best2.pt`, `models/classifier.pt`)
 
-Frozen production weights used for **deploy** (Telegram / one-shot SAHI) and as the **HSP manuscript baseline** for `sunflower-cvat-1093` eval (`scripts/eval.py`). Class semantics in the repo are always **id 0 = developed**, **id 1 = aborted** (`harchoc/sunflower_dataset.py`, `data/README.md`).
+**HSP** = internal repo label for manuscript counting eval (`reports/hsp/`), distinct from deploy SAHI + `classifier.pt` gate. Not a published acronym.
+
+Frozen production weights used for **deploy** (Telegram / one-shot SAHI) and as the **manuscript baseline** for `sunflower-cvat-1093` eval (`scripts/eval.py`). Class semantics in the repo are always **id 0 = developed**, **id 1 = aborted** (`harchoc/sunflower_dataset.py`, `data/README.md`).
 
 **Provenance:** `best2.pt` and `classifier.pt` come from **[Fami2040/sunflower-Detector](https://github.com/Fami2040/sunflower-Detector)** (`main`), not from `scripts/train.py` in this fork. Dataset: CVAT share **`y9xGFqCW`** — [`data/manifest.json`](../data/manifest.json). Full narrative: [`ORIGIN_MAIN_AND_DATASET.md`](ORIGIN_MAIN_AND_DATASET.md). Reviewer comments: [`reports/reviewer2.md`](../reports/reviewer2.md).
 

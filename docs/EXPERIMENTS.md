@@ -2,6 +2,8 @@
 
 Entrypoints for training, evaluation, threshold calibration, and the model-zoo benchmark matrix. They share dataset resolution, config layout (`configs/`), and artifact locations (`reports/`, `figures/`, `runs/`).
 
+**HSP** is internal shorthand for the manuscript **counting-first eval** chain (export preds @ low conf → val threshold sweep → lock → test MAE / dual-metric). Artifacts: [`reports/hsp/`](../reports/hsp/README.md). **HARCHOC** is the project name ([`README.md`](../README.md)); do not invent an acronym expansion for HSP in papers.
+
 ## GPU environment (required for torch work)
 
 All Ultralytics / PyTorch scripts call `require_conda_env()` and expect the **`harchoc`** mamba env (override with `HARCHOC_MAMBA_ENV`):
@@ -220,8 +222,8 @@ Template: [`train_aug_mosaic_sweep_smoke_15ep.json`](../configs/experiments/trai
 | mosaic=0.1 | `configs/aug/robustness_smoke_mosaic01.yaml` | **P1-AUG-MOSAIC** |
 | close_mosaic=15 | `configs/aug/robustness_smoke_close15.yaml` | **P1-AUG-CLOSE** |
 | mosaic=0.3 | `configs/aug/robustness_smoke_mosaic03.yaml` | **P1-AUG-MOSAIC** |
-| close_mosaic=10 | `configs/aug/robustness_smoke_close10.yaml` (+ [`train_aug_close10_sweep_smoke_15ep.json`](../configs/experiments/train_aug_close10_sweep_smoke_15ep.json)) | **P1-AUG-CLOSE** |
-| close_mosaic=25 | `configs/aug/robustness_smoke_close25.yaml` (+ [`train_aug_close25_sweep_smoke_15ep.json`](../configs/experiments/train_aug_close25_sweep_smoke_15ep.json)) | **P1-AUG-CLOSE** |
+| close_mosaic=10 | `configs/aug/robustness_smoke_close10.yaml` + shared [`train_aug_mosaic_sweep_smoke_15ep.json`](../configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json) (arm in [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json)) | **P1-AUG-CLOSE** |
+| close_mosaic=25 | `configs/aug/robustness_smoke_close25.yaml` + same train base (index `sweeps_15ep`) | **P1-AUG-CLOSE** |
 
 Dry-run a 15-ep mosaic-off arm (CI-safe):
 

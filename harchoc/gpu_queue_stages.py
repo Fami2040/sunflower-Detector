@@ -111,6 +111,7 @@ def validate_job_files(job: dict[str, Any], repo_root: Path) -> None:
             entry,
             repo_root=repo_root,
             job_train_config=str(job.get("train_config") or "") or None,
+            smoke_id=str(smoke_id),
         )
         if not (repo_root / tc).is_file():
             raise FileNotFoundError(f"aug_smoke {smoke_id}: missing train_config {tc}")
@@ -284,6 +285,7 @@ def build_job_stages(
             entry,
             repo_root=repo_root,
             job_train_config=str(job.get("train_config") or "") or None,
+            smoke_id=smoke_id,
         )
         name = str(job.get("run_name") or entry.get("run_name") or "")
         if not cfg or not name:

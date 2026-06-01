@@ -34,7 +34,7 @@ Weights live in `models/` (gitignored `.pt` files). See [`models/README.md`](mod
 
 ## Experiments
 
-Reproducible entrypoints, GPU queue, zoo matrix, and HSP protocol:
+Reproducible entrypoints, GPU queue, zoo matrix, and manuscript counting eval (`reports/hsp/`; internal label **HSP**):
 
 [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md)
 

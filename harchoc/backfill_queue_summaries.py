@@ -53,7 +53,7 @@ GPU_QUEUE_SUMMARY_BACKFILLS: tuple[QueueSummaryBackfill, ...] = (
     QueueSummaryBackfill(
         job_id="aug_sweep_15_close10",
         run_name="aug_sweep_close10_15ep",
-        train_config="configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
+        train_config="configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
         summary_path="reports/aug_smoke/sweep_close10_15ep_summary.json",
         smoke_id="CLOSE10",
         arch_ticket="P1-AUG-CLOSE",
@@ -62,7 +62,7 @@ GPU_QUEUE_SUMMARY_BACKFILLS: tuple[QueueSummaryBackfill, ...] = (
     QueueSummaryBackfill(
         job_id="aug_sweep_15_close25",
         run_name="aug_sweep_close25_15ep",
-        train_config="configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
+        train_config="configs/experiments/train_aug_mosaic_sweep_smoke_15ep.json",
         summary_path="reports/aug_smoke/sweep_close25_15ep_summary.json",
         smoke_id="CLOSE25",
         arch_ticket="P1-AUG-CLOSE",

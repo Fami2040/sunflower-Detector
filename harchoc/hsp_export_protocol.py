@@ -1,4 +1,4 @@
-"""HSP manuscript export defaults (conf / IoU / split / device) shared across eval chains."""
+"""Manuscript counting-export defaults (conf / IoU / split / device); HSP = internal reports/hsp/ label."""
 
 from __future__ import annotations
 

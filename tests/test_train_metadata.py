@@ -78,10 +78,16 @@ class TrainMetadataTests(unittest.TestCase):
             self.assertEqual(cfg_out["train"]["seed"], 0)
 
     def test_aug_smoke_s9_dry_run_inline_baseline_defaults(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_config_path
         from scripts.train import main
 
         repo_root = Path(__file__).resolve().parents[1]
-        cfg = repo_root / "configs" / "experiments" / "train_aug_s9_no_aug_yaml_smoke.json"
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
+        rel = resolve_aug_smoke_train_config_path(
+            find_smoke_entry(index, "S9"), repo_root=repo_root, smoke_id="S9"
+        )
+        cfg = repo_root / rel
         self.assertTrue(cfg.is_file())
 
         with tempfile.TemporaryDirectory() as td:

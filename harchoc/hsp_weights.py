@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# YOLOv8m HSP baseline used for manuscript metrics, domain eval, threshold lock, etc.
+# YOLOv8m manuscript baseline (HSP_* = internal reports/hsp/ naming), not deploy SAHI.
 HSP_DETECTION_WEIGHTS = "models/best2.pt"
 
 

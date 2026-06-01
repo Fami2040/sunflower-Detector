@@ -127,10 +127,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
             for k in sorted(set(s1) | set(s13))
             if s1.get(k) != s13.get(k)
         }
-        self.assertEqual(set(diff), {"patience", "notes"})
-        validate_epochs_patience_close_mosaic(
-            s13, repo_root=repo_root, label="train_aug_s13_patience5_smoke.json"
-        )
+        self.assertEqual(set(diff) - {"notes"}, {"patience"})
+        validate_epochs_patience_close_mosaic(s13, repo_root=repo_root, label="aug_smoke S13")
 
     def test_train_schedules_satisfy_close_mosaic_guard(self) -> None:
         from harchoc.train_config import (
@@ -244,12 +242,11 @@ class TrainConfigExtendsTests(unittest.TestCase):
     def test_aug_smoke_s9_no_aug_yaml_resolves_without_aug_config(self) -> None:
         from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
         from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
-        from harchoc.train_config import effective_train_aug_merged, load_train_config_json
+        from harchoc.train_config import effective_train_aug_merged
 
         repo_root = Path(__file__).resolve().parents[1]
         index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
-        path = repo_root / "configs" / "experiments" / "train_aug_s9_no_aug_yaml_smoke.json"
-        resolved = load_train_config_json(path, repo_root=repo_root)
+        resolved = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S9"), repo_root=repo_root)
         self.assertIsNone(resolved.get("aug_config"))
         self.assertEqual(resolved["epochs"], 15)
         self.assertEqual(resolved["patience"], 12)
@@ -284,21 +281,31 @@ class TrainConfigExtendsTests(unittest.TestCase):
         }
         chained_parent = {
             "train_aug_s11_musgd_smoke.json": "configs/experiments/train_aug_s10_yolo11s_smoke.json",
-            "train_aug_s12_amp_off_smoke.json": "configs/experiments/train_smoke_rank_15ep.json",
-            "train_aug_s13_patience5_smoke.json": "configs/experiments/train_smoke_rank_15ep.json",
         }
         for path in sorted(exp_dir.glob("train_aug_s*_smoke.json")):
             raw = json.loads(path.read_text(encoding="utf-8"))
             self.assertNotIn("epochs", raw, msg=path.name)
-            if path.name == "train_aug_s13_patience5_smoke.json":
-                self.assertEqual(raw.get("patience"), 5)
-            else:
-                self.assertNotIn("patience", raw, msg=path.name)
+            self.assertNotIn("patience", raw, msg=path.name)
             extends = raw.get("extends")
             if path.name in chained_parent:
                 self.assertEqual(extends, chained_parent[path.name])
             else:
                 self.assertIn(extends, rank_fragments, msg=f"{path.name} extends={extends!r}")
+
+    def test_aug_smoke_index_train_overrides_s9_s12_s13(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
+
+        repo_root = Path(__file__).resolve().parents[1]
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
+        s9 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S9"), repo_root=repo_root)
+        s12 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S12"), repo_root=repo_root)
+        s13 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S13"), repo_root=repo_root)
+        self.assertIsNone(s9.get("aug_config"))
+        self.assertFalse(s12.get("amp"))
+        self.assertEqual(s13.get("patience"), 5)
+        self.assertEqual(s9["epochs"], 15)
+        self.assertEqual(s12["epochs"], 15)
 
     def test_train_hyperparams_common_merges_into_bench_and_baseline(self) -> None:
         from harchoc.train_config import load_train_config_json
@@ -455,12 +462,9 @@ class TrainConfigExtendsTests(unittest.TestCase):
             validate_epochs_patience_close_mosaic(
                 cfg, repo_root=repo_root, label=name
             )
-        skip_close_guard = {"train_aug_s9_no_aug_yaml_smoke.json"}
         for path in sorted(exp_dir.glob("train_aug_s*_smoke.json")):
             cfg = load_train_config_json(path, repo_root=repo_root)
             self.assertEqual(cfg["epochs"], SMOKE_EPOCHS_RANK, msg=path.name)
-            if path.name in skip_close_guard:
-                continue
             validate_epochs_patience_close_mosaic(
                 cfg, repo_root=repo_root, label=path.name
             )
@@ -515,10 +519,12 @@ class TrainConfigExtendsTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
         close3 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo_root)
-        close10 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
-            repo_root=repo_root,
+        arm = next(
+            a
+            for a in (index.get("sweeps_15ep") or {}).get("arms") or []
+            if str(a.get("id")) == "close10"
         )
+        close10 = resolve_aug_smoke_train_raw(arm, repo_root=repo_root)
         validate_epochs_patience_close_mosaic(close10, repo_root=repo_root)
         m3 = effective_train_aug_merged(close3, repo_root=repo_root)
         m10 = effective_train_aug_merged(close10, repo_root=repo_root)
@@ -537,10 +543,12 @@ class TrainConfigExtendsTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
         close3 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo_root)
-        close25 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
-            repo_root=repo_root,
+        arm = next(
+            a
+            for a in (index.get("sweeps_15ep") or {}).get("arms") or []
+            if str(a.get("id")) == "close25"
         )
+        close25 = resolve_aug_smoke_train_raw(arm, repo_root=repo_root)
         validate_epochs_patience_close_mosaic(close25, repo_root=repo_root)
         m3 = effective_train_aug_merged(close3, repo_root=repo_root)
         m25 = effective_train_aug_merged(close25, repo_root=repo_root)
