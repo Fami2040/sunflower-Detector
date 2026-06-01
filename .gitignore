@@ -122,9 +122,6 @@ reports/manuscript/**/*.json
 reports/gpu_queue/debug_*.py
 reports/gpu_queue/probe_*.py
 reports/gpu_queue/verify_*.py
-figures/*
-!figures/.gitkeep
-!figures/README.md
 
 # Structured pipeline outputs (local)
 outputs/*
