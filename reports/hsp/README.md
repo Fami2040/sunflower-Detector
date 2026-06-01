@@ -78,7 +78,7 @@ Moved or historical paths. **Do not** use for manuscript numbers or new baseline
 | [`reports/_archive/hsp/error_*_report.json`](../_archive/hsp/) | Prior error-analysis taxonomy summaries; canonical payloads are `error_val.json` / `error_test.json` |
 | [`reports/_archive/hsp/logs/`](../_archive/hsp/logs/) | Ad-hoc zoo/matrix/monitor logs from 2026-05-27 runs |
 | [`reports/_archive/hsp/matrix_sanity.json`](../_archive/hsp/matrix_sanity.json) | Pre-matrix dry-run sanity, not P0 metrics |
-| [`reports/_archive/hsp/gpu_check.json`](../_archive/hsp/gpu_check.json), [`_rtdetr_smoke_gpu_check.json`](../_archive/hsp/_rtdetr_smoke_gpu_check.json) | Duplicate GPU probes; canonical: `python scripts/check_gpu.py` → `reports/gpu_check.json` |
+| [`reports/_archive/hsp/gpu_check.json`](../_archive/hsp/gpu_check.json), [`_rtdetr_smoke_gpu_check.json`](../_archive/hsp/_rtdetr_smoke_gpu_check.json) | Duplicate GPU probes; canonical: `mamba run -n harchoc python scripts/check_gpu.py --json-out reports/hsp/gpu_check.json` |
 
 See also [`reports/_archive/hsp/bench_800/README.md`](../_archive/hsp/bench_800/README.md).
 

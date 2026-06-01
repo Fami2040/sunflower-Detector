@@ -58,7 +58,7 @@ Never infer "no GPU" from bare `python` on base. CI lightweight import is for Gi
 
 ## Research scans (2026)
 
-Literature-backed plans referenced by backlog and bench recipes:
+Literature-backed plans referenced by backlog and bench recipes. **Artifact paths:** [`docs/research/README.md`](research/README.md) → [`reports/README.md`](../reports/README.md).
 
 | Scan | Doc |
 |------|-----|
@@ -386,7 +386,7 @@ mamba run -n harchoc python scripts/experiment.py gradcam \
 
 ```bash
 mamba run -n harchoc python scripts/experiment.py --dry-run \
-  --config '{"dataset":{"default_dataset_name":"sunflower-cvat-2500"},"eval":{"out":"reports/eval.json"}}' \
+  --config '{"dataset":{"default_dataset_name":"sunflower-cvat-2500"},"eval":{"out":"reports/hsp/eval_dry_run.json"}}' \
   eval
 
 mamba run -n harchoc python scripts/experiment.py --dry-run --config configs/experiment.json benchmark
@@ -671,8 +671,8 @@ Filter by group: `--group yolov8_scales` (repeatable). List groups: `--list-grou
 Pre-cache:
 
 ```bash
-mamba run -n harchoc python scripts/check_weights_cache.py --strict --out reports/weights_cache.json
-mamba run -n harchoc python scripts/check_weights_cache.py --download --out reports/weights_cache.json
+mamba run -n harchoc python scripts/check_weights_cache.py --strict --out reports/hsp/weights_cache.json
+mamba run -n harchoc python scripts/check_weights_cache.py --download --out reports/hsp/weights_cache.json
 ```
 
 `--download` fetches missing Ultralytics weights and updates `data/weights/weights_manifest.json`. Use only during prep.
@@ -681,13 +681,15 @@ Bench validation (stdlib): required `model` / `model_id` per backend; budget cap
 
 ### Training + test eval
 
-When cached weights exist, `--no-dry-run` invokes `scripts/train.py` per ultralytics bench config, then **`scripts/eval.py` on the test split** unless `--no-eval`. Metrics land in `matrix_train.json`.
+When cached weights exist, `--no-dry-run` invokes `scripts/train.py` per ultralytics bench config, then **`scripts/eval.py` on the test split** unless `--no-eval`. Manuscript / zoo aggregates land in **`reports/hsp/matrix_train.json`** (not `reports/benchmarks/matrix_train.json`).
 
 ```bash
 export DATASET_ROOT=/path/to/dataset
 
 mamba run -n harchoc python scripts/benchmark_matrix.py --no-dry-run \
-  --train-out reports/benchmarks/matrix_train.json
+  --runs-dir runs/hsp_zoo \
+  --train-out reports/hsp/matrix_train.json \
+  --out reports/hsp/matrix_plan.json
 ```
 
 - Missing cache → run `skipped` with `weights_not_cached`.
@@ -797,8 +799,8 @@ Re-run once per GPU class when scheduling production `batch` in bench configs. S
 
 ```bash
 mamba run -n harchoc python scripts/check_gpu.py
-mamba run -n harchoc python scripts/check_gpu.py --json-out reports/gpu_check.json
-mamba run -n harchoc python scripts/check_gpu.py --dry-run --json-out reports/gpu_check.json
+mamba run -n harchoc python scripts/check_gpu.py --json-out reports/hsp/gpu_check.json
+mamba run -n harchoc python scripts/check_gpu.py --dry-run --json-out reports/hsp/gpu_check.json
 mamba run -n harchoc python scripts/check_gpu.py sanity --dry-run --out reports/gpu_sanity.json
 mamba run -n harchoc python scripts/check_gpu.py smoke-ultralytics --dry-run --out reports/gpu_smoke_ultralytics.json
 ```

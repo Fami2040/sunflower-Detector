@@ -148,8 +148,9 @@ python scripts/error_analysis.py \
   --gt-json reports/hsp/gt_test.json \
   --preds-json reports/hsp/preds_test.json \
   --export-fp-crops --fp-crops-topk 200 \
-  --out reports/error_analysis/summary.json \
-  --report reports/error_analysis/report.json
+  --locked-conf-from reports/hsp/threshold_val.json \
+  --out reports/hsp/error_test.json \
+  --report reports/hsp/error_test_report.json
 ```
 
 `eval.py` is **test-only** for mAP; do not use it to export val preds. CI: `--light` + `configs/experiments/error_analysis_light.json`.

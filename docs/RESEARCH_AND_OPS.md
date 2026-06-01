@@ -59,6 +59,7 @@ Single entry point for **how we train, evaluate, and improve** sunflower seed de
 |-----|------|
 | [EXPERIMENTS.md](EXPERIMENTS.md) | Live CLI, configs, matrix, threshold workflow |
 | [../reports/README.md](../reports/README.md) | Canonical `./reports` layout (HSP science vs manuscript vs archive) |
+| [research/README.md](research/README.md) | Literature scans + anti-sprawl path table for citations |
 | [HSP_BASELINE_MODELS.md](HSP_BASELINE_MODELS.md) | `best2.pt` / `classifier.pt`, deploy vs HSP eval |
 | [training_budget.md](training_budget.md) | `HARCHOC_MAX_*`, RT-DETR smoke, export device |
 | [../data/README.md](../data/README.md) | Dataset tree, `data.yaml`, splits |
@@ -67,6 +68,8 @@ Single entry point for **how we train, evaluate, and improve** sunflower seed de
 | [manuscript/related_work_outline.md](manuscript/related_work_outline.md) | §2 Related Work outline + cite table (**MS-LIT** Done) |
 
 ### 2026 tech scans (action-oriented)
+
+Index + canonical `reports/` paths: [`docs/research/README.md`](research/README.md).
 
 | Doc | Focus |
 |-----|--------|

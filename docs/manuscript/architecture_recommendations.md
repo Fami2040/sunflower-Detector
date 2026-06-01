@@ -10,7 +10,7 @@
 |----------|----------|-------------------|
 | `max_det: 3000` on dense trays | S14 truncation study | **Done** P0-1, [`s14_maxdet_truncation.json`](../../reports/hsp/s14_maxdet_truncation.json) |
 | Val tune → lock conf → test reporting | HSP protocol, threshold literature | P0-3 chain, [`dual_metric.json`](../../reports/hsp/dual_metric.json) |
-| 8-model zoo @ imgsz 1280 | Detector SOTA expectation | **P0-5**, [`matrix.json`](../../reports/benchmarks/matrix.json) |
+| 8-model zoo @ imgsz 1280 | Detector SOTA expectation | **P0-5**, plan [`matrix_plan.json`](../../reports/hsp/matrix_plan.json) / train [`matrix_train.json`](../../reports/hsp/matrix_train.json) (dry-run plan also under `reports/benchmarks/matrix.json`) |
 | Grad-CAM on FP crops | LWCD-YOLO, Yang/Ren XAI narrative | **Done** P2-FIG-CAM, `experiment.py gradcam` → [`gradcam_routing.md`](gradcam_routing.md) |
 | Two-weight deploy gate | Alshehri analogy; production path | [`HSP_BASELINE_MODELS.md`](../HSP_BASELINE_MODELS.md), [gap §14](reviewer_comments_backlog_gap.md#14-manuscript-draft--two-stage-deploy-discussion) (**MS-DEPLOY-2STG** Done) |
 | Manuscript repro one-command | Reviewer reproducibility | **Done** MS-REPRO, `experiment.py repro` |

@@ -313,7 +313,7 @@ Record mAP50 / mAP50-95 for model comparison. Do not tune thresholds here.
 ### Phase B — Split diagnostics (before threshold work)
 
 ```bash
-python scripts/split_drift.py --with-ks
+mamba run -n harchoc python scripts/split_drift.py --with-ks --out reports/hsp/split_drift_p0.json
 python scripts/describe_split.py --split val --out reports/split_val.json
 python scripts/describe_split.py --split test --out reports/split_test.json
 ```

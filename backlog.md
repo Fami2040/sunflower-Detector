@@ -10,7 +10,7 @@ Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **B
 | Error mix @ locked conf | FN ~53% ΔAP share; among FPs loc ~58%, bg ~35%, cls ~3% — [`error_test_report.json`](reports/hsp/error_test_report.json) |
 | **Next GPU job** | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) |
 
-**Doc map:** [RESEARCH_AND_OPS](docs/RESEARCH_AND_OPS.md) · [EXPERIMENTS](docs/EXPERIMENTS.md) · [reports/README](reports/README.md) · [reports/hsp/README](reports/hsp/README.md) · [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) · [zoo_comparison_design](docs/zoo_comparison_design.md) · [HSP_BASELINE_MODELS](docs/HSP_BASELINE_MODELS.md) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer gap](docs/manuscript/reviewer_comments_backlog_gap.md) · [refactor.md](refactor.md)
+**Doc map:** [RESEARCH_AND_OPS](docs/RESEARCH_AND_OPS.md) · [EXPERIMENTS](docs/EXPERIMENTS.md) · [reports/README](reports/README.md) · [reports/hsp/README](reports/hsp/README.md) · [research/README](docs/research/README.md) · [manuscript/README](docs/manuscript/README.md) · [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) · [zoo_comparison_design](docs/zoo_comparison_design.md) · [HSP_BASELINE_MODELS](docs/HSP_BASELINE_MODELS.md) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer gap](docs/manuscript/reviewer_comments_backlog_gap.md) · [refactor.md](refactor.md)
 
 **Convention:** Only **Next** / **Partial** / **Blocked** appear in [Now](#now). Everything finished lives in [Archive](#archive).
 
@@ -144,7 +144,7 @@ HARCHOC_STRICT_ML=1 mamba run -n harchoc python scripts/pre_train_gate.py --full
 mamba run -n harchoc python scripts/check_weights_cache.py --sync-repos-manifest
 mamba run -n harchoc python scripts/check_weights_cache.py --download --strict --out reports/hsp/weights_cache.json
 mamba run -n harchoc python scripts/validate_splits.py --require-test
-mamba run -n harchoc python scripts/check_gpu.py --json-out reports/gpu_check.json
+mamba run -n harchoc python scripts/check_gpu.py --json-out reports/hsp/gpu_check.json
 ```
 
 **Queue (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](scripts/run_gpu_queue.sh) — all subprocesses via `mamba run -n harchoc python …`. Stop strays before a fresh run: `./scripts/kill_stray_gpu_jobs.sh`. Do not spawn parallel `train.py` or ad-hoc orchestrators.

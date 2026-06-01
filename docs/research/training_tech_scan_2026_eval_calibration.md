@@ -175,7 +175,7 @@ Aligned with [`backlog.md` § Work queue](../../backlog.md#work-queue-p0--p2) an
 
 ### P0 — Run manuscript chain on real exports (**Next**; code **Done**)
 
-1. `mamba run -n harchoc python scripts/split_drift.py --with-ks` before tuning if val≫test.
+1. `mamba run -n harchoc python scripts/split_drift.py --with-ks --out reports/hsp/split_drift_p0.json` before tuning if val≫test.
 2. Val export (CPU-safe):
 
 ```bash

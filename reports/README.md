@@ -72,6 +72,9 @@ After a full HSP run (local only, often not in git): [`reports/hsp/p0_summary.md
 | `reports/eval_data.yaml` at **repo root** | `reports/hsp/eval_data.yaml` |
 | `reports/split_drift/report.json` | `reports/hsp/split_drift_p0.json` (P0) or `split_drift_rich.json` (`--extended`) |
 | `reports/benchmarks/matrix_train.json` for manuscript | `reports/hsp/matrix_train.json` after `--train-out` |
+| `reports/weights_cache.json` at repo root | `reports/hsp/weights_cache.json` |
+| `reports/gpu_check.json` at repo root | `reports/hsp/gpu_check.json` |
+| `reports/error_analysis/summary.json` for HSP | `reports/hsp/error_test.json` + `error_test_report.json` |
 | `reports/_archive/**` | Current `reports/hsp/` artifacts |
 
 Dry-run examples in docs may use generic paths (e.g. `reports/eval.json`); **published numbers** must come from the table above.
