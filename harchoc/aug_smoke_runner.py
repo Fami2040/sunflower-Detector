@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from harchoc.hsp_eval_chain import (
+    DEFAULT_LOCKED_CONF_FROM,
+    build_ultralytics_hsp_stages,
+    extract_count_mae,
+    hsp_eval_artifacts_verified,
+    hsp_eval_prefix_paths,
+    infer_smoke_eval_backend,
+    run_hsp_eval_chain,
+)
 from harchoc.model_zoo import file_sha256
 
 AUG_SMOKE_SUMMARY_SCHEMA = "aug_smoke_summary.v1"
-DEFAULT_LOCKED_CONF_FROM = "reports/hsp/threshold_val.json"
 DEFAULT_OUT_DIR = "reports/aug_smoke"
 
 
@@ -67,52 +73,16 @@ def build_aug_smoke_eval_stages(
     imgsz: int = 1280,
 ) -> list[tuple[str, list[str], bool]]:
     """Return (stage_id, argv relative to repo, use_mamba) for test eval chain."""
-    rr = repo_root.resolve()
-    prefix = str((rr / out_dir / run_name).relative_to(rr))
-    gt_json = f"{prefix}_gt.json"
-    preds_json = f"{prefix}_preds.json"
-    eval_json = f"{prefix}_eval.json"
-    error_json = f"{prefix}_error.json"
-
-    export_common = [
-        "scripts/eval.py",
-        "--weights",
-        str(weights),
-        "--split-file",
-        "data/splits/test.txt",
-        "--export-only",
-        "--export-gt-json",
-        gt_json,
-        "--export-preds-json",
-        preds_json,
-        "--export-conf",
-        "0.001",
-        "--export-iou",
-        "0.3",
-        "--export-max-det",
-        str(max_det),
-        "--export-device",
-        "cpu",
-        "--imgsz",
-        str(imgsz),
-        "--out",
-        eval_json,
-    ]
-    error_argv = [
-        "scripts/error_analysis.py",
-        "--gt-json",
-        gt_json,
-        "--preds-json",
-        preds_json,
-        "--locked-conf-from",
-        locked_conf_from,
-        "--out",
-        error_json,
-    ]
-    return [
-        ("eval_export", export_common, True),
-        ("error_analysis", error_argv, True),
-    ]
+    stages = build_ultralytics_hsp_stages(
+        repo_root=repo_root,
+        run_name=run_name,
+        weights=weights,
+        locked_conf_from=locked_conf_from,
+        out_dir=out_dir,
+        max_det=max_det,
+        imgsz=imgsz,
+    )
+    return [(sid, argv, True) for sid, argv in stages]
 
 
 def artifact_fingerprints(
@@ -141,37 +111,6 @@ def artifact_fingerprints(
                 "size_bytes": pp.stat().st_size,
             }
     return out
-
-
-def extract_count_mae(error_json_path: str | Path) -> tuple[float | None, dict[str, Any] | None]:
-    p = Path(error_json_path)
-    if not p.is_file():
-        return None, None
-    obj = json.loads(p.read_text(encoding="utf-8"))
-    cm = obj.get("counting_metrics") or {}
-    mae = cm.get("mae")
-    if mae is None:
-        return None, None
-    return float(mae), cm.get("mae_ci")
-
-
-def hsp_eval_prefix_paths(repo_root: Path, *, run_name: str, out_dir: str) -> dict[str, Path]:
-    rr = repo_root.resolve()
-    prefix = rr / out_dir / run_name
-    return {
-        "gt": prefix.with_name(prefix.name + "_gt.json"),
-        "preds": prefix.with_name(prefix.name + "_preds.json"),
-        "eval": prefix.with_name(prefix.name + "_eval.json"),
-        "error": prefix.with_name(prefix.name + "_error.json"),
-    }
-
-
-def hsp_eval_artifacts_verified(repo_root: Path, *, run_name: str, out_dir: str) -> bool:
-    err = hsp_eval_prefix_paths(repo_root, run_name=run_name, out_dir=out_dir)["error"]
-    if not err.is_file():
-        return False
-    mae, _ = extract_count_mae(err)
-    return mae is not None
 
 
 def build_aug_smoke_summary(
@@ -254,11 +193,6 @@ def patch_aug_smoke_index_entry(
     p.write_text(json.dumps(obj, indent=2) + "\n", encoding="utf-8")
 
 
-def infer_smoke_eval_backend(weights: str | Path) -> str:
-    """Route HSP export: SuperGradients checkpoints (.pth) vs Ultralytics eval.py (.pt)."""
-    return "supergradients" if Path(weights).suffix.lower() == ".pth" else "ultralytics"
-
-
 def run_smoke_hsp_eval_chain(
     *,
     repo_root: str | Path,
@@ -274,30 +208,15 @@ def run_smoke_hsp_eval_chain(
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run HSP test export + error_analysis; backend auto-detects from weights suffix."""
-    w = Path(weights)
-    picked = infer_smoke_eval_backend(w) if backend == "auto" else str(backend)
-    if picked == "supergradients":
-        from harchoc.supergradients_eval import run_sg_hsp_eval_chain
-
-        return run_sg_hsp_eval_chain(
-            repo_root=repo_root,
-            run_name=run_name,
-            weights=w,
-            locked_conf_from=locked_conf_from,
-            out_dir=out_dir,
-            max_det=max_det,
-            model_id=model_id,
-            dry_run=dry_run,
-            on_stage=on_stage,
-            env=env,
-        )
-    return run_aug_smoke_eval_chain(
+    return run_hsp_eval_chain(
         repo_root=repo_root,
         run_name=run_name,
-        weights=w,
+        weights=weights,
         locked_conf_from=locked_conf_from,
         out_dir=out_dir,
         max_det=max_det,
+        backend=backend,
+        model_id=model_id,
         dry_run=dry_run,
         on_stage=on_stage,
         env=env,
@@ -317,51 +236,18 @@ def run_aug_smoke_eval_chain(
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run eval export + error_analysis; return artifact paths."""
-    rr = Path(repo_root).resolve()
-    stages = build_aug_smoke_eval_stages(
-        repo_root=rr,
+    return run_hsp_eval_chain(
+        repo_root=repo_root,
         run_name=run_name,
         weights=weights,
         locked_conf_from=locked_conf_from,
         out_dir=out_dir,
         max_det=max_det,
+        backend="ultralytics",
+        dry_run=dry_run,
+        on_stage=on_stage,
+        env=env,
     )
-    run_env = {**dict(os.environ), **(env or {})}
-    mamba_env = os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
-
-    for stage_id, argv, use_mamba in stages:
-        if on_stage is not None:
-            on_stage(stage_id, argv)
-        if dry_run:
-            cmd = (
-                ["mamba", "run", "-n", mamba_env, "python", *argv]
-                if use_mamba
-                else [sys.executable, *argv]
-            )
-            print(f"# {stage_id}: {' '.join(cmd)}")
-            continue
-        prefix_paths = hsp_eval_prefix_paths(rr, run_name=run_name, out_dir=out_dir)
-        if stage_id == "eval_export" and prefix_paths["gt"].is_file() and prefix_paths["preds"].is_file():
-            continue
-        if stage_id == "error_analysis" and hsp_eval_artifacts_verified(
-            rr, run_name=run_name, out_dir=out_dir
-        ):
-            continue
-        if use_mamba:
-            cmd = ["mamba", "run", "-n", mamba_env, "python", *argv]
-        else:
-            cmd = [sys.executable, *argv]
-        proc = subprocess.run(cmd, cwd=str(rr), env=run_env)
-        if proc.returncode != 0:
-            raise RuntimeError(f"aug smoke eval stage {stage_id!r} failed: exit {proc.returncode}")
-
-    prefix = f"{out_dir}/{run_name}"
-    return {
-        "eval_json": str((rr / f"{prefix}_eval.json").resolve()),
-        "error_json": str((rr / f"{prefix}_error.json").resolve()),
-        "gt_json": str((rr / f"{prefix}_gt.json").resolve()),
-        "preds_json": str((rr / f"{prefix}_preds.json").resolve()),
-    }
 
 
 def finalize_smoke_job(

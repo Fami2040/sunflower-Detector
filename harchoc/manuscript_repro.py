@@ -16,14 +16,12 @@ def load_manuscript_repro_bundle(path: str | Path) -> dict[str, Any]:
     return obj
 
 
-def _mamba_prefix() -> str:
-    env = os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
-    return f"mamba run -n {env} python"
+from harchoc.ml_env import repo_python_cmd
 
 
 def _format_cmd(argv: list[str], *, mamba: bool) -> str:
     if mamba:
-        return f"{_mamba_prefix()} {' '.join(argv)}"
+        return " ".join(repo_python_cmd(argv))
     return " ".join([sys.executable, *argv])
 
 
@@ -36,6 +34,13 @@ def build_manuscript_repro_chain(
 ) -> list[tuple[str, list[str]]]:
     """Return ordered (step_id, argv) pairs; argv is repo-relative script invocation."""
     from harchoc.experiment_argv import argv_for_dual_metric, dual_metric_fields_from_bundle_art
+    from harchoc.hsp_export_protocol import (
+        DEFAULT_EXPORT_MAX_DET,
+        DEFAULT_SPLIT_FILE,
+        DEFAULT_VAL_SPLIT_FILE,
+        EXPORT_CONF,
+        EXPORT_IOU,
+    )
 
     rr = Path(repo_root or ".").expanduser().resolve()
     w = str(bundle["weights"])
@@ -65,11 +70,11 @@ def build_manuscript_repro_chain(
         str(exp.get("imgsz", 1280)),
         "--export-only",
         "--export-conf",
-        str(exp.get("conf", 0.001)),
+        str(exp.get("conf", EXPORT_CONF)),
         "--export-iou",
-        str(exp.get("iou", 0.3)),
+        str(exp.get("iou", EXPORT_IOU)),
         "--export-max-det",
-        str(exp.get("max_det", 3000)),
+        str(exp.get("max_det", DEFAULT_EXPORT_MAX_DET)),
     ]
     dev = str(exp.get("export_device") or "").strip()
     if dev:
@@ -82,7 +87,7 @@ def build_manuscript_repro_chain(
                 _script("eval.py"),
                 *common_export,
                 "--split-file",
-                "data/splits/val.txt",
+                DEFAULT_VAL_SPLIT_FILE,
                 "--export-gt-json",
                 str(art["gt_val"]),
                 "--export-preds-json",
@@ -99,7 +104,7 @@ def build_manuscript_repro_chain(
                 _script("eval.py"),
                 *common_export,
                 "--split-file",
-                "data/splits/test.txt",
+                DEFAULT_SPLIT_FILE,
                 "--export-gt-json",
                 str(art["gt_test"]),
                 "--export-preds-json",

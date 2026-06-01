@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harchoc.data_yaml import labels_path_for_image
+from harchoc.hsp_export_protocol import (
+    DEFAULT_EXPORT_MAX_DET,
+    EXPORT_CONF,
+    EXPORT_IOU,
+)
 
 if TYPE_CHECKING:
     from harchoc.strict_ml import StrictWarnings
@@ -234,9 +239,9 @@ def export_gt_preds_json(
     weights: Path,
     gt_out: Path,
     preds_out: Path,
-    conf: float = 0.001,
-    iou: float = 0.3,
-    max_det: int = 3000,
+    conf: float = EXPORT_CONF,
+    iou: float = EXPORT_IOU,
+    max_det: int = DEFAULT_EXPORT_MAX_DET,
     device: str | int | None = None,
     strict_warnings: StrictWarnings | None = None,
 ) -> dict[str, Any]:

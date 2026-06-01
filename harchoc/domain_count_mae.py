@@ -6,6 +6,7 @@ import statistics
 from pathlib import Path
 from typing import Any, Callable
 
+from harchoc.hsp_export_protocol import EXPORT_CONF, EXPORT_IOU
 from harchoc.json_io import load_json_dict
 from harchoc.schemas import with_schema_version
 from harchoc.threshold_lock import load_locked_conf
@@ -17,8 +18,8 @@ def match_settings_from_threshold_json(path: str | Path) -> tuple[float, bool]:
     obj = load_json_dict(path)
     match = obj.get("match") if isinstance(obj, dict) else None
     if not isinstance(match, dict):
-        return 0.3, True
-    iou = float(match.get("iou", 0.3))
+        return EXPORT_IOU, True
+    iou = float(match.get("iou", EXPORT_IOU))
     category_aware = bool(match.get("category_aware", True))
     return iou, category_aware
 
@@ -154,7 +155,7 @@ def run_tray_count_mae_eval(
     locked_conf_from: str,
     split: str = "test",
     device: str = "cpu",
-    export_conf: float = 0.001,
+    export_conf: float = EXPORT_CONF,
     imgsz: int | None = 1280,
     max_det: int | None = 3000,
     manifest: str = "data/manifest.json",

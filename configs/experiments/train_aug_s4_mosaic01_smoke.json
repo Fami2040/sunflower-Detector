@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_smoke_mosaic01.yaml",
-  "notes": "P1-AUG S4: mosaic=0.1, close_mosaic=3, translate=0.10; low-mosaic sweep arm (distinct from S1 close3 @ translate 0.05)."
-}

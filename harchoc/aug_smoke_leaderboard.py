@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from harchoc.aug_smoke_runner import load_aug_smoke_index
+from harchoc.equivalence_index import parse_equivalence_classes, preds_sha_from_summary_path
 from harchoc.model_zoo import file_sha256
 
 LEADERBOARD_SCHEMA = "aug_smoke_leaderboard.v1"
@@ -165,35 +166,6 @@ def collect_leaderboard_rows(
     return rows
 
 
-def parse_equivalence_classes(
-    index: dict[str, Any],
-) -> tuple[set[str], dict[float, str], dict[str, tuple[str, str]]]:
-    """Return audit-only smoke_ids, preds SHA by MAE, and audit sid -> (canonical, preds_sha)."""
-    equiv = index.get("equivalence_classes") or {}
-    audit_only: set[str] = set()
-    verified_preds: dict[float, str] = {}
-    audit_skip: dict[str, tuple[str, str]] = {}
-
-    for cls in equiv.get("classes") or []:
-        smoke_ids = [str(x).upper() for x in (cls.get("smoke_ids") or [])]
-        if not smoke_ids:
-            continue
-        canonical = str(cls.get("canonical_smoke_id") or "").upper()
-        if not canonical:
-            canonical = "S1" if "S1" in smoke_ids else smoke_ids[0]
-        sha = str(cls.get("preds_sha256") or "") if cls.get("preds_sha256") else ""
-        for sid in smoke_ids:
-            if sid != canonical:
-                audit_only.add(sid)
-                if sha:
-                    audit_skip[sid] = (canonical, sha)
-        mae = cls.get("test_count_mae")
-        if sha and mae is not None:
-            verified_preds[round(float(mae), 12)] = sha
-
-    return audit_only, verified_preds, audit_skip
-
-
 def partition_leaderboard_rows(
     rows: list[dict[str, Any]],
     *,
@@ -221,25 +193,6 @@ def partition_leaderboard_rows(
     return ranked, audit, eval_controls
 
 
-def _preds_sha_from_summary_path(repo_root: Path, summary_rel: str) -> str | None:
-    sp = repo_root / summary_rel
-    summary = _load_summary(sp)
-    if summary is None:
-        return None
-    arts = summary.get("artifacts") or {}
-    preds = arts.get("preds_json") or {}
-    sha = preds.get("sha256")
-    if sha:
-        return str(sha)
-    run_name = str(summary.get("run_name") or "")
-    if not run_name:
-        return None
-    preds_path = sp.parent / f"{run_name}_preds.json"
-    if not preds_path.is_file():
-        return None
-    return file_sha256(preds_path)
-
-
 def find_mae_clusters(
     rows: list[dict[str, Any]],
     *,
@@ -262,7 +215,7 @@ def find_mae_clusters(
         if repo_root is not None:
             for m in members:
                 rel = str(m.get("summary") or "")
-                preds_shas.append(_preds_sha_from_summary_path(repo_root, rel) if rel else None)
+                preds_shas.append(preds_sha_from_summary_path(repo_root, rel) if rel else None)
         index_verified_sha = (verified_preds_by_mae or {}).get(mae_key)
         summaries_verified = bool(
             repo_root is not None

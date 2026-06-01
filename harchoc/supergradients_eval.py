@@ -3,13 +3,19 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
 from harchoc.data_yaml import read_class_names
+from harchoc.hsp_eval_chain import DEFAULT_LOCKED_CONF_FROM, build_error_analysis_argv
+from harchoc.hsp_export_protocol import (
+    DEFAULT_EXPORT_MAX_DET,
+    EXPORT_CONF,
+    EXPORT_IOU,
+    split_file_for_repo,
+)
+from harchoc.ml_env import run_repo_python
 from harchoc.supergradients_train import _repo_splits_dir, materialize_yolo_staging
 
 
@@ -169,9 +175,9 @@ def export_hsp_gt_preds_json(
     gt_out: Path,
     preds_out: Path,
     model_id: str = "yolo_nas_s",
-    conf: float = 0.001,
-    iou: float = 0.3,
-    max_det: int = 3000,
+    conf: float = EXPORT_CONF,
+    iou: float = EXPORT_IOU,
+    max_det: int = DEFAULT_EXPORT_MAX_DET,
     device: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -236,7 +242,7 @@ def run_sg_hsp_eval_chain(
     weights: str | Path,
     locked_conf_from: str,
     out_dir: str,
-    max_det: int = 3000,
+    max_det: int = DEFAULT_EXPORT_MAX_DET,
     model_id: str = "yolo_nas_s",
     dry_run: bool = False,
     on_stage: Callable[[str, list[str]], None] | None = None,
@@ -248,18 +254,14 @@ def run_sg_hsp_eval_chain(
     gt_json = rr / f"{prefix}_gt.json"
     preds_json = rr / f"{prefix}_preds.json"
     error_json = rr / f"{prefix}_error.json"
-    split_file = rr / "data/splits/test.txt"
-    error_argv = [
-        "scripts/error_analysis.py",
-        "--gt-json",
-        str(gt_json.relative_to(rr)),
-        "--preds-json",
-        str(preds_json.relative_to(rr)),
-        "--locked-conf-from",
+    split_file = split_file_for_repo(rr)
+    error_argv = build_error_analysis_argv(
+        gt_json,
+        preds_json,
         locked_conf_from,
-        "--out",
-        str(error_json.relative_to(rr)),
-    ]
+        error_json,
+        repo_root=rr,
+    )
     if on_stage is not None:
         on_stage(
             "sg_export",
@@ -294,9 +296,7 @@ def run_sg_hsp_eval_chain(
         device=(env or {}).get("HARCHOC_EXPORT_DEVICE") or os.environ.get("HARCHOC_EXPORT_DEVICE") or "cpu",
     )
     run_env = {**dict(os.environ), **(env or {})}
-    mamba_env = os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
-    cmd = ["mamba", "run", "-n", mamba_env, "python", *error_argv]
-    proc = subprocess.run(cmd, cwd=str(rr), env=run_env)
+    proc = run_repo_python(error_argv, repo_root=rr, env=run_env)
     if proc.returncode != 0:
         raise RuntimeError(f"sg hsp eval stage error_analysis failed: exit {proc.returncode}")
     return {

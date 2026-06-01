@@ -68,6 +68,61 @@ def _infer_imgsz(cfg: BenchConfig) -> int | None:
     return cfg.imgsz
 
 
+def _load_matrix_rows() -> dict[str, Any]:
+    path = _repo_root() / "configs/zoo/matrix_rows.v1.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+_RUNTIME_TRAIN_BENCH_COMMITTED_STEMS = frozenset(
+    {"rtdetr-l", "rtdetr-l_nq1024", "rtdetr-x", "yolo_nas_s"}
+)
+
+
+def _matrix_row_for_cfg(cfg: BenchConfig) -> dict[str, Any] | None:
+    stem = _bench_model_stem(cfg)
+    if not stem:
+        return None
+    for row in _load_matrix_rows().get("rows") or []:
+        if str(row.get("id") or "") == stem or str(row.get("train_config_stem") or "") == stem:
+            return row
+    return None
+
+
+def _runtime_train_bench_raw(cfg: BenchConfig) -> dict[str, Any] | None:
+    row = _matrix_row_for_cfg(cfg)
+    if row is None:
+        return None
+    stem = str(row.get("train_config_stem") or row.get("id") or _bench_model_stem(cfg) or "")
+    if not stem or stem in _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS:
+        return None
+    overlay: dict[str, Any] = {
+        "extends": "configs/experiments/train_bench_base.json",
+        "batch": 1,
+        "cache": False,
+        "notes": f"Matrix/bench training recipe for {stem} @ 1280 (batch=1 on 8GB-class GPUs).",
+    }
+    if cfg.model and str(cfg.model).strip():
+        overlay["model"] = str(cfg.model).strip()
+    elif cfg.model_id and str(cfg.model_id).strip():
+        overlay["model_id"] = str(cfg.model_id).strip()
+    return overlay
+
+
+def _load_bench_train_raw(cfg: BenchConfig) -> dict[str, Any]:
+    committed = _resolve_bench_train_config_path(cfg)
+    if committed is not None and committed.is_file():
+        return _load_committed_train_bench_json(committed)
+    runtime = _runtime_train_bench_raw(cfg)
+    if runtime is not None:
+        from harchoc.train_config import resolve_train_config_extends
+
+        return resolve_train_config_extends(runtime, repo_root=_repo_root())
+    raise FileNotFoundError(
+        f"no committed or runtime train bench config for {cfg.path} "
+        f"(stem={_bench_model_stem(cfg)!r})"
+    )
+
+
 def _resolve_bench_train_config_path(cfg: BenchConfig) -> Path | None:
     if cfg.train_config and str(cfg.train_config).strip():
         p = Path(str(cfg.train_config).strip()).expanduser()
@@ -167,20 +222,24 @@ def validate_bench_config(cfg: BenchConfig) -> None:
         if imgsz > max_imgsz:
             raise SystemExit(f"infer.imgsz={imgsz} exceeds HARCHOC_MAX_IMGSZ={max_imgsz} in {cfg.path}")
 
-    committed = _resolve_bench_train_config_path(cfg)
-    if committed is not None and committed.is_file():
-        raw = _load_committed_train_bench_json(committed)
+    try:
+        raw = _load_bench_train_raw(cfg)
+    except FileNotFoundError:
+        raw = None
+    if raw is not None:
+        train_path = _resolve_bench_train_config_path(cfg)
+        path_label = str(train_path) if train_path is not None else str(cfg.path)
         if raw.get("batch") is not None:
             batch = int(raw["batch"])
             max_batch = _budget_limit_int("HARCHOC_MAX_BATCH", default=16)
             if batch > max_batch:
                 raise SystemExit(
-                    f"batch={batch} in {committed} exceeds HARCHOC_MAX_BATCH={max_batch}"
+                    f"batch={batch} in {path_label} exceeds HARCHOC_MAX_BATCH={max_batch}"
                 )
         validate_rtdetr_query_cap(
             model=cfg.model,
             train_json=raw,
-            train_json_path=str(committed),
+            train_json_path=path_label,
             fail=True,
         )
         infer_max_det = cfg.infer.get("max_det")
@@ -189,7 +248,7 @@ def validate_bench_config(cfg: BenchConfig) -> None:
             model=cfg.model,
             infer_max_det=infer_max_det_int,
             train_json=raw,
-            train_json_path=str(committed),
+            train_json_path=path_label,
             cfg_path=str(cfg.path),
             fail=True,
         )
@@ -257,11 +316,13 @@ def _bench_run_name(cfg: BenchConfig) -> str:
 
 
 def _bench_to_train_config(cfg: BenchConfig, *, weights_path: str) -> dict[str, Any]:
-    committed = _resolve_bench_train_config_path(cfg)
-    if committed is not None:
+    try:
+        raw = _load_bench_train_raw(cfg)
+    except FileNotFoundError:
+        raw = None
+    if raw is not None:
         from scripts.train import _merge_train_config
 
-        raw = _load_committed_train_bench_json(committed)
         merged = _merge_train_config(raw)
         merged["model"] = weights_path
         imgsz = _infer_imgsz(cfg)
@@ -332,12 +393,14 @@ def bench_matrix_metadata(cfg: BenchConfig) -> dict[str, object]:
     (typically ``train_bench_rtdetr-l.json``).
     """
     backend = select_backend(cfg)
-    committed = _resolve_bench_train_config_path(cfg)
     train_raw: dict[str, Any] = {}
     train_json_path = ""
-    if committed is not None and committed.is_file():
-        train_json_path = str(committed)
-        train_raw = _load_committed_train_bench_json(committed)
+    try:
+        train_raw = _load_bench_train_raw(cfg)
+        committed = _resolve_bench_train_config_path(cfg)
+        train_json_path = str(committed) if committed is not None else str(cfg.path)
+    except FileNotFoundError:
+        pass
 
     model_ref = cfg.model or train_raw.get("model") or train_raw.get("model_id")
     nms_free = is_rtdetr_model(str(model_ref) if model_ref is not None else None)

@@ -207,7 +207,7 @@ class TrainMetadataTests(unittest.TestCase):
         from scripts.train import main
 
         repo_root = Path(__file__).resolve().parents[1]
-        cfg = repo_root / "configs" / "experiments" / "train_bench_yolov8m.json"
+        cfg = repo_root / "configs" / "experiments" / "train_bench_rtdetr-l.json"
         self.assertTrue(cfg.is_file())
 
         with tempfile.TemporaryDirectory() as td:

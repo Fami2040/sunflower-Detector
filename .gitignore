@@ -101,16 +101,14 @@ data/*
 # Cached checkpoints (Ultralytics + external); see scripts/check_weights_cache.py
 # data/weights/ is under data/* above
 
-# Generated artifacts (keep README + markdown summaries only; no eval/error JSON or figures)
+# Generated artifacts (README placeholders only; metrics/JSON live on disk or CI)
 reports/*
 !reports/.gitkeep
 !reports/README.md
 !reports/*/
-!reports/*/README.md
+!reports/**/README.md
 reports/**/*
-!reports/**/*.md
-!reports/aug_smoke/
-!reports/aug_smoke/dedup_root_cause.md
+!reports/**/README.md
 figures/*
 !figures/.gitkeep
 !figures/README.md

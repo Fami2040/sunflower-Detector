@@ -51,7 +51,7 @@
 |--------|----------|--------|-------|
 | Scaffold / CV eval | `cv_eval.py` | **Done** (**DRY-SPRAWL-CV**) | Routed via `experiment.py cv-eval` → `argv_for_cv_eval`; `experiments.v1` `run.kind: cv_eval`; implementation in `scripts/cv_eval.py`. Per-fold GPU train → **backlog P1-CV-TRAIN** |
 | Finetune tray eval | `finetune.py` → `train.main` + `harchoc/finetune_tray_eval.py` | **Done** (**P1-FINETUNE-LOOP**) | Staged unfreeze `--stage 1|2` + `finetune_stage{1,2}.yaml`; `eval_domains --write-domain-splits` → 133 lists; tray eval path verified (dry-run + CPU `--run-tray-eval` on `349-10-2`); 2-ep GPU smoke `--no-tray-eval` → `finetune_smoke_s1/best.pt`. Discussion draft **Done** (**MS-DOMAIN-ADAPT**); full 25+25 ep GPU metrics open |
-| GPU probe proliferation | `check_gpu.py`, `gpu_sanity.py`, `gpu_smoke_ultralytics.py`, `strict_ml_smoke.py`, `rtdetr_smoke.py` | **Done** (**DRY-GPU-SMOKE**) | Runbook: `check_gpu` + `strict_ml_smoke`; `gpu_sanity` / `gpu_smoke_ultralytics` are deprecation shims |
+| GPU probe proliferation | `check_gpu.py`, `gpu_sanity.py`, `gpu_smoke_ultralytics.py`, `strict_ml_smoke.py`, `rtdetr_smoke.py` | **Done** (**DRY-GPU-SMOKE**) | Runbook: `check_gpu sanity` / `smoke-ultralytics`; legacy shims **removed** |
 | `experiment.py` argv layer | `harchoc/experiment_argv.py` | **Done** (**DRY-EXPERIMENT-ARGV**) | All subcommands including `deploy-parity`, `gradcam`, `cv-eval`; `experiment.py` dispatch-only |
 | Legacy parallel tree | `yolo-sunflower-seed-detector/training.py` | **Done** (**DRY-LEGACY-TRAIN**) | One-line shim → `scripts/train.py` |
 | Monolith bot | `telegram_bot.py` (~1.7k lines) | **Done** (parity tooling) | `deploy_filters` + `sahi_infer` **Done**; conf + per-image SAHI vs full-frame counts via `deploy_hsp_parity.py` + `experiment.py deploy-parity --sample-images N` (**R-SCI-2** Done); optional `run_infer_once.py --fullframe-export`; bot file not split (**Defer** §7) |
@@ -93,9 +93,9 @@ Production:      telegram_bot / run_infer_once → harchoc/sahi_infer + deploy_f
 
 ## 5. Config / artifact sprawl (operational)
 
-- **Triple config:** `configs/bench/*.yaml` + `configs/experiments/train_bench_*.json` + aug YAML — parity tested in `tests/test_train_config.py`; keep in sync manually (edit bench YAML + matching `train_bench_*.json` + aug smoke index together).
-- **Root sprawl:** `tune_sahi_params.py` deploy-only grid search — **Done** via `experiment.py tune-sahi` → `argv_for_tune_sahi` (dry-run prints argv; `TUNE_COMBOS` / `TUNE_MODEL_CONF` still env-only).
-- **Reports:** canonical `reports/hsp/`; do not cite `reports/_archive/` for P0 metrics.
+- **Triple config:** `configs/bench/*.yaml` + runtime `train_bench` (`bench_config` + `matrix_rows`) + aug YAML — aug smokes use `aug_smoke_index.json` + `train_smoke_rank_15ep.json` (**DRY-AUG-SMOKE-CONFIG**); committed exceptions S9–S13 + sweeps only.
+- **Root sprawl:** deploy SAHI grid — **Done** via `experiment.py tune-sahi` dry-run argv only (removed `tune_sahi_params.py`).
+- **Reports:** canonical `reports/hsp/` on disk; tracked git content is `README.md` only — generated `reports/hsp/*.md`, `reports/aug_smoke/*.{md,json}` removed (**DRY-TRACKED-REPORTS**).
 - **Docs:** `docs/research/*` + `docs/manuscript/*` — intentional synthesis, not code DRY.
 
 ---
@@ -118,6 +118,15 @@ DRY consolidations here support [backlog.md § Model improvement stack](backlog.
 | P2 | `DRY-BOT-LOCKED-CONF` | **Done** | `DeployFilterConfig.resolve()` · [backlog](backlog.md) |
 | P2 | `DRY-LEGACY-TRAIN` | **Done** | [`yolo-sunflower-seed-detector/training.py`](yolo-sunflower-seed-detector/training.py) shim · [backlog](backlog.md) |
 | P2 | `DRY-SPRAWL-CV` | **Done** | `experiment.py cv-eval` → `argv_for_cv_eval`; `experiments.v1` `run.kind: cv_eval` · per-fold GPU train remains **P1-CV-TRAIN** · [backlog](backlog.md) |
+| P1 | `DRY-EXPORT-PROTOCOL` | **Done** | [`harchoc/hsp_export_protocol.py`](harchoc/hsp_export_protocol.py) · shared export conf/IoU/split/device |
+| P1 | `DRY-MAMBA-RUN` | **Done** | `run_repo_python` / `repo_python_cmd` in [`harchoc/ml_env.py`](harchoc/ml_env.py) |
+| P0 | `DRY-HSP-CHAIN` | **Done** | [`harchoc/hsp_eval_chain.py`](harchoc/hsp_eval_chain.py) · aug smoke / SG / external |
+| P0 | `DRY-ERROR-CORE` | **Done** | [`harchoc/error_analysis_core.py`](harchoc/error_analysis_core.py) · thin `scripts/error_analysis.py` |
+| P2 | `DRY-TRACKED-REPORTS` | **Done** | `.gitignore` · `reports/README.md` — metrics local/CI only |
+| P1 | `DRY-PREDS-DEDUP` | **Done** | [`harchoc/equivalence_index.py`](harchoc/equivalence_index.py) · queue + leaderboard |
+| P1 | `DRY-TRAIN-BENCH-RUNTIME` | **Done** | [`harchoc/bench_config.py`](harchoc/bench_config.py) · matrix_rows + `train_bench_base.json` |
+| P1 | `DRY-AUG-SMOKE-CONFIG` | **Done** | [`harchoc/aug_smoke_train.py`](harchoc/aug_smoke_train.py) · index + `train_smoke_rank_15ep.json`; S9–S13 committed |
+| P1 | `DRY-GPU-QUEUE-SPLIT` | **Done** | [`gpu_queue.py`](harchoc/gpu_queue.py) facade · [`gpu_queue_manifest.py`](harchoc/gpu_queue_manifest.py) · [`gpu_queue_dedup.py`](harchoc/gpu_queue_dedup.py) · [`gpu_queue_stages.py`](harchoc/gpu_queue_stages.py) · [`gpu_queue_runner.py`](harchoc/gpu_queue_runner.py) · [`gpu_queue_skip.py`](harchoc/gpu_queue_skip.py) |
 
 ---
 
@@ -133,4 +142,4 @@ DRY consolidations here support [backlog.md § Model improvement stack](backlog.
 
 *Update this file when a consolidation lands; link commit or backlog Done row in the table.*
 
-Verified: `compileall` OK (`harchoc`, `scripts`, `tests`); `unittest discover` **333** tests — **331** OK, **2** FAIL (`test_gpu_sanity_dry_run`, `test_gpu_smoke_ultralytics_dry_run` in `test_scripts_dry_run`; deprecation shims); **P1-FINETUNE-LOOP** closed on dataset (`eval_domains --write-domain-splits`, `finetune --dry-run --stage 1 --tray-key 349-10-2`, CPU tray eval, 2-ep GPU smoke) — 2026-05-29.
+Verified: `compileall` OK; `unittest discover` **530+** tests OK — 2026-05-30 (DRY phase-2: aug runtime, gpu_queue split, shim removal).

@@ -4,19 +4,23 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from harchoc.aug_smoke_runner import DEFAULT_LOCKED_CONF_FROM, extract_count_mae
+from harchoc.aug_smoke_runner import extract_count_mae
 from harchoc.detector_sources import entry_for_bench
 from harchoc.external_detector_train import external_bench_availability
 from harchoc.external_repos import resolve_external_repo_path, spec_for_train_stack
-
-DEFAULT_EXPORT_CONF = 0.001
-DEFAULT_EXPORT_IOU = 0.3
+from harchoc.hsp_eval_chain import DEFAULT_LOCKED_CONF_FROM, build_error_analysis_argv
+from harchoc.hsp_export_protocol import (
+    DEFAULT_EXPORT_MAX_DET,
+    EXPORT_CONF,
+    EXPORT_IOU,
+    export_result_meta,
+)
+from harchoc.ml_env import run_repo_python
 
 
 @contextmanager
@@ -182,12 +186,10 @@ def export_hsp_gt_preds_json(
     preds_obj = {"images": images}
     preds_out.write_text(json.dumps(preds_obj, indent=2) + "\n", encoding="utf-8")
     return {
+        **export_result_meta(max_det=max_det),
         "gt_json": str(gt_out.resolve()),
         "preds_json": str(preds_out.resolve()),
         "n_images": len(images),
-        "export_conf": DEFAULT_EXPORT_CONF,
-        "export_iou": DEFAULT_EXPORT_IOU,
-        "export_max_det": max_det,
         "backend": "external",
         "weights": str(weights_path),
         "source_id": source_id,
@@ -213,12 +215,7 @@ def _repo_relative_or_absolute(path: Path, repo_root: Path) -> str:
 
 
 def _run_error_analysis(repo_root: Path, error_argv: list[str], env: dict[str, str]) -> int:
-    if os.environ.get("HARCHOC_ALLOW_BASE_PYTHON") == "1":
-        cmd = [sys.executable, *error_argv]
-    else:
-        mamba_env = os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
-        cmd = ["mamba", "run", "-n", mamba_env, "python", *error_argv]
-    proc = subprocess.run(cmd, cwd=str(repo_root), env=env, check=False)
+    proc = run_repo_python(error_argv, repo_root=repo_root, env=env)
     return int(proc.returncode)
 
 
@@ -318,17 +315,13 @@ def eval_hsp_for_bench(
             "exc_type": type(exc).__name__,
         }
 
-    error_argv = [
-        "scripts/error_analysis.py",
-        "--gt-json",
-        _repo_relative_or_absolute(gt_json, rr),
-        "--preds-json",
-        _repo_relative_or_absolute(preds_json, rr),
-        "--locked-conf-from",
+    error_argv = build_error_analysis_argv(
+        gt_json,
+        preds_json,
         locked_conf_from,
-        "--out",
-        _repo_relative_or_absolute(error_json, rr),
-    ]
+        error_json,
+        repo_root=rr,
+    )
     env = dict(os.environ)
     rc = _run_error_analysis(rr, error_argv, env)
     if rc != 0:

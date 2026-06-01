@@ -413,7 +413,7 @@ class TuneSahiArgvTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         out = buf.getvalue()
         self.assertIn("# tune-sahi", out)
-        self.assertIn("tune_sahi_params.py", out)
+        self.assertIn("scripts/experiment.py", out)
         self.assertIn("data/heads/ref.png", out)
 
 

@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
-  "notes": "P1-AUG S1: close_mosaic=3 only; mosaic active ep 0–11, off ep 12–14 (test count MAE primary)."
-}

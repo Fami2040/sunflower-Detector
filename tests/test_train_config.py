@@ -5,27 +5,29 @@ from pathlib import Path
 
 class TrainConfigExtendsTests(unittest.TestCase):
     def test_train_bench_yolov8n_merges_base(self) -> None:
-        from harchoc.train_config import load_train_config_json
+        from harchoc.bench_config import _bench_to_train_config, load_bench_config
 
         repo_root = Path(__file__).resolve().parents[1]
-        path = repo_root / "configs" / "experiments" / "train_bench_yolov8n.json"
-        merged = load_train_config_json(path, repo_root=repo_root)
+        cfg = load_bench_config(repo_root / "configs/bench/yolov8n_default.yaml")
+        doc = _bench_to_train_config(cfg, weights_path="yolov8n.pt")
+        merged = doc["train"]
         self.assertEqual(merged["model"], "yolov8n.pt")
         self.assertEqual(merged["batch"], 1)
         self.assertEqual(merged["epochs"], 100)
         self.assertEqual(merged["aug_config"], "configs/aug/robustness_minimal.yaml")
-        self.assertEqual(merged["eval"]["max_det"], 3000)
+        self.assertEqual(doc["eval"]["max_det"], 3000)
         self.assertNotIn("extends", merged)
 
     def test_train_bench_yolov8m_merged_eval_cpu_max_det(self) -> None:
-        from harchoc.train_config import load_train_config_json
+        from harchoc.bench_config import _bench_to_train_config, load_bench_config
 
         repo_root = Path(__file__).resolve().parents[1]
-        path = repo_root / "configs" / "experiments" / "train_bench_yolov8m.json"
-        merged = load_train_config_json(path, repo_root=repo_root)
+        cfg = load_bench_config(repo_root / "configs/bench/yolov8m_default.yaml")
+        doc = _bench_to_train_config(cfg, weights_path="yolov8m.pt")
+        merged = doc["train"]
         self.assertEqual(merged["model"], "yolov8m.pt")
-        self.assertEqual(merged["eval"]["max_det"], 3000)
-        self.assertEqual(merged["eval"]["device"], "cpu")
+        self.assertEqual(doc["eval"]["max_det"], 3000)
+        self.assertEqual(doc["eval"]["device"], "cpu")
 
     def test_train_rtdetr_smoke_15ep_merged_eval_skip(self) -> None:
         from harchoc.train_config import load_train_config_json
@@ -110,20 +112,14 @@ class TrainConfigExtendsTests(unittest.TestCase):
             validate_train_bench_raw_cache(raw, path_label=path.name)
 
     def test_s13_patience_smoke_extends_s1_only_patience(self) -> None:
-        from harchoc.train_config import (
-            load_train_config_json,
-            validate_epochs_patience_close_mosaic,
-        )
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
+        from harchoc.train_config import validate_epochs_patience_close_mosaic
 
         repo_root = Path(__file__).resolve().parents[1]
-        s1 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_s1_close3_smoke.json",
-            repo_root=repo_root,
-        )
-        s13 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_s13_patience5_smoke.json",
-            repo_root=repo_root,
-        )
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
+        s1 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo_root)
+        s13 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S13"), repo_root=repo_root)
         self.assertEqual(s1["patience"], 12)
         self.assertEqual(s13["patience"], 5)
         diff = {
@@ -153,28 +149,30 @@ class TrainConfigExtendsTests(unittest.TestCase):
             )
 
     def test_aug_smoke_configs_close_mosaic_guard(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.train_config import (
             SMOKE_EPOCHS_MICRO,
             effective_train_aug_merged,
-            load_train_config_json,
             scale_close_mosaic_for_epochs,
             validate_epochs_patience_close_mosaic,
         )
 
         repo_root = Path(__file__).resolve().parents[1]
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
         micro_close = scale_close_mosaic_for_epochs(SMOKE_EPOCHS_MICRO)
         micro_aug = "tests/fixtures/aug/micro_close1.yaml"
         smoke_expectations: dict[str, dict[str, float | int | str]] = {
-            "train_aug_s0_baseline_smoke.json": {
+            "S0": {
                 "close_mosaic": micro_close,
                 "mosaic": 0.1,
             },
-            "train_aug_s1_close3_smoke.json": {
+            "S1": {
                 "close_mosaic": micro_close,
                 "mosaic": 0.1,
                 "aug_config": micro_aug,
             },
-            "train_aug_s2_mosaic0_smoke.json": {
+            "S2": {
                 "close_mosaic": 0,
                 "mosaic": 0.0,
                 "translate": 0.05,
@@ -182,7 +180,7 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 "fliplr": 0.5,
                 "hsv_s": 0.35,
             },
-            "train_aug_s3_photometric_smoke.json": {
+            "S3": {
                 "close_mosaic": 0,
                 "mosaic": 0.0,
                 "mixup": 0.0,
@@ -193,18 +191,18 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 "hsv_s": 0.45,
                 "hsv_v": 0.40,
             },
-            "train_aug_s4_mosaic01_smoke.json": {
+            "S4": {
                 "close_mosaic": micro_close,
                 "mosaic": 0.1,
                 "translate": 0.10,
                 "aug_config": "tests/fixtures/aug/micro_mosaic01.yaml",
             },
-            "train_aug_s5_mosaic03_smoke.json": {
+            "S5": {
                 "close_mosaic": micro_close,
                 "mosaic": 0.3,
                 "aug_config": "tests/fixtures/aug/micro_close1_mosaic03.yaml",
             },
-            "train_aug_s6_erasing0_smoke.json": {
+            "S6": {
                 "close_mosaic": 0,
                 "mosaic": 0.0,
                 "mixup": 0.0,
@@ -215,7 +213,7 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 "hsv_s": 0.45,
                 "hsv_v": 0.40,
             },
-            "train_aug_s7_erasing03_smoke.json": {
+            "S7": {
                 "close_mosaic": 0,
                 "mosaic": 0.0,
                 "mixup": 0.0,
@@ -227,9 +225,9 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 "hsv_v": 0.40,
             },
         }
-        for name, expected_aug in smoke_expectations.items():
-            path = repo_root / "configs" / "experiments" / name
-            resolved = load_train_config_json(path, repo_root=repo_root)
+        for sid, expected_aug in smoke_expectations.items():
+            entry = find_smoke_entry(index, sid)
+            resolved = resolve_aug_smoke_train_raw(entry, repo_root=repo_root)
             resolved["epochs"] = SMOKE_EPOCHS_MICRO
             resolved["patience"] = 1
             aug_override = expected_aug.pop("aug_config", None)
@@ -237,26 +235,26 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 resolved["aug_config"] = aug_override
             self.assertEqual(resolved["epochs"], SMOKE_EPOCHS_MICRO)
             validate_epochs_patience_close_mosaic(
-                resolved, repo_root=repo_root, label=name
+                resolved, repo_root=repo_root, label=sid
             )
             merged = effective_train_aug_merged(resolved, repo_root=repo_root)
             for key, value in expected_aug.items():
-                self.assertEqual(merged[key], value, msg=f"{name} {key}")
+                self.assertEqual(merged[key], value, msg=f"{sid} {key}")
 
     def test_aug_smoke_s9_no_aug_yaml_resolves_without_aug_config(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.train_config import effective_train_aug_merged, load_train_config_json
 
         repo_root = Path(__file__).resolve().parents[1]
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
         path = repo_root / "configs" / "experiments" / "train_aug_s9_no_aug_yaml_smoke.json"
         resolved = load_train_config_json(path, repo_root=repo_root)
         self.assertIsNone(resolved.get("aug_config"))
         self.assertEqual(resolved["epochs"], 15)
         self.assertEqual(resolved["patience"], 12)
 
-        s0 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_s0_baseline_smoke.json",
-            repo_root=repo_root,
-        )
+        s0 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S0"), repo_root=repo_root)
         self.assertIsNotNone(s0.get("aug_config"))
         self.assertEqual(s0["aug_config"], "configs/aug/robustness_minimal.yaml")
         merged_s9 = effective_train_aug_merged(resolved, repo_root=repo_root)
@@ -286,8 +284,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
         }
         chained_parent = {
             "train_aug_s11_musgd_smoke.json": "configs/experiments/train_aug_s10_yolo11s_smoke.json",
-            "train_aug_s12_amp_off_smoke.json": "configs/experiments/train_aug_s1_close3_smoke.json",
-            "train_aug_s13_patience5_smoke.json": "configs/experiments/train_aug_s1_close3_smoke.json",
+            "train_aug_s12_amp_off_smoke.json": "configs/experiments/train_smoke_rank_15ep.json",
+            "train_aug_s13_patience5_smoke.json": "configs/experiments/train_smoke_rank_15ep.json",
         }
         for path in sorted(exp_dir.glob("train_aug_s*_smoke.json")):
             raw = json.loads(path.read_text(encoding="utf-8"))
@@ -327,55 +325,31 @@ class TrainConfigExtendsTests(unittest.TestCase):
 
         import yaml
 
-        from harchoc.train_config import (
-            SMOKE_EPOCHS_RANK,
-            effective_train_aug_merged,
-            load_train_config_json,
-        )
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
+        from harchoc.train_config import SMOKE_EPOCHS_RANK, effective_train_aug_merged
 
         repo_root = Path(__file__).resolve().parents[1]
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
 
         def _ultralytics_hash(relpath: str) -> str:
             doc = yaml.safe_load((repo_root / relpath).read_text(encoding="utf-8"))
             payload = json.dumps(doc.get("ultralytics") or {}, sort_keys=True).encode()
             return hashlib.sha256(payload).hexdigest()
 
-        def _merged(name: str) -> dict[str, object]:
-            cfg = load_train_config_json(
-                repo_root / "configs" / "experiments" / name,
-                repo_root=repo_root,
-            )
-            return effective_train_aug_merged(cfg, repo_root=repo_root)
+        def _merged(sid: str) -> tuple[dict[str, object], dict[str, object]]:
+            cfg = resolve_aug_smoke_train_raw(find_smoke_entry(index, sid), repo_root=repo_root)
+            return cfg, effective_train_aug_merged(cfg, repo_root=repo_root)
 
         cases: tuple[tuple[str, str, str], ...] = (
-            (
-                "train_aug_s0_baseline_smoke.json",
-                "train_aug_s1_close3_smoke.json",
-                "s0_minimal_vs_s1_close3_yaml",
-            ),
-            (
-                "train_aug_s1_close3_smoke.json",
-                "train_aug_s4_mosaic01_smoke.json",
-                "s1_vs_s4_translate",
-            ),
-            (
-                "train_aug_s2_mosaic0_smoke.json",
-                "train_aug_s3_photometric_smoke.json",
-                "s2_mosaic0_vs_s3_photometric",
-            ),
+            ("S0", "S1", "s0_minimal_vs_s1_close3_yaml"),
+            ("S1", "S4", "s1_vs_s4_translate"),
+            ("S2", "S3", "s2_mosaic0_vs_s3_photometric"),
         )
-        for left_name, right_name, case_id in cases:
-            with self.subTest(case_id=case_id, left=left_name, right=right_name):
-                left_cfg = load_train_config_json(
-                    repo_root / "configs" / "experiments" / left_name,
-                    repo_root=repo_root,
-                )
-                right_cfg = load_train_config_json(
-                    repo_root / "configs" / "experiments" / right_name,
-                    repo_root=repo_root,
-                )
-                left = _merged(left_name)
-                right = _merged(right_name)
+        for left_sid, right_sid, case_id in cases:
+            with self.subTest(case_id=case_id, left=left_sid, right=right_sid):
+                left_cfg, left = _merged(left_sid)
+                right_cfg, right = _merged(right_sid)
                 self.assertNotEqual(left_cfg["aug_config"], right_cfg["aug_config"])
                 self.assertNotEqual(
                     _ultralytics_hash(str(left_cfg["aug_config"])),
@@ -422,11 +396,11 @@ class TrainConfigExtendsTests(unittest.TestCase):
                 self.assertEqual(left["epochs"], SMOKE_EPOCHS_RANK)
 
     def test_apply_close_mosaic_epoch_scale(self) -> None:
+        from harchoc.bench_config import _bench_to_train_config, load_bench_config
         from harchoc.train_config import (
             SMOKE_EPOCHS_RANK,
             apply_close_mosaic_epoch_scale,
             effective_train_aug_merged,
-            load_train_config_json,
         )
 
         repo_root = Path(__file__).resolve().parents[1]
@@ -446,10 +420,10 @@ class TrainConfigExtendsTests(unittest.TestCase):
             )["close_mosaic"],
             3,
         )
-        bench = load_train_config_json(
-            repo_root / "configs/experiments/train_bench_yolov8m.json",
-            repo_root=repo_root,
-        )
+        bench = _bench_to_train_config(
+            load_bench_config(repo_root / "configs/bench/yolov8m_default.yaml"),
+            weights_path="yolov8m.pt",
+        )["train"]
         self.assertEqual(
             effective_train_aug_merged(bench, repo_root=repo_root)["close_mosaic"],
             15,
@@ -530,6 +504,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
         self.assertEqual(scale_close_mosaic_for_epochs(100, production_close_mosaic=10), 10)
 
     def test_robustness_smoke_close10_distinct_from_close3(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.train_config import (
             effective_train_aug_merged,
             load_train_config_json,
@@ -537,10 +513,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
         )
 
         repo_root = Path(__file__).resolve().parents[1]
-        close3 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_s1_close3_smoke.json",
-            repo_root=repo_root,
-        )
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
+        close3 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo_root)
         close10 = load_train_config_json(
             repo_root / "configs/experiments/train_aug_close10_sweep_smoke_15ep.json",
             repo_root=repo_root,
@@ -552,6 +526,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
         self.assertEqual(m10["close_mosaic"], 2)
 
     def test_robustness_smoke_close25_distinct_from_close3(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.train_config import (
             effective_train_aug_merged,
             load_train_config_json,
@@ -559,10 +535,8 @@ class TrainConfigExtendsTests(unittest.TestCase):
         )
 
         repo_root = Path(__file__).resolve().parents[1]
-        close3 = load_train_config_json(
-            repo_root / "configs/experiments/train_aug_s1_close3_smoke.json",
-            repo_root=repo_root,
-        )
+        index = load_aug_smoke_index(repo_root / "configs/experiments/aug_smoke_index.json")
+        close3 = resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo_root)
         close25 = load_train_config_json(
             repo_root / "configs/experiments/train_aug_close25_sweep_smoke_15ep.json",
             repo_root=repo_root,

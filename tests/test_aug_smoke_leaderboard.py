@@ -89,6 +89,30 @@ class AugSmokeLeaderboardPartitionTests(unittest.TestCase):
             "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d",
         )
 
+    def test_find_mae_clusters_requires_verified_preds_for_identical_claim(self) -> None:
+        from harchoc.aug_smoke_leaderboard import find_mae_clusters
+
+        repo = Path(__file__).resolve().parents[1]
+        rows = [
+            {
+                "smoke_id": "S0",
+                "run_name": "aug_smoke_baseline",
+                "test_count_mae": 68.90825688073394,
+                "summary": "reports/aug_smoke/s0_summary.json",
+            },
+            {
+                "smoke_id": "S1",
+                "run_name": "aug_smoke_close3",
+                "test_count_mae": 68.90825688073394,
+                "summary": "reports/aug_smoke/missing_summary.json",
+            },
+        ]
+        clusters = find_mae_clusters(rows, repo_root=repo)
+        self.assertEqual(len(clusters), 1)
+        cl = clusters[0]
+        self.assertIsNone(cl.get("preds_sha256"))
+        self.assertIn("unverified", cl.get("interpretation") or "")
+
 
 if __name__ == "__main__":
     unittest.main()

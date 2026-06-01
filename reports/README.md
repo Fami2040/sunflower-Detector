@@ -2,8 +2,9 @@
 
 This directory stores **generated** experiment artifacts (JSON/CSV/MD summaries).
 
-- Keep large or frequently-changing outputs untracked.
-- Keep small “schema/contract” examples tracked only when helpful.
+- **Do not commit** run outputs — they live on disk locally or as CI workflow artifacts.
+- Only `README.md` placeholders (and `.gitkeep`) are tracked in git.
+- Regenerate HSP / aug-smoke metrics with the pipeline scripts documented in [`docs/EXPERIMENTS.md`](../docs/EXPERIMENTS.md).
 
 ## Layout
 
@@ -17,7 +18,7 @@ This directory stores **generated** experiment artifacts (JSON/CSV/MD summaries)
 
 **Manuscript and P0 gate metrics live under [`reports/hsp/`](hsp/README.md).** Start there for `dual_metric.json`, threshold sweeps, gt/preds exports, error analysis, split drift, and baseline model manifests.
 
-One-page headline numbers: [`reports/hsp/p0_summary.md`](hsp/p0_summary.md).
+One-page headline numbers (local only after a run): `reports/hsp/p0_summary.md` — not tracked in git.
 
 ## Archived (May 29 hygiene)
 

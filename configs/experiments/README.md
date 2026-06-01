@@ -69,9 +69,9 @@ Examples:
 - `train_batch_probe_yolov8n.json`, `train_batch_probe_yolov8m.json`, `train_batch_probe_rtdetr-l.json` (`"_canonical": false` — 1-ep GPU VRAM probes; see [`docs/training_budget.md`](../../docs/training_budget.md#vram-probes-1-epoch--imgsz-1280))
 - `train_autobatch_probe_yolov8m.json` (`"_canonical": false` — P1-AUTOBATCH: 1-ep Ultralytics AutoBatch `batch=-1` @ 1280, `eval.skip`)
 - **Aug / ranking smokes (15 ep @ 1280):**
-  - [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json) — `extends` [`train_yolov8m_baseline.json`](train_yolov8m_baseline.json), sets `epochs: 15`, `patience: 12` (shared parent for P1-AUG smokes on YOLOv8m-scale recipes)
-  - [`train_smoke_rank_yolo11s_15ep.json`](train_smoke_rank_yolo11s_15ep.json) — `extends` [`train_bench_yolo11s.json`](train_bench_yolo11s.json) with the same 15-ep cap (S10 / YOLO11s variant)
-  - `train_aug_s0` … `train_aug_s9`, close sweep overlays — each `extends` one of the two parents above; per-smoke `aug_config` lives in the child JSON or referenced YAML under `configs/aug/`
+  - [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json) — shared 15-ep parent for P1-AUG smokes (runtime via [`aug_smoke_index.json`](aug_smoke_index.json) + [`harchoc/aug_smoke_train.py`](../../harchoc/aug_smoke_train.py))
+  - [`train_smoke_rank_yolo11s_15ep.json`](train_smoke_rank_yolo11s_15ep.json) — YOLO11s 15-ep parent (S10 committed chain)
+  - Committed aug exceptions: `train_aug_s9` … `train_aug_s13` + close/mosaic sweep overlays; S0–S8/S1 use index `aug_config` only (no per-smoke train JSON)
   - Index + queue wiring: [`aug_smoke_index.json`](aug_smoke_index.json) (`aug_smoke_index.v1`); GPU queue expands pending rows when the manifest sets `"aug_smoke_from_index": true` (see below)
 
 `normalize_experiment_spec()` skips files without `"schema_version": "experiments.v1"`.

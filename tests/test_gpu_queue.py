@@ -1,4 +1,4 @@
-"""Tests for harchoc.gpu_queue and aug_smoke_runner (CI-safe, no GPU)."""
+"""Tests for harchoc.gpu_queue (CI-safe, no GPU)."""
 
 from __future__ import annotations
 
@@ -7,109 +7,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-
-
-class AugSmokeRunnerTests(unittest.TestCase):
-    def test_build_aug_smoke_eval_stages_paths(self) -> None:
-        from harchoc.aug_smoke_runner import build_aug_smoke_eval_stages
-
-        repo = Path(__file__).resolve().parents[1]
-        stages = build_aug_smoke_eval_stages(
-            repo_root=repo,
-            run_name="aug_smoke_test",
-            weights="runs/foo/weights/best.pt",
-        )
-        self.assertEqual(len(stages), 2)
-        self.assertEqual(stages[0][0], "eval_export")
-        self.assertIn("scripts/eval.py", stages[0][1])
-        self.assertTrue(any("aug_smoke_test_preds.json" in str(x) for x in stages[0][1]))
-
-    def test_extract_count_mae_from_error_json(self) -> None:
-        from harchoc.aug_smoke_runner import extract_count_mae
-
-        with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "err.json"
-            p.write_text(
-                json.dumps({"counting_metrics": {"mae": 42.5, "mae_ci": {"point": 42.5}}}),
-                encoding="utf-8",
-            )
-            mae, ci = extract_count_mae(p)
-            self.assertAlmostEqual(mae or 0, 42.5)
-            self.assertIsNotNone(ci)
-
-    def test_artifact_fingerprints_on_existing_preds(self) -> None:
-        from harchoc.aug_smoke_runner import artifact_fingerprints
-
-        repo = Path(__file__).resolve().parents[1]
-        preds = repo / "reports/aug_smoke/aug_smoke_close3_preds.json"
-        weights = repo / "runs/aug_smoke_close3/weights/best.pt"
-        if not preds.is_file() or not weights.is_file():
-            self.skipTest("aug smoke artifacts missing")
-        fp = artifact_fingerprints(weights=weights, preds_json=preds)
-        self.assertEqual(
-            fp["preds_json"]["sha256"],
-            "ad6f1621d8c2c8a1c1db2000626f0fc17f9c19da83348aa92bbc1ba4862607e8",
-        )
-        self.assertNotEqual(fp["weights"]["sha256"], fp["preds_json"]["sha256"])
-
-
-class AugSmokeLeaderboardTests(unittest.TestCase):
-    def test_collect_and_render_leaderboard(self) -> None:
-        from harchoc.aug_smoke_leaderboard import (
-            build_leaderboard_payload,
-            find_mae_clusters,
-            render_leaderboard_md,
-        )
-
-        repo = Path(__file__).resolve().parents[1]
-        fixture_root = repo / "tests/fixtures/aug_smoke_leaderboard"
-        payload = build_leaderboard_payload(
-            repo_root=fixture_root,
-            index_path="index.json",
-            out_dir="reports/aug_smoke",
-        )
-        self.assertEqual(payload["schema_version"], "aug_smoke_leaderboard.v1")
-        self.assertGreaterEqual(len(payload["ranked_rows"]), 3)
-        self.assertIsNotNone(payload.get("reference"))
-        md = render_leaderboard_md(payload)
-        self.assertIn("best2", md)
-        self.assertIn("Duplicate MAE clusters", md)
-        self.assertIn("## Audit / duplicate class", md)
-        verified_preds = {
-            round(float(c["test_count_mae"]), 12): str(c["preds_sha256"])
-            for c in (payload.get("equivalence_classes") or {}).get("classes") or []
-            if c.get("preds_sha256") is not None and c.get("test_count_mae") is not None
-        }
-        clusters = find_mae_clusters(
-            payload["rows"],
-            repo_root=fixture_root,
-            verified_preds_by_mae=verified_preds,
-        )
-        self.assertGreaterEqual(len(clusters), 1)
-
-    def test_find_mae_clusters_requires_verified_preds_for_identical_claim(self) -> None:
-        from harchoc.aug_smoke_leaderboard import find_mae_clusters
-
-        repo = Path(__file__).resolve().parents[1]
-        rows = [
-            {
-                "smoke_id": "S0",
-                "run_name": "aug_smoke_baseline",
-                "test_count_mae": 68.90825688073394,
-                "summary": "reports/aug_smoke/s0_summary.json",
-            },
-            {
-                "smoke_id": "S1",
-                "run_name": "aug_smoke_close3",
-                "test_count_mae": 68.90825688073394,
-                "summary": "reports/aug_smoke/missing_summary.json",
-            },
-        ]
-        clusters = find_mae_clusters(rows, repo_root=repo)
-        self.assertEqual(len(clusters), 1)
-        cl = clusters[0]
-        self.assertIsNone(cl.get("preds_sha256"))
-        self.assertIn("unverified", cl.get("interpretation") or "")
 
 
 class GpuQueueManifestTests(unittest.TestCase):
@@ -262,40 +159,48 @@ class GpuQueueManifestTests(unittest.TestCase):
         self.assertIn("recipe duplicate", close15.get("skip_reason") or "")
 
     def test_complete_recipe_owners_maps_close3_to_first_complete(self) -> None:
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.gpu_queue import _complete_recipe_owners
-        from harchoc.train_config import job_train_recipe_fingerprint
+        from harchoc.train_config import effective_train_recipe_fingerprint
 
         repo = Path(__file__).resolve().parents[1]
         owners = _complete_recipe_owners(repo_root=repo)
-        fp = job_train_recipe_fingerprint(
+        index = load_aug_smoke_index(repo / "configs/experiments/aug_smoke_index.json")
+        fp = effective_train_recipe_fingerprint(
+            resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo),
             repo_root=repo,
-            train_config="configs/experiments/train_aug_s1_close3_smoke.json",
-            aug_config="configs/aug/robustness_smoke_close3.yaml",
         )
         self.assertIsNotNone(fp)
         self.assertIn(fp, owners)
         self.assertIn(owners[fp], {"S0", "S1"})
 
     def _index_entry_recipe_fingerprint(self, entry: dict, *, repo: Path) -> str:
-        from harchoc.train_config import job_train_recipe_fingerprint
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
+        from harchoc.train_config import effective_train_recipe_fingerprint
 
-        return job_train_recipe_fingerprint(
+        return effective_train_recipe_fingerprint(
+            resolve_aug_smoke_train_raw(entry, repo_root=repo),
             repo_root=repo,
-            train_config=str(entry["train_config"]),
-            aug_config=str(entry["aug_config"]) if entry.get("aug_config") else None,
         )
 
     def _enrich_aug_smoke_job_from_index(self, job: dict, *, repo: Path) -> dict:
         from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import (
+            resolve_aug_smoke_aug_config,
+            resolve_aug_smoke_train_config_path,
+        )
 
         entry = find_smoke_entry(
             load_aug_smoke_index(repo / "configs/experiments/aug_smoke_index.json"),
             str(job.get("smoke_id") or ""),
         )
         enriched = dict(job)
-        enriched["train_config"] = str(entry["train_config"])
-        if entry.get("aug_config"):
-            enriched["aug_config"] = str(entry["aug_config"])
+        tc = resolve_aug_smoke_train_config_path(entry, repo_root=repo)
+        enriched["train_config"] = tc
+        aug = resolve_aug_smoke_aug_config(entry, repo_root=repo, train_config_path=tc)
+        if aug:
+            enriched["aug_config"] = aug
         return enriched
 
     def test_pending_gpu_pending_smokes_have_unique_fingerprints_vs_complete(self) -> None:
@@ -425,21 +330,15 @@ class GpuQueueManifestTests(unittest.TestCase):
     def test_s0_s1_s13_recipe_fingerprint_equivalence(self) -> None:
         """S0/S1 share effective recipe fp; S13 is patience-only (index equivalence class)."""
         from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
-        from harchoc.train_config import (
-            EFFECTIVE_RECIPE_KEYS,
-            effective_train_aug_merged,
-            load_train_config_json,
-        )
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
+        from harchoc.train_config import EFFECTIVE_RECIPE_KEYS, effective_train_aug_merged
 
         repo = Path(__file__).resolve().parents[1]
         index = load_aug_smoke_index(repo / "configs/experiments/aug_smoke_index.json")
 
         def _merged_subset(sid: str) -> dict:
             entry = find_smoke_entry(index, sid)
-            cfg = load_train_config_json(repo / entry["train_config"], repo_root=repo)
-            if entry.get("aug_config"):
-                cfg = dict(cfg)
-                cfg["aug_config"] = str(entry["aug_config"])
+            cfg = resolve_aug_smoke_train_raw(entry, repo_root=repo)
             merged = effective_train_aug_merged(cfg, repo_root=repo)
             return {k: merged.get(k) for k in EFFECTIVE_RECIPE_KEYS}
 
@@ -469,17 +368,18 @@ class GpuQueueManifestTests(unittest.TestCase):
     def test_complete_recipe_owners_uses_summary_has_count_mae(self) -> None:
         import inspect
 
-        from harchoc.gpu_queue import _complete_recipe_owners, _summary_has_count_mae
+        from harchoc.equivalence_index import summary_has_count_mae
+        from harchoc.gpu_queue import _complete_recipe_owners
 
         src = inspect.getsource(_complete_recipe_owners)
-        self.assertIn("_summary_has_count_mae", src)
+        self.assertIn("summary_has_count_mae", src)
         self.assertNotIn("extract_count_mae", src)
 
         repo = Path(__file__).resolve().parents[1]
         transcript = {"status": "complete", "stages": [{"stage_id": "train"}]}
-        self.assertFalse(_summary_has_count_mae(transcript, repo))
+        self.assertFalse(summary_has_count_mae(transcript, repo))
         with_mae = {"status": "complete", "test_count_mae": 1.0}
-        self.assertTrue(_summary_has_count_mae(with_mae, repo))
+        self.assertTrue(summary_has_count_mae(with_mae, repo))
 
     def test_filter_duplicate_train_recipes_skips_known_dupes(self) -> None:
         from harchoc.gpu_queue import load_gpu_queue_manifest
@@ -586,7 +486,6 @@ class GpuQueueManifestTests(unittest.TestCase):
                         "id": "S3",
                         "status": "complete",
                         "summary": "reports/aug_smoke/s3_summary.json",
-                        "train_config": "configs/experiments/train_aug_s3_photometric_smoke.json",
                         "aug_config": "configs/aug/robustness_photometric_only.yaml",
                     },
                     {"id": "S6", "status": "gpu_pending", "summary": "reports/aug_smoke/s6_summary.json"},
@@ -778,7 +677,6 @@ class GpuQueueManifestTests(unittest.TestCase):
                         "id": "S1",
                         "status": "complete",
                         "summary": "reports/aug_smoke/s1_summary.json",
-                        "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
                         "aug_config": "configs/aug/robustness_smoke_close3.yaml",
                     }
                 ],
@@ -849,16 +747,15 @@ class GpuQueueManifestTests(unittest.TestCase):
     def test_amp_smoke_recipe_fingerprint_differs_from_s1(self) -> None:
         """amp_smoke_15ep_on is not recipe-equivalent to complete S1 (distinct train path)."""
         from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_raw
         from harchoc.gpu_queue import _job_train_recipe_fingerprint
-        from harchoc.train_config import job_train_recipe_fingerprint
+        from harchoc.train_config import effective_train_recipe_fingerprint
 
         repo = Path(__file__).resolve().parents[1]
         index = load_aug_smoke_index(repo / "configs/experiments/aug_smoke_index.json")
-        s1 = find_smoke_entry(index, "S1")
-        fp_s1 = job_train_recipe_fingerprint(
+        fp_s1 = effective_train_recipe_fingerprint(
+            resolve_aug_smoke_train_raw(find_smoke_entry(index, "S1"), repo_root=repo),
             repo_root=repo,
-            train_config=str(s1["train_config"]),
-            aug_config=str(s1["aug_config"]) if s1.get("aug_config") else None,
         )
         amp_job = {
             "id": "amp_smoke_15ep_on",

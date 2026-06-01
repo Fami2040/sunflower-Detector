@@ -1,7 +1,0 @@
-{
-  "extends": "configs/experiments/train_bench_base.json",
-  "batch": 1,
-  "cache": false,
-  "notes": "Matrix/bench training recipe for yolov10s @ 1280 (batch=1 on 8GB-class GPUs).",
-  "model": "yolov10s.pt"
-}

@@ -1,5 +1,6 @@
 {
-  "extends": "configs/experiments/train_aug_s1_close3_smoke.json",
+  "extends": "configs/experiments/train_smoke_rank_15ep.json",
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
   "amp": false,
   "notes": "P1-AUG S12: S1 + amp=false (may OOM on 8 GiB)."
 }

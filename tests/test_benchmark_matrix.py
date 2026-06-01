@@ -636,8 +636,8 @@ class BenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(doc["train"].get("max_det"), 3000)
         self.assertEqual(doc.get("eval", {}).get("max_det"), 3000)
 
-    def test_all_ultralytics_bench_configs_have_train_bench_json(self) -> None:
-        from scripts.benchmark_matrix import _resolve_bench_train_config_path, load_bench_config, select_backend
+    def test_all_ultralytics_bench_configs_have_train_bench_recipe(self) -> None:
+        from harchoc.bench_config import _load_bench_train_raw, load_bench_config, select_backend
 
         repo_root = Path(__file__).resolve().parents[1]
         bench_dir = repo_root / "configs" / "bench"
@@ -647,11 +647,10 @@ class BenchmarkMatrixTests(unittest.TestCase):
             cfg = load_bench_config(pth)
             if select_backend(cfg) != "ultralytics":
                 continue
-            resolved = _resolve_bench_train_config_path(cfg)
-            self.assertIsNotNone(
-                resolved,
-                msg=f"missing train_bench JSON for {pth.name} (model={cfg.model})",
-            )
+            try:
+                _load_bench_train_raw(cfg)
+            except FileNotFoundError as exc:
+                self.fail(f"missing train bench recipe for {pth.name}: {exc}")
 
     def test_supergradients_bench_resolves_train_bench_json(self) -> None:
         from scripts.benchmark_matrix import _resolve_bench_train_config_path, load_bench_config
@@ -662,12 +661,8 @@ class BenchmarkMatrixTests(unittest.TestCase):
         self.assertIsNotNone(resolved)
         self.assertTrue(resolved.name.endswith("train_bench_yolo_nas_s.json"))
 
-    def test_bench_yaml_matches_implicit_train_bench_json(self) -> None:
-        from scripts.benchmark_matrix import (
-            _infer_imgsz,
-            _resolve_bench_train_config_path,
-            load_bench_config,
-        )
+    def test_bench_yaml_matches_implicit_train_bench_recipe(self) -> None:
+        from harchoc.bench_config import _infer_imgsz, _load_bench_train_raw, load_bench_config, select_backend
 
         repo_root = Path(__file__).resolve().parents[1]
         bench_dir = repo_root / "configs" / "bench"
@@ -677,49 +672,40 @@ class BenchmarkMatrixTests(unittest.TestCase):
             cfg = load_bench_config(pth)
             if cfg.train_config:
                 continue
-            from harchoc.bench_config import select_backend
-
             if select_backend(cfg) == "external":
                 continue
-            committed = _resolve_bench_train_config_path(cfg)
-            self.assertIsNotNone(
-                committed,
-                msg=f"missing train_bench JSON for implicit train_config in {pth.name}",
-            )
-            raw = json.loads(committed.read_text("utf-8"))
-            self.assertIsInstance(raw, dict, msg=str(committed))
-            if raw.get("extends"):
-                from harchoc.train_config import load_train_config_json
-
-                raw = load_train_config_json(committed, repo_root=repo_root)
+            try:
+                raw = _load_bench_train_raw(cfg)
+            except FileNotFoundError:
+                self.fail(f"missing train bench recipe for implicit train_config in {pth.name}")
             eval_section = raw.get("eval") if isinstance(raw.get("eval"), dict) else {}
 
             self.assertEqual(
                 cfg.epochs,
                 raw.get("epochs"),
-                msg=f"epochs mismatch for {pth.name} vs {committed.name}",
+                msg=f"epochs mismatch for {pth.name}",
             )
             self.assertEqual(
                 cfg.patience,
                 raw.get("patience"),
-                msg=f"patience mismatch for {pth.name} vs {committed.name}",
+                msg=f"patience mismatch for {pth.name}",
             )
             self.assertEqual(
                 cfg.seed,
                 raw.get("seed"),
-                msg=f"seed mismatch for {pth.name} vs {committed.name}",
+                msg=f"seed mismatch for {pth.name}",
             )
             imgsz = _infer_imgsz(cfg)
             self.assertEqual(
                 imgsz,
                 raw.get("imgsz"),
-                msg=f"infer.imgsz mismatch for {pth.name} vs {committed.name}",
+                msg=f"infer.imgsz mismatch for {pth.name}",
             )
             infer_max_det = cfg.infer.get("max_det")
             self.assertEqual(
                 infer_max_det,
                 eval_section.get("max_det"),
-                msg=f"infer.max_det mismatch for {pth.name} vs {committed.name}",
+                msg=f"infer.max_det mismatch for {pth.name}",
             )
 
     @patch("scripts.eval.main")
@@ -988,6 +974,18 @@ class BenchmarkMatrixTests(unittest.TestCase):
         after = rtdetr_path.read_text(encoding="utf-8")
         self.assertEqual(before, after)
         self.assertGreaterEqual(report.bench_skipped, 8)
+
+    def test_scaffold_zoo_does_not_write_runtime_ultralytics_train_bench(self) -> None:
+        from harchoc.zoo_matrix_scaffold import scaffold_zoo_matrix
+
+        repo_root = Path(__file__).resolve().parents[1]
+        runtime_path = repo_root / "configs" / "experiments" / "train_bench_yolo11s.json"
+        existed_before = runtime_path.is_file()
+        report = scaffold_zoo_matrix(repo_root=repo_root, write=True)
+        self.assertFalse(runtime_path.is_file(), msg="runtime ultralytics train_bench must not be scaffolded")
+        if existed_before:
+            runtime_path.unlink(missing_ok=True)
+        self.assertGreaterEqual(report.train_skipped, 1)
 
     def test_aggregate_seeds_null_mae_without_artifacts(self) -> None:
         from scripts.benchmark_matrix import main as benchmark_main

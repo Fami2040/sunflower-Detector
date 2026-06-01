@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_photometric_only.yaml",
-  "notes": "P1-AUG S3: photometric only (mosaic=0, mixup=0, translate=0, scale=0, hsv_s=0.45, hsv_v=0.40, erasing=0.2); lighting DR distinct from S2 LWCD mosaic_off."
-}

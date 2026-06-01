@@ -14,6 +14,11 @@ import sys
 from typing import Any
 
 
+def allow_base_python() -> bool:
+    """True when CI/unittest may run repo scripts without ``mamba run``."""
+    return os.getenv("HARCHOC_ALLOW_BASE_PYTHON", "").strip() in ("1", "true", "yes")
+
+
 def default_mamba_env() -> str:
     return (os.getenv("HARCHOC_MAMBA_ENV") or "harchoc").strip() or "harchoc"
 
@@ -34,6 +39,42 @@ def mamba_run_shell_command(
 ) -> str:
     """Single-line command for docs/backlog (repo-root relative)."""
     return " ".join(mamba_run_argv(*python_args, env_name=env_name))
+
+
+def repo_python_cmd(
+    argv: list[str],
+    *,
+    use_mamba: bool = True,
+    env_name: str | None = None,
+) -> list[str]:
+    """Argv to run ``python <argv>`` in-repo, optionally via ``mamba run``."""
+    if use_mamba and not allow_base_python():
+        return list(mamba_run_argv(*argv, env_name=env_name))
+    return [sys.executable, *argv]
+
+
+def run_repo_python(
+    argv: list[str],
+    *,
+    repo_root: str | os.PathLike[str],
+    use_mamba: bool = True,
+    env_name: str | None = None,
+    env: dict[str, str] | None = None,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run repo-relative script argv under mamba (or base Python in CI)."""
+    cmd = repo_python_cmd(argv, use_mamba=use_mamba, env_name=env_name)
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
+    return subprocess.run(
+        cmd,
+        cwd=str(repo_root),
+        env=run_env,
+        check=check,
+        capture_output=False,
+        text=True,
+    )
 
 
 def run_in_mamba_env(

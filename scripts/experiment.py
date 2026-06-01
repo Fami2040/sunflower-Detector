@@ -135,11 +135,12 @@ def _run_tune_sahi(fields: dict[str, Any]) -> int:
     argv = argv_for_tune_sahi(fields)
     if bool(fields.get("dry_run")):
         print("# tune-sahi")
-        print(_format_cmd(["tune_sahi_params.py", *argv], mamba=True))
+        print(_format_cmd(["scripts/experiment.py", "tune-sahi", *argv], mamba=True))
         return 0
-    import tune_sahi_params
-
-    return int(tune_sahi_params.main(argv))
+    raise SystemExit(
+        "tune-sahi live grid was removed with tune_sahi_params.py; "
+        "use run_infer_once.py or experiment.py deploy-parity for deploy tuning."
+    )
 
 
 def _run_fp_budget_sweep(fields: dict[str, Any]) -> int:

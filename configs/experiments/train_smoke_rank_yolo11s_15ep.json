@@ -1,5 +1,9 @@
 {
-  "extends": "configs/experiments/train_bench_yolo11s.json",
+  "extends": "configs/experiments/train_bench_base.json",
+  "model": "yolo11s.pt",
+  "batch": 1,
+  "cache": false,
   "epochs": 15,
-  "patience": 12
+  "patience": 12,
+  "notes": "15-ep smoke rank cap for YOLO11s (runtime train_bench overlay; was train_bench_yolo11s.json)."
 }

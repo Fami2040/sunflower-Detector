@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_mosaic_off.yaml",
-  "notes": "P1-AUG S2 / ARCH-MOSAIC0-AB precursor: mosaic=0, close_mosaic=0; 15-ep smoke."
-}

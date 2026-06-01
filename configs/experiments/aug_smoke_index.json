@@ -7,7 +7,6 @@
     {
       "id": "S0",
       "name": "aug_smoke_baseline",
-      "train_config": "configs/experiments/train_aug_s0_baseline_smoke.json",
       "aug_config": "configs/aug/robustness_minimal.yaml",
       "run_name": "aug_smoke_baseline",
       "status": "complete",
@@ -18,7 +17,6 @@
     {
       "id": "S1",
       "name": "aug_smoke_close3",
-      "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_close3",
       "status": "complete",
@@ -29,7 +27,6 @@
     {
       "id": "S2",
       "name": "aug_smoke_mosaic0",
-      "train_config": "configs/experiments/train_aug_s2_mosaic0_smoke.json",
       "aug_config": "configs/aug/robustness_mosaic_off.yaml",
       "run_name": "aug_smoke_mosaic0",
       "status": "complete",
@@ -40,7 +37,6 @@
     {
       "id": "S3",
       "name": "aug_smoke_photometric",
-      "train_config": "configs/experiments/train_aug_s3_photometric_smoke.json",
       "aug_config": "configs/aug/robustness_photometric_only.yaml",
       "run_name": "aug_smoke_photometric",
       "status": "complete",
@@ -51,7 +47,6 @@
     {
       "id": "S4",
       "name": "aug_smoke_mosaic01",
-      "train_config": "configs/experiments/train_aug_s4_mosaic01_smoke.json",
       "aug_config": "configs/aug/robustness_smoke_mosaic01.yaml",
       "run_name": "aug_smoke_mosaic01",
       "status": "complete",
@@ -62,7 +57,6 @@
     {
       "id": "S5",
       "name": "aug_smoke_mosaic03",
-      "train_config": "configs/experiments/train_aug_s5_mosaic03_smoke.json",
       "aug_config": "configs/aug/robustness_smoke_mosaic03.yaml",
       "run_name": "aug_smoke_mosaic03",
       "status": "complete",
@@ -73,7 +67,6 @@
     {
       "id": "S6",
       "name": "aug_smoke_erasing0",
-      "train_config": "configs/experiments/train_aug_s6_erasing0_smoke.json",
       "aug_config": "configs/aug/robustness_photometric_erasing0.yaml",
       "run_name": "aug_smoke_erasing0",
       "status": "complete",
@@ -85,7 +78,6 @@
     {
       "id": "S7",
       "name": "aug_smoke_erasing03",
-      "train_config": "configs/experiments/train_aug_s7_erasing03_smoke.json",
       "aug_config": "configs/aug/robustness_photometric_erasing03.yaml",
       "run_name": "aug_smoke_erasing03",
       "status": "complete",
@@ -96,7 +88,6 @@
     {
       "id": "S8",
       "name": "aug_smoke_hsv_v045",
-      "train_config": "configs/experiments/train_aug_s8_hsv_v045_smoke.json",
       "aug_config": "configs/aug/robustness_photometric_hsv_v045.yaml",
       "run_name": "aug_smoke_hsv_v045",
       "status": "complete",
@@ -162,7 +153,6 @@
     {
       "id": "S14",
       "name": "aug_smoke_eval300",
-      "train_config": "configs/experiments/train_aug_s1_close3_smoke.json",
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_eval300",
       "weights_run_name": "aug_smoke_close3",

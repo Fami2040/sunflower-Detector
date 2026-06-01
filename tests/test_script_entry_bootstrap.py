@@ -111,17 +111,11 @@ assert hasattr(mod, "main")
         )
         self.assertEqual(proc.returncode, 0, msg=proc.stderr)
 
-    def test_gpu_shims_exit_2(self) -> None:
-        for script in ("scripts/gpu_sanity.py", "scripts/gpu_smoke_ultralytics.py"):
-            with self.subTest(script=script):
-                proc = subprocess.run(
-                    [sys.executable, script],
-                    cwd=REPO_ROOT,
-                    env={**os.environ, "PYTHONPATH": "."},
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertEqual(proc.returncode, 2, msg=proc.stderr)
+    def test_check_gpu_subcommands_importable(self) -> None:
+        from scripts.check_gpu import cmd_sanity, cmd_smoke_ultralytics
+
+        self.assertTrue(callable(cmd_sanity))
+        self.assertTrue(callable(cmd_smoke_ultralytics))
 
 
 if __name__ == "__main__":

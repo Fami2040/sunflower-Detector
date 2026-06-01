@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_photometric_erasing0.yaml",
-  "notes": "P1-AUG S6: S3 + erasing=0 (no random erasing)."
-}

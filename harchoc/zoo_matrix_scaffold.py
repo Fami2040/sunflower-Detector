@@ -192,16 +192,40 @@ def _bench_matches_manifest(cfg_path: Path, row: dict[str, Any], defaults: dict[
     return errs
 
 
-def _train_matches_manifest(train_path: Path, row: dict[str, Any]) -> list[str]:
+def _train_matches_manifest(train_path: Path, row: dict[str, Any], *, repo_root: Path) -> list[str]:
     if not row.get("scaffold_train", True) or str(row["backend"]) == "external":
         return []
-    if not train_path.is_file():
-        return [f"missing train JSON: {train_path}"]
-    raw = json.loads(train_path.read_text(encoding="utf-8"))
+    stem = str(row.get("train_config_stem") or row["id"])
+    from harchoc.bench_config import (
+        _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS,
+        _load_bench_train_raw,
+        load_bench_config,
+    )
+
+    if stem not in _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS:
+        bench_file = repo_root / "configs" / "bench" / str(row["bench_file"])
+        if not bench_file.is_file():
+            return [f"missing bench for runtime train check: {bench_file}"]
+        cfg = load_bench_config(bench_file)
+        try:
+            raw = _load_bench_train_raw(cfg)
+        except FileNotFoundError:
+            return [f"runtime train config unavailable for {stem}"]
+    else:
+        if not train_path.is_file():
+            return [f"missing train JSON: {train_path}"]
+        raw = json.loads(train_path.read_text(encoding="utf-8"))
+        if raw.get("extends"):
+            from harchoc.train_config import load_train_config_json
+
+            raw = load_train_config_json(train_path, repo_root=repo_root)
     expected = _train_json_object(row)
     if expected is None:
         return []
-    for key in ("extends", "model", "model_id", "batch"):
+    check_keys = ("model", "model_id", "batch")
+    if stem in _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS:
+        check_keys = ("extends", "model", "model_id", "batch")
+    for key in check_keys:
         if key in expected and raw.get(key) != expected.get(key):
             return [f"{train_path.name}: {key}={raw.get(key)!r} != {expected.get(key)!r}"]
     return []
@@ -250,8 +274,15 @@ def scaffold_zoo_matrix(
                 report.errors.append(f"missing hand-authored bench YAML: {bench_file}")
 
         train_obj = _train_json_object(row)
-        if train_obj is not None and write and row.get("scaffold_train", True):
-            stem = str(row.get("train_config_stem") or row["id"])
+        stem = str(row.get("train_config_stem") or row["id"])
+        from harchoc.bench_config import _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS
+
+        if (
+            train_obj is not None
+            and write
+            and row.get("scaffold_train", True)
+            and stem in _RUNTIME_TRAIN_BENCH_COMMITTED_STEMS
+        ):
             train_path = train_dir / f"train_bench_{stem}.json"
             text = json.dumps(train_obj, indent=2) + "\n"
             if train_path.is_file():
@@ -300,7 +331,7 @@ def validate_zoo_matrix(
 
         stem = str(row.get("train_config_stem") or row["id"])
         train_path = train_dir / f"train_bench_{stem}.json"
-        report.errors.extend(_train_matches_manifest(train_path, row))
+        report.errors.extend(_train_matches_manifest(train_path, row, repo_root=root))
 
     extra = sorted(
         p.name

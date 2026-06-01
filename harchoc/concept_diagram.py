@@ -6,14 +6,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+from harchoc.hsp_export_protocol import (
+    DEFAULT_EXPORT_MAX_DET,
+    EXPORT_CONF,
+    EXPORT_IOU,
+)
+
 # Fallback copy when HSP JSON artifacts are absent (matches p0_summary.md snapshot).
 _DEFAULT_HEADLINES: dict[str, str] = {
     "locked_conf": "0.15",
     "val_mae": "71.0",
     "test_mae": "61.3",
-    "match_iou": "0.3",
-    "export_conf": "0.001",
-    "max_det": "3000",
+    "match_iou": str(EXPORT_IOU),
+    "export_conf": str(EXPORT_CONF),
+    "max_det": str(DEFAULT_EXPORT_MAX_DET),
     "train_n": "875",
     "val_n": "109",
     "test_n": "109",

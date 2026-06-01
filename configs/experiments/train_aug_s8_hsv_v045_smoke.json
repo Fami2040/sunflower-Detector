@@ -1,5 +1,0 @@
-{
-  "extends": "configs/experiments/train_smoke_rank_15ep.json",
-  "aug_config": "configs/aug/robustness_photometric_hsv_v045.yaml",
-  "notes": "P1-AUG S8: S3 + hsv_v=0.45."
-}

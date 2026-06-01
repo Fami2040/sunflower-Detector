@@ -194,21 +194,21 @@ class ScriptDryRunTests(unittest.TestCase):
             self.assertIsInstance(obj.get("figures"), list)
             self.assertGreaterEqual(len(obj.get("figures") or []), 1)
 
-    def test_gpu_sanity_dry_run(self) -> None:
-        from scripts.gpu_sanity import main
+    def test_check_gpu_sanity_subcommand(self) -> None:
+        from scripts.check_gpu import main
 
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / "gpu.json"
-            rc = main(["--dry-run", "--out", str(out)])
-            self.assertEqual(rc, 2)
+            rc = main(["sanity", "--dry-run", "--out", str(out)])
+            self.assertEqual(rc, 0)
 
-    def test_gpu_smoke_ultralytics_dry_run(self) -> None:
-        from scripts.gpu_smoke_ultralytics import main
+    def test_check_gpu_smoke_ultralytics_subcommand(self) -> None:
+        from scripts.check_gpu import main
 
         with tempfile.TemporaryDirectory() as td:
             out = Path(td) / "smoke.json"
-            rc = main(["--dry-run", "--out", str(out)])
-            self.assertEqual(rc, 2)
+            rc = main(["smoke-ultralytics", "--dry-run", "--out", str(out)])
+            self.assertEqual(rc, 0)
 
     def test_matrix_seed_stats_dry_run(self) -> None:
         from scripts.matrix_seed_stats import main

@@ -84,30 +84,20 @@ def _run_hsp_eval_or_error_only(
     preds = prefix.with_name(prefix.name + "_preds.json")
     err = prefix.with_name(prefix.name + "_error.json")
     if gt.is_file() and preds.is_file() and not err.is_file():
-        import os
-        import subprocess
+        from harchoc.hsp_eval_chain import build_error_analysis_argv
+        from harchoc.ml_env import run_repo_python
 
-        mamba_env = os.environ.get("HARCHOC_MAMBA_ENV", "harchoc")
         rel_gt = str(gt.relative_to(rr))
         rel_preds = str(preds.relative_to(rr))
         rel_err = str(err.relative_to(rr))
-        cmd = [
-            "mamba",
-            "run",
-            "-n",
-            mamba_env,
-            "python",
-            "scripts/error_analysis.py",
-            "--gt-json",
+        argv = build_error_analysis_argv(
             rel_gt,
-            "--preds-json",
             rel_preds,
-            "--locked-conf-from",
             locked_conf_from,
-            "--out",
             rel_err,
-        ]
-        proc = subprocess.run(cmd, cwd=str(rr), env={**os.environ})
+            repo_root=rr,
+        )
+        proc = run_repo_python(argv, repo_root=rr, check=False)
         if proc.returncode != 0:
             raise RuntimeError(f"error_analysis failed for {spec.job_id} exit {proc.returncode}")
         return
