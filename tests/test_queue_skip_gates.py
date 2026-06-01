@@ -105,15 +105,56 @@ class TestQueueSkipGates(unittest.TestCase):
             self.assertTrue(ok, reason)
 
     def test_matrix_train_verified_accepts_skipped_no_weights_zoo(self) -> None:
+        import json
+        import tempfile
+
+        from harchoc.bench_config import load_bench_config
         from harchoc.queue_skip_gates import matrix_train_verified
 
         repo = Path(__file__).resolve().parents[1]
-        train_out = repo / "reports/hsp/matrix_train.json"
-        if not train_out.is_file():
-            self.skipTest("matrix_train.json missing")
-        ok, reason = matrix_train_verified(
-            repo, train_out, "zoo_yolo_only", accept_skipped_no_weights=True
-        )
+        configs = [
+            repo / "configs/bench/yolov8m_default.yaml",
+            repo / "configs/bench/yolov10m_default.yaml",
+            repo / "configs/bench/yolo11m_default.yaml",
+            repo / "configs/bench/yolo26m_default.yaml",
+        ]
+        runs: list[dict[str, object]] = []
+        for pth in configs:
+            cfg = load_bench_config(pth)
+            if pth.name.startswith("yolov10m"):
+                runs.append(
+                    {
+                        "status": "skipped_no_weights",
+                        "reason": "no_bench_run_weights",
+                        "config_path": str(pth.resolve()),
+                        "name": cfg.name,
+                        "weights": None,
+                    }
+                )
+            else:
+                runs.append(
+                    {
+                        "status": "ok",
+                        "config_path": str(pth.resolve()),
+                        "name": cfg.name,
+                        "weights": str(repo / "models/best2.pt"),
+                        "test_count_mae": 61.3,
+                    }
+                )
+        with tempfile.TemporaryDirectory() as td:
+            train_out = Path(td) / "matrix_train.json"
+            train_out.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "benchmark_matrix_train.v1",
+                        "runs": runs,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ok, reason = matrix_train_verified(
+                repo, train_out, "zoo_yolo_only", accept_skipped_no_weights=True
+            )
         self.assertTrue(ok, reason)
 
     def test_should_skip_zoo_matrix_when_verified(self) -> None:
@@ -123,7 +164,8 @@ class TestQueueSkipGates(unittest.TestCase):
         job = {
             "id": "zoo_matrix_p0_5",
             "kind": "zoo_matrix_train",
-            "matrix_group": "zoo_core_8gb",
+            "matrix_group": "zoo_yolo_only",
+            "skip_if": {"accept_skipped_no_weights": True},
             "out": "reports/hsp/matrix_train.json",
         }
         skip, _ = should_skip_job(job, repo_root=repo)
