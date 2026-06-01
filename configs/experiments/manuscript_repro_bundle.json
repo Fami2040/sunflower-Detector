@@ -1,12 +1,23 @@
 {
   "schema_version": "manuscript_repro_bundle.v1",
-  "description": "Canonical HSP P0 manuscript reproducibility bundle for models/best2.pt (YOLOv8m @ 1280).",
+  "description": "Canonical HSP P0 manuscript reproducibility bundle: evaluate upstream best2.pt on frozen CVAT splits (not re-train production weights in this fork).",
   "weights": "models/best2.pt",
+  "weights_provenance": {
+    "source": "upstream_public_repo",
+    "repo": "https://github.com/Fami2040/sunflower-Detector",
+    "branch": "main",
+    "doc": "docs/ORIGIN_MAIN_AND_DATASET.md",
+    "origin_train_reference": "configs/origin/public_yolov8_train_reference.json"
+  },
   "train_config": "configs/experiments/train_yolov8m_baseline.json",
+  "train_config_role": "replication_template_for_ablations_not_best2_origin",
   "aug_config": "configs/aug/robustness_minimal.yaml",
+  "aug_config_role": "codified_recipe_approximating_origin_train_not_proof_of_provenance",
   "dataset": {
     "manifest": "data/manifest.json",
-    "default_dataset_name": "sunflower-cvat-2500"
+    "default_dataset_name": "sunflower-cvat-2500",
+    "share_url": "https://izba-memes.ru/share/y9xGFqCW",
+    "note": "Canonical corpus is CVAT ~2500 images (manifest); not Kaggle hub as published dataset."
   },
   "repo_splits": {
     "splits_dir": "data/splits",
@@ -59,7 +70,7 @@
   "post_zoo_reviewer2": {
     "bundle": "configs/experiments/reviewer2_repro.json",
     "command": "scripts/experiment.py reviewer2-repro",
-    "note": "After zoo matrix train + HSP eval exports; before Word docx paste."
+    "note": "After zoo matrix train + HSP eval exports; before markdown submission parity check."
   },
   "manuscript_preflight": {
     "manifest": "reports/manuscript/preflight_manifest.json",
@@ -79,7 +90,8 @@
       "bundle": "configs/experiments/figures_repro.json"
     },
     "tables": {
-      "out_dir": "reports/manuscript/tables"
+      "out_dir": "reports/manuscript/tables",
+      "matrix_group": "zoo_yolo_only"
     },
     "docx_repro": {
       "out_dir": "reports/manuscript/docx",

@@ -42,10 +42,30 @@ class Reviewer2PasteCheckTests(unittest.TestCase):
         from harchoc.reviewer2_paste_check import parse_sota_inventory_md
 
         text = Path(__file__).resolve().parents[1].joinpath(
-            "reports/reviewer2_sota_inventory.md"
+            "reports/_llm/sota_inventory.md"
         ).read_text(encoding="utf-8")
         parsed = parse_sota_inventory_md(text)
         self.assertIn("yolo26m_e100_s0", parsed["run_names_e100"])
+
+    def test_paste_check_default_docx_drift_is_warn_not_fail(self) -> None:
+        from harchoc.reviewer2_paste_check import extract_docx_text, run_reviewer2_paste_check
+
+        repo = Path(__file__).resolve().parents[1]
+        docx = repo / "reports/plants-4336582.docx"
+        if not docx.is_file():
+            self.skipTest("plants-4336582.docx not present")
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "paste_check.json"
+            report = run_reviewer2_paste_check(
+                repo,
+                out_path=out,
+                strict_docx=False,
+                write_drift_md=False,
+            )
+            map50_items = [it for it in report["items"] if it.get("id") == "docx_gap_map50"]
+            if map50_items:
+                self.assertEqual(map50_items[0]["status"], "warn")
+            self.assertEqual(report["summary"]["fail"], 0)
 
     def test_experiment_paste_check_dry_run_exits_zero(self) -> None:
         import os

@@ -48,6 +48,27 @@ class ManuscriptTablesTests(unittest.TestCase):
         self.assertIn("pending", md)
         self.assertIn("Partial aggregate", md)
 
+    def test_zoo_yolo_only_expects_four_rows(self) -> None:
+        from harchoc.manuscript_tables import (
+            ZOO_YOLO_ONLY_ROW_IDS,
+            build_zoo_core_rows,
+            render_zoo_core_md,
+        )
+
+        rows, meta = build_zoo_core_rows(
+            repo_root=self.repo,
+            matrix_rows_path="configs/zoo/matrix_rows.v1.json",
+            matrix_train_path=str(self.fixtures / "matrix_train_partial.json"),
+            matrix_group="zoo_yolo_only",
+        )
+        self.assertEqual(meta["matrix_group"], "zoo_yolo_only")
+        self.assertEqual(meta["n_expected"], len(ZOO_YOLO_ONLY_ROW_IDS))
+        self.assertEqual(len(rows), len(ZOO_YOLO_ONLY_ROW_IDS))
+        self.assertEqual({r["id"] for r in rows}, set(ZOO_YOLO_ONLY_ROW_IDS))
+        md = render_zoo_core_md(rows, meta, matrix_train_path="tests/fixtures/.../partial.json")
+        self.assertIn("zoo_yolo_only", md)
+        self.assertNotIn("rtdetr_l", md)
+
     def test_aug_top_n_from_fixture_leaderboard(self) -> None:
         from harchoc.manuscript_tables import build_aug_top_n_rows, render_aug_top_n_md
 

@@ -30,7 +30,9 @@ DEFAULT_MATRIX_ROWS = "configs/zoo/matrix_rows.v1.json"
 DEFAULT_AUG_INDEX = "configs/experiments/aug_smoke_index.json"
 DEFAULT_AUG_OUT = "reports/aug_smoke"
 DEFAULT_MODEL_LABEL = "models/best2.pt"
-DEFAULT_MATRIX_GROUP = "zoo_core"
+DEFAULT_MATRIX_GROUP = "zoo_yolo_only"
+# P0-5 quartet when matrix_rows.v1.json has no zoo_yolo_only tags (bench YAML only).
+ZOO_YOLO_ONLY_ROW_IDS: tuple[str, ...] = ("yolov8m", "yolov10m", "yolo11m", "yolo26m")
 DEFAULT_TOP_N = 10
 
 FOOTNOTE_LOCKED_CONF = (
@@ -342,6 +344,17 @@ def render_aug_top_n_tex(rows: list[dict[str, Any]], *, caption: str) -> str:
     )
 
 
+def expected_matrix_group_row_ids(matrix_doc: dict[str, Any], matrix_group: str) -> list[str]:
+    """Row ids for a matrix group; ``zoo_yolo_only`` falls back to the P0-5 YOLO quartet."""
+    ids = matrix_group_row_ids(matrix_doc, matrix_group)
+    if matrix_group != "zoo_yolo_only":
+        return ids
+    if not ids:
+        return list(ZOO_YOLO_ONLY_ROW_IDS)
+    order = {rid: i for i, rid in enumerate(ZOO_YOLO_ONLY_ROW_IDS)}
+    return sorted(ids, key=lambda x: order.get(x, len(order)))
+
+
 def _matrix_run_for_id(
     runs: list[dict[str, Any]],
     row_id: str,
@@ -372,7 +385,7 @@ def build_zoo_core_rows(
     matrix_group: str = DEFAULT_MATRIX_GROUP,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     matrix_doc = load_matrix_rows(repo_root, matrix_rows_path)
-    expected_ids = matrix_group_row_ids(matrix_doc, matrix_group)
+    expected_ids = expected_matrix_group_row_ids(matrix_doc, matrix_group)
     meta: dict[str, Any] = {
         "matrix_group": matrix_group,
         "expected_row_ids": expected_ids,
@@ -437,8 +450,12 @@ def render_zoo_core_md(
     meta: dict[str, Any],
     *,
     matrix_train_path: str | None,
-    title: str = "Model zoo (zoo_core) — test metrics @ locked conf",
+    title: str | None = None,
 ) -> str:
+    group = str(meta.get("matrix_group") or DEFAULT_MATRIX_GROUP)
+    if title is None:
+        label = "zoo_yolo_only (P0-5)" if group == "zoo_yolo_only" else group
+        title = f"Model zoo ({label}) — test metrics @ locked conf"
     n_ok = meta.get("n_complete", 0)
     n_exp = meta.get("n_expected", len(rows))
     lines = [
@@ -474,12 +491,12 @@ def render_zoo_core_md(
             f"1. {FOOTNOTE_LOCKED_CONF}",
             f"2. {FOOTNOTE_TEST_SPLIT}",
             "3. Empty MAE cells: train or HSP test eval not finished (P0-5 `zoo_matrix_train`); "
-            "re-run `benchmark_matrix.py` with `--matrix-group zoo_core` after queue resume.",
+            f"re-run `benchmark_matrix.py` with `--matrix-group {group}` after queue resume.",
         ]
     )
     if n_ok < n_exp:
         lines.append(
-            f"4. Partial aggregate ({n_ok}/{n_exp}) — table lists all `zoo_core` slots with graceful placeholders."
+            f"4. Partial aggregate ({n_ok}/{n_exp}) — table lists all `{group}` slots with graceful placeholders."
         )
     return "\n".join(lines) + "\n"
 

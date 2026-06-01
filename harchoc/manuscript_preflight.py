@@ -120,7 +120,7 @@ def _resolve_tables_fields(ms_bundle: dict[str, Any], cfg: dict[str, Any]) -> di
         "aug_index": tables_cfg.get("aug_index") or DEFAULT_AUG_INDEX,
         "aug_out_dir": tables_cfg.get("aug_out_dir") or DEFAULT_AUG_OUT,
         "model_label": tables_cfg.get("model_label") or DEFAULT_MODEL_LABEL,
-        "matrix_group": tables_cfg.get("matrix_group") or "zoo_core",
+        "matrix_group": tables_cfg.get("matrix_group") or "zoo_yolo_only",
         "top_n": int(tables_cfg.get("top_n") or DEFAULT_TOP_N),
         "latex": bool(tables_cfg.get("latex", False)),
     }

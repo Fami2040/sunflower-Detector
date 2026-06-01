@@ -1,5 +1,8 @@
 # Aug comparative analysis
 
+*Generated fixture — regenerate via `experiment.py aug-compare`; do not hand-edit for manuscript.*
+
+
 Generated: `2026-06-01T09:19:07Z` · schema `aug_comparative_analysis.v1`
 
 CPU-only synthesis from [`aug_smoke_index.json`](../../configs/experiments/aug_smoke_index.json) and existing `*_summary.json` artifacts — no re-training.

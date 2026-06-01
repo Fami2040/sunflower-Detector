@@ -323,8 +323,18 @@ def run_manuscript_docx_repro(
         "generated_at": _utc(),
         "style": {"dpi": FIGURE_DPI, "module": "harchoc.figure_style"},
         "docx": "reports/plants-4336582.docx",
+        "docx_role": "read_only_reviewer_snapshot",
+        "submission_source": "reports/manuscript/",
         "figures": {},
         "tables": {},
+        "figures_manual": {
+            "Figure 3": {"reason": "dataset spatial panels", "automated": False},
+            "Figure 7": {"reason": "setup photos", "automated": False},
+            "Figure 8": {"reason": "CVAT workflow", "automated": False},
+            "Figure 9": {"reason": "pipeline architecture", "automated": False},
+            "Figure 10": {"reason": "deploy / Telegram", "automated": False},
+            "Figure 11": {"reason": "supplementary", "automated": False},
+        },
     }
 
     if dry_run:

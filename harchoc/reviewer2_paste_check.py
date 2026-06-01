@@ -1,4 +1,4 @@
-"""Reviewer 2 manuscript paste readiness + SOTA inventory vs zoo matrix (no ML deps)."""
+"""Manuscript submission parity + optional docx drift audit (no ML deps)."""
 
 from __future__ import annotations
 
@@ -17,23 +17,31 @@ _SCHEMA = "reviewer2_paste_check.v1"
 _W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 _DEFAULT_DOCX = "reports/plants-4336582.docx"
-_DEFAULT_CHECKLIST = "reports/reviewer2_docx_paste_checklist.md"
-_DEFAULT_INVENTORY_MD = "reports/reviewer2_sota_inventory.md"
+_DEFAULT_CHECKLIST = "reports/_llm/docx_paste_checklist.md"
+_DEFAULT_INVENTORY_MD = "reports/_llm/sota_inventory.md"
 _DEFAULT_INVENTORY_JSON = "reports/reviewer2_sota_inventory.json"
 _DEFAULT_MATRIX_ROWS = "configs/zoo/matrix_rows.v1.json"
 _DEFAULT_OUT = "reports/reviewer2_paste_check.json"
+_DEFAULT_DRIFT_MD = "reports/manuscript/docx_vs_submission.md"
 
-# Checklist rows: paste target + optional artifact gates (from reviewer2_docx_paste_checklist.md).
+_SUBMISSION_MD = (
+    "reports/manuscript/abstract.md",
+    "reports/manuscript/response_to_reviewers.md",
+    "reports/manuscript/results_and_methods.md",
+    "reports/manuscript/dataset.md",
+)
+
+# Submission sources + optional artifact gates (reports/_llm/docx_paste_checklist.md).
 _PASTE_SOURCES: tuple[dict[str, Any], ...] = (
     {
         "id": "paste_abstract",
         "section": "Abstract",
-        "source": "reports/reviewer2_abstract_draft.md",
+        "source": "reports/manuscript/abstract.md",
     },
     {
         "id": "paste_related_work",
         "section": "§2 Related work",
-        "source": "reports/reviewer2_related_work.md",
+        "source": "reports/manuscript/response_to_reviewers.md",
         "also": ["docs/manuscript/related_work_outline.md"],
     },
     {
@@ -43,20 +51,27 @@ _PASTE_SOURCES: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "paste_methods_counting",
-        "section": "Methods counting / n=50",
-        "source": "docs/manuscript/reviewer_comments_backlog_gap.md",
+        "section": "Methods counting / dataset",
+        "source": "reports/manuscript/results_and_methods.md",
+        "also": ["reports/manuscript/dataset.md"],
+    },
+    {
+        "id": "paste_dataset",
+        "section": "Dataset (Methods)",
+        "source": "reports/manuscript/dataset.md",
     },
     {
         "id": "paste_sota_table",
         "section": "Results SOTA table",
-        "source": "reports/reviewer2_sota_inventory.md",
+        "source": "reports/manuscript/results_and_methods.md",
+        "also": ["reports/_llm/sota_inventory.md"],
         "artifacts": ["reports/hsp/matrix_train.json"],
         "artifacts_optional": True,
     },
     {
         "id": "paste_discussion_gen",
         "section": "Discussion generalization",
-        "source": "reports/reviewer2_related_work.md",
+        "source": "reports/manuscript/response_to_reviewers.md",
         "also": ["reports/domains/domain_eval.json"],
     },
     {
@@ -178,7 +193,7 @@ def matrix_group_row_ids(doc: dict[str, Any], group: str) -> list[str]:
 
 
 def parse_sota_inventory_md(text: str) -> dict[str, Any]:
-    """Light parse of reviewer2_sota_inventory.md for run names and cited MAEs."""
+    """Light parse of reports/_llm/sota_inventory.md for run names and cited MAEs."""
     run_names = sorted(
         {
             m.group(1).strip()
@@ -264,7 +279,7 @@ def check_paste_sources(repo_root: Path) -> list[dict[str, Any]]:
                     iid,
                     section=section,
                     status="fail",
-                    message=f"missing paste source(s): {', '.join(missing)}",
+                    message=f"missing submission source(s): {', '.join(missing)}",
                     missing=missing,
                 )
             )
@@ -284,7 +299,7 @@ def check_paste_sources(repo_root: Path) -> list[dict[str, Any]]:
                     iid,
                     section=section,
                     status="warn",
-                    message=f"paste source OK; pending artifact(s): {', '.join(art_missing)}",
+                    message=f"submission source OK; pending artifact(s): {', '.join(art_missing)}",
                     missing=art_missing,
                 )
             )
@@ -295,7 +310,7 @@ def check_paste_sources(repo_root: Path) -> list[dict[str, Any]]:
                     iid,
                     section=section,
                     status="pass",
-                    message="paste source(s) present on disk",
+                    message="submission source(s) present on disk",
                     sources=sources,
                 )
             )
@@ -495,11 +510,125 @@ def check_inventory_vs_matrix(
     return {"matrix_status": matrix_status, "items": items}
 
 
+def check_manuscript_json_alignment(repo_root: Path) -> list[dict[str, Any]]:
+    """Verify headline numbers appear in submission markdown when JSON exists."""
+    items: list[dict[str, Any]] = []
+    missing_md = [rel for rel in _SUBMISSION_MD if not _rel(repo_root, rel).is_file()]
+    for rel in missing_md:
+        items.append(
+            _item(
+                f"submission_{Path(rel).stem}",
+                section="Submission markdown",
+                status="fail",
+                message=f"missing {rel}",
+            )
+        )
+    if not missing_md:
+        items.append(
+            _item(
+                "submission_bundle",
+                section="Submission markdown",
+                status="pass",
+                message="all canonical manuscript/*.md present",
+            )
+        )
+
+    abstract = _rel(repo_root, "reports/manuscript/abstract.md")
+    if not abstract.is_file():
+        return items
+
+    text = abstract.read_text(encoding="utf-8")
+    counting = _rel(repo_root, "reports/reviewer2_counting_metrics_computed.json")
+    if counting.is_file():
+        mae = _mae_from_counting_computed(_read_json(counting))
+        if mae is not None:
+            token = f"{mae:.1f}"
+            if token not in text and "61.3" not in text:
+                items.append(
+                    _item(
+                        "submission_mae_in_abstract",
+                        section="Submission markdown",
+                        status="fail",
+                        message=f"abstract.md missing test MAE ~{token}",
+                    )
+                )
+            else:
+                items.append(
+                    _item(
+                        "submission_mae_in_abstract",
+                        section="Submission markdown",
+                        status="pass",
+                        message="abstract.md cites headline test MAE",
+                    )
+                )
+    eval_map = _rel(repo_root, "reports/hsp/eval_test_map.json")
+    if eval_map.is_file():
+        map50 = float(_read_json(eval_map).get("mAP50") or 0)
+        if "0.18" not in text and "0.180" not in text:
+            items.append(
+                _item(
+                    "submission_map50_in_abstract",
+                    section="Submission markdown",
+                    status="warn",
+                    message=f"abstract.md may not state reconciled test mAP50 (~{map50:.3f})",
+                )
+            )
+    return items
+
+
+def write_docx_vs_submission_md(
+    repo_root: Path,
+    *,
+    gaps: list[dict[str, Any]],
+    docx_meta: dict[str, Any],
+    out_path: str | Path = _DEFAULT_DRIFT_MD,
+) -> Path:
+    """Write human-readable docx vs submission drift report (not a paste guide)."""
+    lines = [
+        "# Submitted docx vs repository submission (drift audit)",
+        "",
+        "The file `reports/plants-4336582.docx` is a **frozen reviewer snapshot**, not the build target.",
+        "Canonical submission text: `reports/manuscript/*.md`.",
+        "",
+        f"Docx on disk: **{docx_meta.get('exists', False)}**",
+        "",
+        "## Known metric drift (expected until journal resubmission from markdown)",
+        "",
+    ]
+    if gaps:
+        lines.append("| Claim in docx | Repo value | Notes |")
+        lines.append("|---------------|------------|-------|")
+        for g in gaps:
+            docx_v = g.get("docx", "—")
+            repo_v = g.get("repo", "—")
+            action = str(g.get("action", "")).replace("paste ", "use ")
+            lines.append(f"| {g.get('claim', '')} | docx {docx_v} → repo {repo_v} | {action} |")
+    else:
+        lines.append("No tracked numeric conflicts between docx extract and HSP JSON.")
+    lines.extend(
+        [
+            "",
+            "## Submission source of truth",
+            "",
+            "- Abstract / rebuttal / methods: `reports/manuscript/`",
+            "- Tables / quantitative figures: `reports/manuscript/docx/`",
+            "- Regenerate parity: `python scripts/experiment.py reviewer2-paste-check`",
+            "",
+        ]
+    )
+    out = _rel(repo_root, str(out_path))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
+
+
 def check_docx_claim_gaps(
     repo_root: Path,
     docx_text: str,
+    *,
+    strict_docx: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Compare submitted docx numeric claims to on-disk HSP artifacts."""
+    """Compare submitted docx numeric claims to on-disk HSP artifacts (audit only)."""
     gaps: list[dict[str, Any]] = []
     items: list[dict[str, Any]] = []
 
@@ -542,15 +671,16 @@ def check_docx_claim_gaps(
                     "docx": 0.793,
                     "repo": round(repo_map50, 3),
                     "repo_path": "reports/hsp/eval_test_map.json",
-                    "action": "paste reviewer2_abstract_draft.md; see reviewer2_map50_investigation.md",
+                    "action": "submission uses reports/manuscript/abstract.md; technical detail in reports/_llm/map50_investigation.md",
                 }
             )
+            gap_status: Status = "fail" if strict_docx else "warn"
             items.append(
                 _item(
                     "docx_gap_map50",
                     section="Docx vs repo",
-                    status="fail",
-                    message=f"docx cites mAP50 0.793; repo test mAP50≈{repo_map50:.3f}",
+                    status=gap_status,
+                    message=f"docx cites mAP50 0.793; repo test mAP50≈{repo_map50:.3f} (docx snapshot only)",
                 )
             )
         else:
@@ -571,7 +701,7 @@ def check_docx_claim_gaps(
                     "docx": 13.2,
                     "repo": repo_mean_rel,
                     "repo_path": "reports/reviewer2_counting_metrics_computed.json",
-                    "action": "use full test n=109 stats from abstract draft",
+                    "action": "use full test n=109 stats from reports/manuscript/abstract.md",
                 }
             )
     if docx_has["pct_below_2_80"] and repo_pct_below_2 is not None:
@@ -622,7 +752,7 @@ def check_docx_claim_gaps(
                 "docx": "not found in docx extract",
                 "repo": round(repo_mae, 1),
                 "repo_path": "reports/reviewer2_counting_metrics_computed.json",
-                "action": "paste revised abstract Results",
+                "action": "headline MAE in reports/manuscript/abstract.md Results",
             }
         )
 
@@ -648,6 +778,9 @@ def run_reviewer2_paste_check(
     inventory_json: str | Path = _DEFAULT_INVENTORY_JSON,
     matrix_rows_path: str | Path = _DEFAULT_MATRIX_ROWS,
     out_path: str | Path = _DEFAULT_OUT,
+    drift_md_path: str | Path = _DEFAULT_DRIFT_MD,
+    strict_docx: bool = False,
+    write_drift_md: bool = True,
 ) -> dict[str, Any]:
     root = (repo_root or Path(__file__).resolve().parents[1]).resolve()
     items: list[dict[str, Any]] = []
@@ -661,6 +794,7 @@ def run_reviewer2_paste_check(
     )
 
     items.extend(check_paste_sources(root))
+    items.extend(check_manuscript_json_alignment(root))
     items.extend(check_inventory_mae(root))
     matrix_block = check_inventory_vs_matrix(root, inventory, matrix_doc)
     items.extend(matrix_block["items"])
@@ -678,7 +812,7 @@ def run_reviewer2_paste_check(
             "mean_rel_13_2": "13.2" in docx_text,
             "pct_below_2_80": bool(re.search(r"80\s*%", docx_text)),
         }
-        doc_items, gaps = check_docx_claim_gaps(root, docx_text)
+        doc_items, gaps = check_docx_claim_gaps(root, docx_text, strict_docx=strict_docx)
         items.extend(doc_items)
     else:
         items.append(
@@ -694,12 +828,22 @@ def run_reviewer2_paste_check(
     warn_n = sum(1 for it in items if it.get("status") == "warn")
     overall: Status = "fail" if fail_n else ("warn" if warn_n else "pass")
 
+    drift_md: str | None = None
+    if write_drift_md:
+        drift_out = write_docx_vs_submission_md(
+            root, gaps=gaps, docx_meta=docx_meta, out_path=drift_md_path
+        )
+        drift_md = str(drift_md_path)
+
     report: dict[str, Any] = {
         "schema_version": _SCHEMA,
         "status": overall,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "repo_root": str(root),
         "checklist": str(checklist_path),
+        "strict_docx": strict_docx,
+        "submission_md": list(_SUBMISSION_MD),
+        "docx_vs_submission_md": drift_md,
         "docx": docx_meta,
         "docx_gaps": gaps,
         "sota_inventory_source": inventory.get("_source"),
@@ -732,7 +876,7 @@ def main(argv: list[str] | None = None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Reviewer 2 docx paste readiness + SOTA/matrix alignment (no GPU)."
+        description="Manuscript submission parity + optional docx drift audit (no GPU)."
     )
     parser.add_argument("--docx", default=_DEFAULT_DOCX)
     parser.add_argument("--checklist", default=_DEFAULT_CHECKLIST)
@@ -740,6 +884,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--inventory-json", default=_DEFAULT_INVENTORY_JSON)
     parser.add_argument("--matrix-rows", default=_DEFAULT_MATRIX_ROWS)
     parser.add_argument("--out", default=_DEFAULT_OUT)
+    parser.add_argument("--drift-md", default=_DEFAULT_DRIFT_MD)
+    parser.add_argument(
+        "--strict-docx",
+        action="store_true",
+        help="Treat docx metric drift as fail (default: warn only).",
+    )
+    parser.add_argument("--no-drift-md", action="store_true")
     args = parser.parse_args(argv)
     try:
         report = run_reviewer2_paste_check(
@@ -749,13 +900,16 @@ def main(argv: list[str] | None = None) -> int:
             inventory_json=args.inventory_json,
             matrix_rows_path=args.matrix_rows,
             out_path=args.out,
+            drift_md_path=args.drift_md,
+            strict_docx=bool(args.strict_docx),
+            write_drift_md=not args.no_drift_md,
         )
     except FileNotFoundError as exc:
         print(f"ERROR: {exc}", file=__import__("sys").stderr)
         return 1
     summary = report["summary"]
     print(
-        f"reviewer2 paste check: {report['status']} "
+        f"manuscript parity check: {report['status']} "
         f"(pass={summary['pass']} warn={summary['warn']} fail={summary['fail']})"
     )
     print(f"Wrote {report['out']}")

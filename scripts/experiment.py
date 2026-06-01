@@ -481,7 +481,7 @@ def _run_tables_repro(fields: dict[str, Any]) -> int:
         ),
         "aug_out_dir": str(fields.get("aug_out_dir") or "reports/aug_smoke"),
         "model_label": str(fields.get("model_label") or "models/best2.pt"),
-        "matrix_group": str(fields.get("matrix_group") or "zoo_core"),
+        "matrix_group": str(fields.get("matrix_group") or "zoo_yolo_only"),
         "top_n": int(fields.get("top_n") or 10),
         "aug_leaderboard_json": str(fields.get("aug_leaderboard_json") or "").strip() or None,
     }
@@ -1366,10 +1366,10 @@ def main(argv: list[str] | None = None) -> int:
             repo_root,
             docx_path=str(merged_fields.get("docx") or "reports/plants-4336582.docx"),
             checklist_path=str(
-                merged_fields.get("checklist") or "reports/reviewer2_docx_paste_checklist.md"
+                merged_fields.get("checklist") or "reports/_llm/docx_paste_checklist.md"
             ),
             inventory_md=str(
-                merged_fields.get("inventory_md") or "reports/reviewer2_sota_inventory.md"
+                merged_fields.get("inventory_md") or "reports/_llm/sota_inventory.md"
             ),
             inventory_json=str(
                 merged_fields.get("inventory_json") or "reports/reviewer2_sota_inventory.json"
@@ -1378,10 +1378,16 @@ def main(argv: list[str] | None = None) -> int:
                 merged_fields.get("matrix_rows") or "configs/zoo/matrix_rows.v1.json"
             ),
             out_path=out_path,
+            drift_md_path=str(
+                merged_fields.get("drift_md")
+                or "reports/manuscript/docx_vs_submission.md"
+            ),
+            strict_docx=bool(merged_fields.get("strict_docx")),
+            write_drift_md=not bool(merged_fields.get("no_drift_md")),
         )
         summary = report["summary"]
         print(
-            f"reviewer2 paste check: {report['status']} "
+            f"manuscript parity check: {report['status']} "
             f"(pass={summary['pass']} warn={summary['warn']} fail={summary['fail']})"
         )
         print(f"Wrote {report['out']}")

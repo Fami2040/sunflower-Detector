@@ -283,7 +283,7 @@ def parse_backlog_md(path: str | Path) -> dict[str, Any]:
         "archive_ids": archive_ids,
         "status_index": by_status,
         "gap_doc": "docs/manuscript/reviewer_comments_backlog_gap.md",
-        "reviewer2_gaps": "reports/reviewer2_programmatic_gaps.md",
+        "reviewer2_gaps": "reports/_llm/programmatic_gaps.md",
     }
 
 
