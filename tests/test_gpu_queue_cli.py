@@ -13,7 +13,7 @@ from tests._gpu_queue_fixtures import load_manifest_with_index, write_pending_fi
 class ExperimentGpuQueueCliTests(unittest.TestCase):
     def _dry_run_gpu_queue_aug_pending(self, *, invoke) -> tuple[int, str]:
         repo = Path(__file__).resolve().parents[1]
-        manifest = repo / "configs/experiments/gpu_queue_aug_pending.json"
+        manifest = repo / "configs/experiments/archive/gpu_queue_aug_pending.json"
         if not manifest.is_file():
             self.skipTest("gpu_queue_aug_pending.json missing")
         import io

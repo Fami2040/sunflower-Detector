@@ -101,8 +101,9 @@ Modeling splits live in repo-tracked `data/splits/{train,val,test}.txt`. Ultraly
 | `scripts/eval.py` | Test-split mAP + optional GT/preds export (`--export-*`, `--max-det`, `--imgsz`) |
 | `scripts/benchmark_matrix.py` | Model-zoo plan / train / test eval (`configs/bench/*.yaml`) |
 | `scripts/experiment.py` | Unified CLI: `splits`, `describe`, `eval`, `benchmark`, `train`, `hpo`, **`cv-eval`**, `map-cpu`, `dual-metric`, `repro`, **`reviewer2-repro`**, **`figures-repro`**, **`tables-repro`**, **`manuscript-docx-repro`**, **`manuscript-preflight`**, `aug-compare`, `backlog-narrative`, `gradcam`, `deploy-parity` |
-| `scripts/threshold_sweep.py` | Confidence sweep (default `--out reports/thresholds/sweep.json`; HSP → `reports/hsp/threshold_*.json`) |
-| `scripts/error_analysis.py` | Counting / TIDE-style summary (HSP → `reports/hsp/error_*.json`; see [`reports/error_analysis/README.md`](../reports/error_analysis/README.md)) |
+| `experiment.py threshold-sweep` / `scripts/threshold_sweep.py` | Confidence sweep (default `--out reports/hsp/threshold_sweep.json`; val/test via `threshold_sweep_*.json`) |
+| `experiment.py error-analysis` / `scripts/error_analysis.py` | Counting / TIDE-style summary (HSP → `reports/hsp/error_*.json`) |
+| `experiment.py split-drift` / `scripts/split_drift.py` | Train/val/test drift (default `reports/hsp/split_drift_p0.json`) |
 | `scripts/describe_split.py` | Split stats → `reports/split_stats.json` |
 | `scripts/split_drift.py` | Train/val/test drift report → `reports/hsp/split_drift_p0.json` (P0); rich proxies → `--extended` → `reports/hsp/split_drift_rich.json` |
 | `scripts/make_figures.py` | Figures + `reports/figures/run.json` |
@@ -155,7 +156,7 @@ Post-train test eval: [aug scan §5 shared eval](research/training_tech_scan_202
 
 **Canonical ops:** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) (`dry-run` | `run` | `resume`). Direct / CI: [`scripts/run_gpu_queue.py`](../scripts/run_gpu_queue.py) (`--manifest`, `--job`). `experiment.py gpu-queue` is a deprecated alias (config-file workflows only).
 
-**Default manifest:** [`configs/experiments/gpu_queue_aug_pending.json`](../configs/experiments/gpu_queue_aug_pending.json) (preflight + index-expanded pending smokes). **Full backlog** (RT-DETR probes skipped on 8 GiB, close25 sweep, **`zoo_matrix_p0_5`** = **`zoo_yolo_only` 4×100 ep**, CV folds deferred): [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) via `GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json`. **Post-zoo** (repro/preflight, domain audit, finetune weak trays): [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Mosaic `aug_sweep_15_*` jobs are **removed** from manifests (covered by smokes **S2/S4/S5**).
+**Active manifests:** [`gpu_queue_zoo_p0_5.json`](../configs/experiments/gpu_queue_zoo_p0_5.json) (P0-5 zoo only) · [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json) (after matrix) · [`gpu_queue_post_zoo_smoke.json`](../configs/experiments/gpu_queue_post_zoo_smoke.json) (wiring smoke; default for `run_gpu_queue.sh`). **Archived** (aug tails, historical full queue): [`configs/experiments/archive/`](../configs/experiments/archive/README.md). Mosaic `aug_sweep_15_*` jobs are **removed** from manifests (covered by smokes **S2/S4/S5**).
 
 ```bash
 export DATASET_ROOT="$(pwd)/data/raw/extracted/dataset"
@@ -164,11 +165,11 @@ export HARCHOC_EXPORT_DEVICE=cpu
 # 1) Validate all stage commands (CPU-safe)
 ./scripts/run_gpu_queue.sh dry-run
 
-# 2) Unattended live run (default: gpu_queue_aug_pending.json)
+# 2) Unattended live run (default: gpu_queue_post_zoo_smoke.json)
 ./scripts/run_gpu_queue.sh run
 
 # Full backlog:
-# GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json ./scripts/run_gpu_queue.sh run
+# GPU_QUEUE_MANIFEST=configs/experiments/archive/gpu_queue_full.json ./scripts/run_gpu_queue.sh run
 
 # 3) Monitor / resume
 tail -f reports/gpu_queue/nohup.log
@@ -182,21 +183,21 @@ Per-job logs: `reports/gpu_queue/logs/{job_id}/{stage_id}.log`. Completed aug sm
 
 ### GPU queue manifest map
 
-One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (default: aug pending, now **complete**). Job order is manifest order; recipe dedup skips trains when a complete smoke owns the same [`effective_train_recipe_fingerprint`](../harchoc/train_config.py). Rankings / equivalence / preds dedup audit: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) (`equivalence_classes`), [`leaderboard.md`](../reports/aug_smoke/leaderboard.md).
+One sequential GPU — pick **one** manifest per run via `GPU_QUEUE_MANIFEST` (default: `gpu_queue_post_zoo_smoke.json`). Job order is manifest order; recipe dedup skips trains when a complete smoke owns the same [`effective_train_recipe_fingerprint`](../harchoc/train_config.py). Rankings / equivalence / preds dedup audit: [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) (`equivalence_classes`), [`leaderboard.md`](../reports/aug_smoke/leaderboard.md).
 
 | Manifest | Tier | Purpose | Notable jobs |
 |----------|------|---------|--------------|
-| [`gpu_queue_aug_pending.json`](../configs/experiments/gpu_queue_aug_pending.json) | **Done** | Index-expanded S0–S14 smokes | `aug_smoke_from_index: true` — finished 2026-05-30 15:08 UTC |
-| [`gpu_queue_aug_confirm.json`](../configs/experiments/gpu_queue_aug_confirm.json) | **1** | 100-ep aug winner confirm | `aug_confirm_winner_100ep` (**P1-AUG-100EP-WINNER**) — not in full manifest |
-| [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) | **1–2**, **P0-5** | Post-smoke backlog | RT-DETR refresh skipped on 8 GiB (**P1-RTDETR-COUNT-REFRESH**), amp/sg HSP (**P1-AMP-HSP-EVAL**, **P1-SG-HSP-EVAL**), close10/close25 sweeps, **`zoo_matrix_p0_5`** (`zoo_yolo_only` 4×100 ep, ~480 min), CV folds deferred |
+| [`gpu_queue_aug_pending.json`](../configs/experiments/archive/gpu_queue_aug_pending.json) | **Done** | Index-expanded S0–S14 smokes | `aug_smoke_from_index: true` — finished 2026-05-30 15:08 UTC |
+| [`gpu_queue_aug_confirm.json`](../configs/experiments/archive/gpu_queue_aug_confirm.json) | **1** | 100-ep aug winner confirm | `aug_confirm_winner_100ep` (**P1-AUG-100EP-WINNER**) — not in full manifest |
+| [`gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) | **1–2**, **P0-5** | Post-smoke backlog | RT-DETR refresh skipped on 8 GiB (**P1-RTDETR-COUNT-REFRESH**), amp/sg HSP (**P1-AMP-HSP-EVAL**, **P1-SG-HSP-EVAL**), close10/close25 sweeps, **`zoo_matrix_p0_5`** (`zoo_yolo_only` 4×100 ep, ~480 min), CV folds deferred |
 | [`gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json) | **Post-P0-5** | After zoo matrix | Repro / manuscript-preflight → domain tray audit → staged finetune on weak trays ([FINETUNE_WEAK_TRAYS.md](FINETUNE_WEAK_TRAYS.md)); run only after `matrix_train.json` has 4/4 `zoo_yolo_only` rows |
 
 ```bash
 # Tier 1 — 100-ep winner (separate manifest)
-GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_aug_confirm.json ./scripts/run_gpu_queue.sh dry-run
+GPU_QUEUE_MANIFEST=configs/experiments/archive/gpu_queue_aug_confirm.json ./scripts/run_gpu_queue.sh dry-run
 
 # Tier 1–2 + P0-5 — full backlog
-GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json ./scripts/run_gpu_queue.sh dry-run
+GPU_QUEUE_MANIFEST=configs/experiments/archive/gpu_queue_full.json ./scripts/run_gpu_queue.sh dry-run
 ```
 
 **P0-5 job:** `zoo_matrix_p0_5` in full manifest — `kind: zoo_matrix_train`, `matrix_group: zoo_yolo_only` (`yolov8m`, `yolov10m`, `yolo11m`, `yolo26m` @ 1280; no external DETR stack on 8 GiB), out `reports/hsp/matrix_train.json` (~**480** min). `skip_if` requires a complete `zoo_yolo_only` matrix artifact. Run after Tier 2 eval/sweeps unless manually reordered. **Deferred from P0-5 path:** full **`zoo_core`** 10× (~2000 min). **Ultralytics RT-DETR** train @ 1280 OOMs on 8 GiB; external DETR is integration/scheduling, not universally >8 GiB. Zoo design: [zoo_comparison_design.md](zoo_comparison_design.md).
@@ -205,7 +206,7 @@ GPU_QUEUE_MANIFEST=configs/experiments/gpu_queue_full.json ./scripts/run_gpu_que
 
 **`aug_smoke_from_index`** (on `gpu_queue_manifest.v1`): when `true`, `load_gpu_queue_manifest()` replaces inline `aug_smoke` jobs with one queue job per [`aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json) row in `status: gpu_pending` (optional `"aug_smoke_index"` path override). Train/`--aug-config` for those jobs come from the index entry, not duplicated in the manifest. Parity: `harchoc.aug_smoke_runner.aug_smoke_index_queue_parity_errors()`. Summaries: `finalize_smoke_job()` in [`aug_smoke_runner.py`](../harchoc/aug_smoke_runner.py).
 
-Single job dry-run: `mamba run -n harchoc python scripts/run_gpu_queue.py --manifest configs/experiments/gpu_queue_aug_pending.json --dry-run --job aug_smoke_S3`.
+Single job dry-run: `mamba run -n harchoc python scripts/run_gpu_queue.py --manifest configs/experiments/archive/gpu_queue_aug_pending.json --dry-run --job aug_smoke_S3`.
 
 ### P1-AUG sweeps (15-ep, post-smoke)
 
@@ -230,7 +231,7 @@ mamba run -n harchoc python scripts/train.py --dry-run --name aug_sweep_mosaic0_
   --aug-config configs/aug/robustness_mosaic_off.yaml
 ```
 
-Optional 100-ep winner confirm (**P1-AUG-100EP-WINNER**): production [`robustness_minimal.yaml`](../configs/aug/robustness_minimal.yaml) via [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json) and [`gpu_queue_aug_confirm.json`](../configs/experiments/gpu_queue_aug_confirm.json) (`aug_confirm_winner_100ep` → `reports/aug_smoke/aug_confirm_winner_100ep_summary.json`). Runbook: [backlog § P1-AUG-100EP-WINNER](../backlog.md#p1-aug-100ep-winner-optional-manifest). General 100-ep sweep template: [`train_aug_mosaic_sweep_template.json`](../configs/experiments/train_aug_mosaic_sweep_template.json).
+Optional 100-ep winner confirm (**P1-AUG-100EP-WINNER**): production [`robustness_minimal.yaml`](../configs/aug/robustness_minimal.yaml) via [`train_aug_winner_100ep.json`](../configs/experiments/train_aug_winner_100ep.json) and [`gpu_queue_aug_confirm.json`](../configs/experiments/archive/gpu_queue_aug_confirm.json) (`aug_confirm_winner_100ep` → `reports/aug_smoke/aug_confirm_winner_100ep_summary.json`). Runbook: [backlog § P1-AUG-100EP-WINNER](../backlog.md#p1-aug-100ep-winner-optional-manifest). General 100-ep sweep template: [`train_aug_mosaic_sweep_template.json`](../configs/experiments/train_aug_mosaic_sweep_template.json).
 
 | 5 | Model zoo matrix (**`zoo_yolo_only`** 4×100 ep on 8 GiB; full `zoo_core` deferred) | **P0-5** — [§ Model zoo](#model-zoo-benchmark-matrix) |
 | 6+ | Tray finetune, domain eval, RT-DETR query cap | **P1-FINETUNE-LOOP**, **P1-DOMAIN-EVAL**, **P1-RTDETR-Q** |
@@ -389,7 +390,7 @@ mamba run -n harchoc python scripts/experiment.py gradcam \
 
 ```bash
 mamba run -n harchoc python scripts/experiment.py --dry-run \
-  --config '{"dataset":{"default_dataset_name":"sunflower-cvat-2500"},"eval":{"out":"reports/hsp/eval_dry_run.json"}}' \
+  --config '{"dataset":{"default_dataset_name":"sunflower-cvat-1093"},"eval":{"out":"reports/hsp/eval_dry_run.json"}}' \
   eval
 
 mamba run -n harchoc python scripts/experiment.py --dry-run --config configs/experiment.json benchmark
@@ -864,7 +865,7 @@ Build catalog and per-tray split lists; run one tray or all trays on CPU (val-lo
 `DATASET_ROOT` is optional when `data/manifest.json` lists an on-disk extracted path (same resolution as `train.py` / `eval.py` via `harchoc.datasets.resolve_dataset`).
 
 ```bash
-# Optional if manifest default (sunflower-cvat-2500) exists on disk:
+# Optional if manifest default (sunflower-cvat-1093) exists on disk:
 export DATASET_ROOT=/path/to/dataset
 mamba run -n harchoc python scripts/eval_domains.py \
   --write-domain-splits --catalog reports/domains/catalog.json

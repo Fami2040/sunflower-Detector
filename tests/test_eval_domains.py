@@ -305,7 +305,7 @@ class EvalDomainsTests(unittest.TestCase):
                     {
                         "datasets": [
                             {
-                                "name": "sunflower-cvat-2500",
+                                "name": "sunflower-cvat-1093",
                                 "extracted_paths": ["datasets/sunflower"],
                             }
                         ]
@@ -329,7 +329,7 @@ class EvalDomainsTests(unittest.TestCase):
                             "--manifest",
                             str(manifest_path),
                             "--default-dataset-name",
-                            "sunflower-cvat-2500",
+                            "sunflower-cvat-1093",
                             "--catalog",
                             str(catalog_out),
                             "--out",

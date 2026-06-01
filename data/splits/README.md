@@ -1,6 +1,6 @@
 # Canonical train / val / test splits
 
-Tracked split lists for dataset `sunflower-cvat-2500` (see `data/manifest.json`).
+Tracked split lists for dataset `sunflower-cvat-1093` (see `data/manifest.json`).
 
 ## Policy
 

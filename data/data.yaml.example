@@ -1,4 +1,4 @@
-# Ultralytics dataset config for sunflower-cvat-2500.
+# Ultralytics dataset config for sunflower-cvat-1093.
 # Copy to DATASET_ROOT/data.yaml and set `path` to the extracted dataset root.
 #
 #   cp data/data.yaml.example "$DATASET_ROOT/data.yaml"

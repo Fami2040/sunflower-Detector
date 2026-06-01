@@ -216,7 +216,7 @@ class GpuQueueDedupTests(unittest.TestCase):
         from harchoc.gpu_queue import load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_full.json", repo_root=repo)
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_full.json", repo_root=repo)
         by_id = {j["id"]: j for j in m["jobs"]}
         dup = by_id["aug_sweep_15_close15"]
         self.assertTrue(dup.get("skip"))

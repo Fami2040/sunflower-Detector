@@ -66,7 +66,7 @@ There are **26 bench YAML files** total. Groups are **filters**, not disjoint bu
 | Group | What it selects | Count | GPU if you run *only this filter* |
 |-------|-----------------|-------|-----------------------------------|
 | **`zoo_core`** | Mid+ YOLO gens, counting-oriented DETR, external DETR stack | **10** | **10 × 100 ep** (full zoo; post–P0-5; **Ultralytics RT-DETR** train needs >8 GiB on this machine) |
-| **`zoo_yolo_only`** | Four M-scale Ultralytics YOLO rows only | **4** | **4 × 100 ep** (**P0-5** on 8 GiB — [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) `zoo_matrix_p0_5`) |
+| **`zoo_yolo_only`** | Four M-scale Ultralytics YOLO rows only | **4** | **4 × 100 ep** (**P0-5** on 8 GiB — [`gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) `zoo_matrix_p0_5`) |
 | **`sota_2026`** | Every hub-backed Ultralytics row + NAS | **~22** | ~22 × 100 ep |
 | **`zoo_scale`** | n/s/l/x/b rows **excluding** the single “m” pick per YOLO family | **14** | 14 × 100 ep (optional) |
 | **`sota_deim`** | `rtdetrv2_l`, `dfine_l`, `deim_*` | **4** | 4 × 100 ep (subset of `zoo_core`) |

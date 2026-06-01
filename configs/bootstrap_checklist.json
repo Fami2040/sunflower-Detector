@@ -6,7 +6,7 @@
     "mamba run -n {env} python scripts/check_gpu.py --verify-deps",
     "export HARCHOC_EXPORT_DEVICE=cpu  # optional: preds export when GPU OOM @ 1280",
     "python scripts/check_weights_cache.py --strict --out reports/weights_cache.json",
-    "export DATASET_NAME=sunflower-cvat-2500  # or DATASET_ROOT=... && mamba run -n {env} python scripts/validate_splits.py --require-test"
+    "export DATASET_NAME=sunflower-cvat-1093  # or DATASET_ROOT=... && mamba run -n {env} python scripts/validate_splits.py --require-test"
   ],
   "when": {
     "with_super_gradients": [

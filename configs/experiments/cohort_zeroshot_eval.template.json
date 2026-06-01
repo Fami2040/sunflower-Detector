@@ -1,0 +1,22 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cohort-202Y-50",
+    "dataset_env": {
+      "DATASET_ROOT": "data/raw/extracted/cohort_202Y_50",
+      "YOLO_DATA_YAML": "",
+      "DATASET_NAME": "sunflower-cohort-202Y-50"
+    },
+    "split_file_test": "data/cohorts/202Y/test.txt"
+  },
+  "run": {
+    "kind": "eval",
+    "dry_run": true,
+    "weights": "models/best2.pt",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "split_file": "data/cohorts/202Y/test.txt",
+    "out": "reports/cohorts/202Y/best2_zeroshot_eval.json",
+    "notes": "Copy this file to cohort_202Y_zeroshot_eval.json after paths exist. Lock conf from 1093 val only; do not tune on cohort val for headline comparison."
+  }
+}

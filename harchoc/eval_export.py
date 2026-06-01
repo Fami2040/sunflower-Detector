@@ -83,16 +83,65 @@ def load_gt_annotations(
     return anns
 
 
+def _read_image_size_header(img_path: Path) -> tuple[int, int] | None:
+    """Best-effort PNG IHDR / JPEG SOF parse when PIL cannot open the file."""
+    import struct
+
+    suf = img_path.suffix.lower()
+    if suf == ".png":
+        with img_path.open("rb") as f:
+            if f.read(8) != b"\x89PNG\r\n\x1a\n":
+                return None
+            f.read(4)
+            if f.read(4) != b"IHDR":
+                return None
+            w = struct.unpack(">I", f.read(4))[0]
+            h = struct.unpack(">I", f.read(4))[0]
+            return int(w), int(h)
+    if suf in {".jpg", ".jpeg"}:
+        with img_path.open("rb") as f:
+            if f.read(2) != b"\xff\xd8":
+                return None
+            while True:
+                b = f.read(1)
+                if not b:
+                    break
+                if b != b"\xff":
+                    continue
+                while True:
+                    m = f.read(1)
+                    if not m:
+                        return None
+                    if m != b"\xff":
+                        break
+                marker = m[0]
+                if marker in {0xD9, 0xDA}:
+                    break
+                seglen_bytes = f.read(2)
+                if len(seglen_bytes) != 2:
+                    break
+                seglen = struct.unpack(">H", seglen_bytes)[0]
+                if seglen < 2:
+                    break
+                if marker in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
+                    f.read(1)
+                    h = struct.unpack(">H", f.read(2))[0]
+                    w = struct.unpack(">H", f.read(2))[0]
+                    return int(w), int(h)
+                f.seek(seglen - 2, 1)
+    return None
+
+
 def read_image_size(
     img_path: Path,
     *,
     strict_warnings: StrictWarnings | None = None,
 ) -> tuple[int, int]:
     """
-    Return (width, height) from PIL.
+    Return (width, height) from PIL, else PNG/JPEG header parse, else (1, 1).
 
-    On failure: records ``pil_image_open_failed``; strict mode raises; otherwise
-    falls back to (1, 1) so YOLO norm coords still produce finite xyxy (legacy).
+    On PIL failure: records ``pil_image_open_failed``; strict mode raises before
+  fallback; otherwise tries header parse, then (1, 1) for finite YOLO xyxy.
     """
     from harchoc.strict_ml import capture_failure
 
@@ -101,6 +150,8 @@ def read_image_size(
 
         with Image.open(img_path) as im:
             return int(im.size[0]), int(im.size[1])
+    if not cap.failed:
+        raise RuntimeError("read_image_size: unexpected capture_failure state")
     msg = cap.exc_msg or "unknown error"
     if strict_warnings is not None:
         strict_warnings.warn(
@@ -110,6 +161,10 @@ def read_image_size(
             exc_type=cap.exc_type,
             raise_if_strict=True,
         )
+    if img_path.is_file():
+        header = _read_image_size_header(img_path)
+        if header is not None:
+            return header
     return 1, 1
 
 

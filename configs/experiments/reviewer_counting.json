@@ -1,5 +1,4 @@
 {
-  "schema_version": "experiments.v1",
   "reviewer_counting": {
     "out": "reports/reviewer2_counting_metrics_computed.json",
     "locked_conf_from": "reports/hsp/threshold_val.json",

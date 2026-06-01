@@ -1,5 +1,4 @@
 {
-  "schema_version": "experiments.v1",
   "reviewer2_confusion": {
     "out": "reports/reviewer2_confusion_tide.json",
     "gt_json": "reports/hsp/gt_test.json",

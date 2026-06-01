@@ -7,7 +7,7 @@ from harchoc.datasets import dataset_root_from_manifest
 
 
 def main() -> None:
-    name = os.getenv("DATASET_NAME", "sunflower-cvat-2500")
+    name = os.getenv("DATASET_NAME", "sunflower-cvat-1093")
     root = dataset_root_from_manifest(dataset_name=name)
     print(str(root))
 

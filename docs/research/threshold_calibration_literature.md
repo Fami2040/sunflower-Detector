@@ -1,6 +1,6 @@
 # Threshold sweeps, calibration, and PR curves for dense small-object detection
 
-Literature review for **harchoc** benchtop **sunflower-seed** counting on **sunflower-cvat-2500** (frozen splits in `data/splits/`). Covers conf/NMS sweeps, post-hoc calibration, PR-curve operating points, and the val≫test mAP gap. Implementation cross-check: `scripts/threshold_sweep.py`, `harchoc/threshold_protocol.py`, `harchoc/dual_metric_report.py`, `scripts/experiment.py dual-metric`.
+Literature review for **harchoc** benchtop **sunflower-seed** counting on **sunflower-cvat-1093** (frozen splits in `data/splits/`). Covers conf/NMS sweeps, post-hoc calibration, PR-curve operating points, and the val≫test mAP gap. Implementation cross-check: `scripts/threshold_sweep.py`, `harchoc/threshold_protocol.py`, `harchoc/dual_metric_report.py`, `scripts/experiment.py dual-metric`.
 
 **Classes (repo only):** id **0 = developed**, id **1 = aborted** (`harchoc/sunflower_dataset.py`, `data/README.md`). Agri-UAV papers below count **plants or heads**, not developed vs aborted—cite them for threshold/counting **methodology**, not label semantics.
 
@@ -25,7 +25,7 @@ Literature review for **harchoc** benchtop **sunflower-seed** counting on **sunf
 
 ---
 
-## Applicability to HSP (sunflower-cvat-2500)
+## Applicability to HSP (sunflower-cvat-1093)
 
 | Aspect | Literature (UAV / field) | HSP benchtop |
 |--------|-------------------------|--------------|
@@ -242,7 +242,7 @@ Sweep clarifies: *“Given fixed weights, what is the best achievable F1 on each
 
 | Dataset | Notes |
 |---------|-------|
-| **sunflower-cvat-2500** (ours) | Primary; frozen splits in `data/splits/` |
+| **sunflower-cvat-1093** (ours) | Primary; frozen splits in `data/splits/` |
 | [Plant Detection and Counting](https://datasetninja.com/plant-detection-and-counting) | 189 UAV images, sunflower/maize/beet; early-stage plants |
 | [Iamchuen et al., sunflower UAV YOLOv11 (2026)](https://doi.org/10.3390/su18021026) | 1290 tiles from 215 UAV images; conf/IoU grid (optimum **0.50 / 0.40**) |
 | BARI-Sunflower | Leaf disease close-ups — **not** head counting ([systematic review](https://www.mdpi.com/2504-4990/7/4/130)) |

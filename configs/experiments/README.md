@@ -18,13 +18,15 @@ Model-zoo candidate          →  configs/bench/*.yaml  →  benchmark_matrix.py
 
 Related paths only: `configs/aug/`, `configs/transfer/` — referenced by train scripts, not a fourth schema.
 
-Extend `experiment.py` / `train.py` / `benchmark_matrix.py` before new top-level scripts ([extend-before-add-script](../../.cursor/rules/extend-before-add-script.mdc)).
+**GPU queues (active):** [`gpu_queue_zoo_p0_5.json`](gpu_queue_zoo_p0_5.json) · [`gpu_queue_post_zoo.json`](gpu_queue_post_zoo.json) · [`gpu_queue_post_zoo_smoke.json`](gpu_queue_post_zoo_smoke.json). Closed aug/full queues: [`archive/`](archive/README.md).
+
+Extend `experiment.py` / `train.py` / `benchmark_matrix.py` before new top-level scripts ([extend-before-add-script](../../.cursor/rules/extend-before-add-script.mdc) · [dry-refactor-plan](../../docs/plans/dry-refactor-plan.md)).
 
 ## Train-only configs
 
 Files without `"schema_version": "experiments.v1"` are consumed by `train.py` (and matrix via `train_bench_<stem>.json`):
 
-- Baselines: `train_yolov8m_baseline.json`, smokes, batch probes (`"_canonical": false`)
+- Baselines: `train_yolov8m_baseline.json`, smokes, batch probes (`train_batch_probe.template.json` + per-model copies; `"_canonical": false`)
 - Matrix: `train_bench_base.json` + per-model overlays; aug via `configs/aug/robustness_minimal.yaml`
 - Aug smokes: [`aug_smoke_index.json`](aug_smoke_index.json) + [`train_smoke_rank_15ep.json`](train_smoke_rank_15ep.json)
 
@@ -37,7 +39,12 @@ RT-DETR query-cap policy: `train_bench_rtdetr-l.json` — see [`docs/training_bu
 | [`manuscript_repro_bundle.json`](manuscript_repro_bundle.json) | HSP repro + preflight |
 | [`reviewer2_repro.json`](reviewer2_repro.json) | Post-zoo reviewer CPU chain |
 | [`figures_repro.json`](figures_repro.json) | Figure manifest |
-| [`reviewer_counting.json`](reviewer_counting.json) | Counting metrics JSON |
+| [`reviewer_counting.json`](reviewer_counting.json) | Counting metrics JSON (top-level `reviewer_counting` section; not `experiments.v1`) |
+| [`reviewer2_confusion_tide.json`](reviewer2_confusion_tide.json) | §11 confusion + TIDE parity (top-level `reviewer2_confusion` section) |
+| [`cohort_zeroshot_eval.template.json`](cohort_zeroshot_eval.template.json) | Copy after year-cohort ingest — zero-shot `best2` eval |
+| [`gpu_queue_post_zoo.json`](gpu_queue_post_zoo.json) | After P0-5 (`require_before.matrix_train` gate) |
+| [`gpu_queue_post_zoo_smoke.json`](gpu_queue_post_zoo_smoke.json) | 1-ep finetune + domain audit smoke (test wiring) |
+| [`now_todos_smoke_bundle.json`](now_todos_smoke_bundle.json) | `experiment.py now-todos-smoke` stage definitions |
 
 Ops runbooks (GPU queue job matrix, zoo groups, weights prep): [`docs/EXPERIMENTS.md`](../../docs/EXPERIMENTS.md#gpu-sequential-queue).
 
@@ -48,7 +55,7 @@ Ops runbooks (GPU queue job matrix, zoo groups, weights prep): [`docs/EXPERIMENT
   "schema_version": "experiments.v1",
   "dataset": {
     "manifest": "data/manifest.json",
-    "default_dataset_name": "sunflower-cvat-2500"
+    "default_dataset_name": "sunflower-cvat-1093"
   },
   "run": {
     "kind": "eval",

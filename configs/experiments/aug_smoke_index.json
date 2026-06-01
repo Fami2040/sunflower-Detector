@@ -215,7 +215,7 @@
     "promotion_gate_note": "Enable Phase B queue job when matching 15-ep arm test MAE \u2264 72.3 (S1 68.9 + 5%)",
     "baseline_confirm_mae": 64.12844036697248,
     "baseline_confirm_summary": "reports/aug_smoke/aug_confirm_winner_100ep_summary.json",
-    "manifest": "configs/experiments/gpu_queue_aug_close_100ep.json",
+    "manifest": "configs/experiments/archive/gpu_queue_aug_close_100ep.json",
     "arms": [
       {
         "id": "close10_100",

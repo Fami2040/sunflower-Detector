@@ -146,7 +146,7 @@ class BenchmarkMatrixTests(unittest.TestCase):
             cfg_path.write_text(
                 json.dumps(
                     {
-                        "dataset": {"manifest": str(manifest_path), "default_dataset_name": "sunflower-cvat-2500"},
+                        "dataset": {"manifest": str(manifest_path), "default_dataset_name": "sunflower-cvat-1093"},
                         "benchmark": {
                             "dry_run": True,
                             "bench_dir": str(bench_dir),
@@ -424,22 +424,22 @@ class BenchmarkMatrixTests(unittest.TestCase):
                 else:
                     os.environ["HARCHOC_MAX_BATCH"] = old_batch
 
-    @patch("scripts.benchmark_matrix._invoke_test_eval_for_bench")
+    @patch("scripts.benchmark_matrix._invoke_ultralytics_hsp_for_matrix")
     @patch("scripts.benchmark_matrix._invoke_train_for_bench")
-    def test_no_dry_run_chains_test_eval_after_train(self, mock_invoke, mock_eval) -> None:
+    def test_no_dry_run_chains_test_eval_after_train(self, mock_invoke, mock_hsp_eval) -> None:
         mock_invoke.return_value = {
             "status": "ok",
             "returncode": 0,
             "run_name": "tiny",
             "weights": HSP_DETECTION_WEIGHTS,
         }
-        mock_eval.return_value = {
+        mock_hsp_eval.return_value = {
             "status": "ok",
-            "returncode": 0,
             "split": "test",
             "mAP50": 0.81,
             "mAP50_95": 0.42,
             "eval_out": "/tmp/test_eval.json",
+            "test_count_mae": 61.3,
         }
         with tempfile.TemporaryDirectory() as td:
             tdp = Path(td)
@@ -486,7 +486,7 @@ class BenchmarkMatrixTests(unittest.TestCase):
             )
             self.assertEqual(rc, 0)
             mock_invoke.assert_called_once()
-            mock_eval.assert_called_once()
+            mock_hsp_eval.assert_called_once()
             train_obj = json.loads(train_out.read_text("utf-8"))
             self.assertEqual(train_obj["schema_version"], "benchmark_matrix_train.v1")
             run0 = train_obj["runs"][0]

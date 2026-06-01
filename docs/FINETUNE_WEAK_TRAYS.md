@@ -121,7 +121,7 @@ Run **after** P0-5 **`zoo_matrix_p0_5`** completes (`zoo_yolo_only` → [`matrix
 | Step | Action |
 |------|--------|
 | 0 | `./scripts/kill_stray_gpu_jobs.sh` |
-| 1 | P0-5 in [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) (`zoo_matrix_p0_5`) |
+| 1 | P0-5 in [`gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) (`zoo_matrix_p0_5`) |
 | 2 | Post-zoo manifest below |
 | 3 | Keep **`models/best2.pt`** unless a zoo or finetune run beats **61.3** canonical test MAE |
 

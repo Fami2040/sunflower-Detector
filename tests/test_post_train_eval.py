@@ -39,7 +39,7 @@ class PostTrainEvalPolicyTests(unittest.TestCase):
             recorded_weights="/w/best.pt",
             eval_out="/tmp/eval.json",
             manifest="data/manifest.json",
-            default_dataset_name="sunflower-cvat-2500",
+            default_dataset_name="sunflower-cvat-1093",
             dataset_name=None,
             dataset_root=None,
             yolo_data_yaml=None,

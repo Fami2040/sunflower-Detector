@@ -338,7 +338,7 @@ def aug_smoke_index_queue_parity_errors(
     *,
     repo_root: str | Path,
     index_path: str | Path = "configs/experiments/aug_smoke_index.json",
-    manifest_path: str | Path = "configs/experiments/gpu_queue_full.json",
+    manifest_path: str | Path = "configs/experiments/archive/gpu_queue_full.json",
 ) -> list[str]:
     """Every ``gpu_pending`` smoke index row must have a matching ``aug_smoke`` queue job."""
     rr = Path(repo_root).resolve()

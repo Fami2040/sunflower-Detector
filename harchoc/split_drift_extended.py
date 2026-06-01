@@ -124,7 +124,8 @@ def collect_split_extended_stats(
 
     Requires describe_split image readers (deferred import).
     """
-    from scripts.describe_split import _infer_label_path, _read_image_size
+    from harchoc.eval_export import read_image_size
+    from scripts.describe_split import _infer_label_path
 
     root = dataset_root.resolve()
     imgs = list(split_list)
@@ -150,7 +151,7 @@ def collect_split_extended_stats(
             n_read_errors += 1
             continue
         try:
-            w, h = _read_image_size(img_path)
+            w, h = read_image_size(img_path)
         except Exception:
             n_read_errors += 1
             continue

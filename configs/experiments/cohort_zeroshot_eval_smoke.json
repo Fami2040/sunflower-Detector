@@ -1,0 +1,17 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-1093"
+  },
+  "run": {
+    "kind": "eval",
+    "dry_run": true,
+    "weights": "models/best2.pt",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "split_file": "tests/fixtures/cohort_smoke_test.txt",
+    "out": "reports/cohorts/smoke/best2_zeroshot_eval_smoke.json",
+    "imgsz": 1280,
+    "notes": "Smoke: zero-shot counting path on 2-image fixture (now-todos-smoke). Live: --no-dry-run when DATASET_ROOT set."
+  }
+}

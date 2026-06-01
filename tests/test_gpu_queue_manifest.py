@@ -16,7 +16,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import expand_aug_smoke_jobs_from_index, load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        full = repo / "configs/experiments/gpu_queue_full.json"
+        full = repo / "configs/experiments/archive/gpu_queue_full.json"
         m = load_gpu_queue_manifest(full, repo_root=repo)
         self.assertTrue(m.get("aug_smoke_from_index"))
         ids = {j.get("id") for j in m["jobs"]}
@@ -43,7 +43,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_full.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_full.json")
         self.assertEqual(m["schema_version"], "gpu_queue_manifest.v1")
         self.assertGreaterEqual(len(m["jobs"]), 14)
         by_id = {j["id"]: j for j in m["jobs"]}
@@ -70,7 +70,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_full.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_full.json")
         by_id = {j["id"]: j for j in m["jobs"]}
         self.assertNotIn("aug_sweep_15_mosaic0", by_id)
         self.assertEqual(
@@ -104,7 +104,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         arms = {str(a["id"]): a for a in (sweeps.get("arms") or [])}
         self.assertEqual(set(arms), {"close10", "close15", "close25"})
 
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_full.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_full.json")
         by_id = {j["id"]: j for j in m["jobs"]}
         for arm_id, arm in arms.items():
             qid = str(arm.get("queue_job_id") or "")
@@ -121,7 +121,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        aug_pending = repo / "configs/experiments/gpu_queue_aug_pending.json"
+        aug_pending = repo / "configs/experiments/archive/gpu_queue_aug_pending.json"
         m = load_gpu_queue_manifest(aug_pending, repo_root=repo)
         ids = {j.get("id") for j in m["jobs"]}
         self.assertIn("preflight", ids)
@@ -168,7 +168,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_full.json", repo_root=repo)
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_full.json", repo_root=repo)
         amp = next(j for j in m["jobs"] if j.get("id") == "amp_smoke_15ep_on")
         self.assertNotEqual(amp.get("skip"), True)
         reason = str(amp.get("skip_reason") or "")
@@ -178,7 +178,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import _job_train_recipe_fingerprint, load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        full = repo / "configs/experiments/gpu_queue_full.json"
+        full = repo / "configs/experiments/archive/gpu_queue_full.json"
         with tempfile.TemporaryDirectory(dir=repo / "tests") as td:
             index_rel = write_pending_fixture_index(repo, Path(td), ("S14",))
             m = load_manifest_with_index(
@@ -193,7 +193,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import build_job_stages, load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_aug_confirm.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_aug_confirm.json")
         self.assertEqual(len(m["jobs"]), 1)
         job = m["jobs"][0]
         self.assertEqual(job["id"], "aug_confirm_winner_100ep")
@@ -228,7 +228,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import build_job_stages, load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_aug_close_phase_a.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_aug_close_phase_a.json")
         by_id = {j["id"]: j for j in m["jobs"]}
         self.assertIn("preflight", by_id)
         for jid in ("aug_sweep_15_close10", "aug_sweep_15_close25"):
@@ -246,7 +246,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         from harchoc.gpu_queue import build_job_stages, load_gpu_queue_manifest
 
         repo = Path(__file__).resolve().parents[1]
-        m = load_gpu_queue_manifest(repo / "configs/experiments/gpu_queue_aug_close_100ep.json")
+        m = load_gpu_queue_manifest(repo / "configs/experiments/archive/gpu_queue_aug_close_100ep.json")
         by_id = {j["id"]: j for j in m["jobs"]}
         for jid, cfg, run_name in (
             (
@@ -306,7 +306,7 @@ class GpuQueueManifestTests(unittest.TestCase):
 
         repo = Path(__file__).resolve().parents[1]
         m = load_gpu_queue_manifest(
-            repo / "configs/experiments/gpu_queue_full.json", repo_root=repo
+            repo / "configs/experiments/archive/gpu_queue_full.json", repo_root=repo
         )
         job = next(j for j in m["jobs"] if j.get("id") == "aug_confirm_winner_100ep")
         self.assertTrue(job.get("skip"))
@@ -353,7 +353,7 @@ class GpuQueueManifestTests(unittest.TestCase):
         fin_argv = build_job_stages(fin, repo_root=repo)[0]["argv"]
         self.assertTrue(any("finetune_tray_stage1.json" in str(a) for a in fin_argv))
         zoo = load_gpu_queue_manifest(
-            repo / "configs/experiments/gpu_queue_full.json", repo_root=repo
+            repo / "configs/experiments/archive/gpu_queue_full.json", repo_root=repo
         )
         zjob = next(j for j in zoo["jobs"] if j.get("id") == "zoo_matrix_p0_5")
         mh = zjob.get("matrix_hyperparams") or {}
@@ -367,7 +367,7 @@ class GpuQueueManifestTests(unittest.TestCase):
 
         repo = Path(__file__).resolve().parents[1]
         m = load_gpu_queue_manifest(
-            repo / "configs/experiments/gpu_queue_full.json", repo_root=repo
+            repo / "configs/experiments/archive/gpu_queue_full.json", repo_root=repo
         )
         ids = [j["id"] for j in m["jobs"]]
 

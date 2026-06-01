@@ -2,7 +2,7 @@
 
 ## Corpus and imaging
 
-We used a CVAT-annotated corpus of sunflower capitula imaged on a **benchtop tray** under **fixed indoor lighting** at a **single site**. Heads were **dried** before imaging. The public annotation share lists approximately **2500** images (share identifier `y9xGFqCW`). For modeling we used a frozen pool of **1093** images with seed-level bounding boxes.
+We used a CVAT-annotated corpus of **1093** sunflower capitula imaged on a **benchtop tray** under **fixed indoor lighting** at a **single site**. Heads were **dried** before imaging. The annotation share identifier is `y9xGFqCW`. All images carry seed-level bounding boxes under frozen train/validation/test lists.
 
 This design supports high-throughput viability counting under controlled conditions. It does **not** establish field robustness across varieties, growth stages, natural illumination, or geographic sites.
 

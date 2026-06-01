@@ -4,23 +4,9 @@
 **Validated against backlog:** 2026-06-01 · branch `pr/backlog-ci-dataset`  
 **Literature:** [`literature_validated.json`](literature_validated.json) · [`literature_validated.md`](literature_validated.md)
 
-## Integration status (2026-06)
+## Integration status
 
-Repo integration snapshot for manuscript / GPU agents (not a reviewer theme).
-
-| Track | Status | Blocker / note |
-|-------|--------|----------------|
-| **P0-5 zoo** | **3/4 + v10m in flight** | v8m / 11m / 26m complete; **v10m** 100-ep training (not OOM). See [`FRESHNESS.md`](../../reports/manuscript/FRESHNESS.md). |
-| **`matrix_train.json`** | **3/4 MAE ok** | **111.9** / **119.6** / **95.3**; **v10m** pending weights. None beat **best2** **61.3**. |
-| **RT-DETR / external DETR** | **Split** | **Ultralytics RT-DETR-L** @ 1280 batch=1 **OOMs** on 8 GiB (vram probe). **External** DEIM/rtdetrv2: integration/port issues; **D-FINE** reached ~6.7 GiB @ ep 42 on same GPU — not a blanket >8 GiB block. |
-| **Finetune weak trays** | **Queued, not run** | Code + splits wired (**P1-FINETUNE-TRAY** Partial); queue kind **`finetune_tray`**; Methods [§20](#20-manuscript-draft--tray-finetuning-methods--discussion); GPU in [`gpu_queue_post_zoo.json`](../../configs/experiments/gpu_queue_post_zoo.json) after zoo. |
-| **Provenance (`best2`, dataset)** | **Documented** | Weights from [origin `main`](https://github.com/Fami2040/sunflower-Detector); dataset CVAT [`y9xGFqCW`](../../data/manifest.json) — [§0](#0-origin-weights--dataset-not-kaggle) |
-| **Aug (closed)** | **Done** | Literature aug program (S0–S14 + 100 ep) on **same test split** as anchor **best2 61.3** — none beat anchor — [§18](#18-manuscript-draft--augmentation-strategy-methods) |
-| **MS-SOTA table** | **Draft ok** | [`reports/manuscript/tables/zoo_core.md`](../../reports/manuscript/tables/zoo_core.md) — refresh after **v10m** completes (`manuscript-preflight`). |
-| **Headline vs zoo** | **Keep `best2`** | Test count MAE **61.3** @ locked conf until a zoo/finetune row beats it on canonical test. |
-| **Literature DOI audit** | **Done** | 11/11 in registry; GWHD DOI fixed — [`literature_doi_audit_2026-06-01.md`](../../reports/manuscript/literature_doi_audit_2026-06-01.md), [`lit_audit/`](../../reports/manuscript/lit_audit/README.md) |
-
-**Single-GPU order:** kill strays → `zoo_matrix_p0_5` → repro/preflight → domain audit → finetune — [backlog § 4-agent workstream](../../backlog.md#4-agent-workstream-2026-06).
+**Canonical snapshot (GPU, zoo, stubs, smoke commands):** [`status.md`](status.md) — do not duplicate that table here.
 
 **Test ranking mAP50 (~0.18 vs legacy ~0.79):** Narrative-only **0.79** / **0.793** came from training-log / domain-pooled conventions, not current HSP exports. Canonical pooled test mAP50 for `models/best2.pt` is **0.180** in [`eval_test_map.json`](../../reports/hsp/eval_test_map.json) (`export_only: false`, `imgsz=1280`, `max_det=3000`, `data/splits/test.txt`). Reproduce:
 
@@ -56,7 +42,7 @@ Do **not** cite **0.79** as pooled test mAP without reconciling to this path ([`
 |---|-----------------------------------|-------------------------|--------|-----------------|-------|
 | 1 | **Abstract standardization** — purpose / methods / results / conclusions | **MS-ABS** | **MISSING** (manuscript only) | — | No LaTeX in repo |
 | 2 | **Originality / contribution vs crop seed detection** | **MS-ORIG** Done; lit: `grainnet2025`, `lwcd_yolo2025`, fp_taxonomy | **Done** | — | Repo draft §2 + [`originality_contribution_peers.md`](originality_contribution_peers.md); external LaTeX paste = user action |
-| 3 | **SOTA comparison (not only YOLOv8)** | **P0-5**, **MS-SOTA**, **P1-ZOO-PARITY**; **P1-ZOO-READY** Done | **Existing backlog** | — | **P0-5** = `zoo_yolo_only` on 8 GiB; Methods rationale [§19](#19-manuscript-draft--model-selection--sota-zoo-methods--results); **MS-SOTA** blocked until [`matrix_train.json`](../../reports/hsp/matrix_train.json) complete — [Integration status (2026-06)](#integration-status-2026-06) |
+| 3 | **SOTA comparison (not only YOLOv8)** | **P0-5**, **MS-SOTA**, **P1-ZOO-PARITY**; **P1-ZOO-READY** Done | **Existing backlog** | — | **P0-5** = `zoo_yolo_only` on 8 GiB; Methods [§19](#19-manuscript-draft--model-selection--sota-zoo-methods--results); **MS-SOTA** blocked until [`matrix_train.json`](../../reports/hsp/matrix_train.json) complete — [status.md](status.md) |
 | 4 | **Generalization** — multi-site, field light, variety, maturity | **MS-GEN** Partial; **P1-DOMAIN-EVAL** Done; **P1-DOMAIN-TAGS** | **Partial** | — | Tray/session + count MAE @ locked conf; field tags open |
 | 5 | **Reproducibility** | **MS-REPRO** Done; **P1-ZOO-PROV** Next | **Partial** | — | `experiment.py repro` + bundle JSON |
 | 6 | **Literature review depth** | **MS-LIT** Done; [`related_work_outline.md`](related_work_outline.md) + `docs/research/*` + validated registry | **Done** | **LIT-VALIDATE** (ongoing) | Repo draft Done ([§6 cite table](#6-manuscript-draft--related-work--literature-review-depth)); external LaTeX paste = user action |
@@ -269,12 +255,12 @@ Suggested Methods sentence: *“Manual validation comprised n=50 test images sam
 | Topic | Fact | Evidence |
 |-------|------|----------|
 | **`best2.pt`** | Trained in **[Fami2040/sunflower-Detector](https://github.com/Fami2040/sunflower-Detector)** (`main`), copied into this fork | [`docs/ORIGIN_MAIN_AND_DATASET.md`](../ORIGIN_MAIN_AND_DATASET.md), [`configs/origin/public_yolov8_train_reference.json`](../../configs/origin/public_yolov8_train_reference.json) |
-| **Dataset** | **CVAT ~2500**, share **`y9xGFqCW`** — tracked [`data/manifest.json`](../../data/manifest.json) | [`data/README.md`](../../data/README.md) |
+| **Dataset** | **CVAT 1093**, share **`y9xGFqCW`** — tracked [`data/manifest.json`](../../data/manifest.json) | [`data/README.md`](../../data/README.md) |
 | **Kaggle `dataset1`** | Development convenience in upstream script; **not** the published corpus in this repo | Origin reference JSON `dataset_note` |
 | **Aug comparison program** | S0–S14 + 100 ep: **new trains** with literature tactics; **same** test + locked conf as anchor `best2` | [`reports/aug_smoke/README.md`](../../reports/aug_smoke/README.md) |
 | **Reviewer criticisms** | Full text | [`reports/reviewer2.md`](../../reports/reviewer2.md) |
 
-Suggested Methods sentence: *“The detector weights (`best2.pt`) were obtained from the public training pipeline (YOLOv8m, 100 epochs, image size 1280, conservative augmentation; repository Fami2040/sunflower-Detector). Counting metrics in this study use the CVAT-annotated corpus (~2500 images, share y9xGFqCW) with frozen train/val/test lists; held-out test count MAE is 61.3 seeds/image at a validation-locked confidence of 0.15.”*
+Suggested Methods sentence: *“The detector weights (`best2.pt`) were obtained from the public training pipeline (YOLOv8m, 100 epochs, image size 1280, conservative augmentation; repository Fami2040/sunflower-Detector). Counting metrics in this study use the CVAT-annotated corpus (1093 images, share y9xGFqCW) with frozen train/val/test lists; held-out test count MAE is 61.3 seeds/image at a validation-locked confidence of 0.15.”*
 
 ---
 
@@ -302,7 +288,7 @@ Suggested Methods sentence: *“We held the legacy detector fixed as the anchor 
 
 **SOTA comparison (8 GiB GPU):** **`zoo_yolo_only`** (four YOLO M-scale rows × 100 epochs @ 1280). Completed test count MAE at locked conf: **yolov8m 111.9**, **yolo11m 119.6**, **yolo26m 95.3** — all worse than anchor **`best2` 61.3** ([`matrix_train.json`](../../reports/hsp/matrix_train.json)). **YOLOv10m** was finishing 100-ep training at draft date (1-ep VRAM ~3.3 GiB; not OOM-deferred). **Ultralytics RT-DETR-L** train @ 1280 batch=1 **OOMs** on 8 GiB (measured probe). External DETR: integration/port issues; **D-FINE** reached ~6.7 GiB peak on same GPU. Snapshot: [`reports/manuscript/FRESHNESS.md`](../../reports/manuscript/FRESHNESS.md).
 
-**Evidence:** [`eval_test_map.json`](../../reports/hsp/eval_test_map.json), [`matrix_train.json`](../../reports/hsp/matrix_train.json), [`zoo_comparison_design.md`](../zoo_comparison_design.md), [`gpu_queue_full.json`](../../configs/experiments/gpu_queue_full.json) (`zoo_matrix_p0_5`).
+**Evidence:** [`eval_test_map.json`](../../reports/hsp/eval_test_map.json), [`matrix_train.json`](../../reports/hsp/matrix_train.json), [`zoo_comparison_design.md`](../zoo_comparison_design.md), [`gpu_queue_full.json`](../../configs/experiments/archive/gpu_queue_full.json) (`zoo_matrix_p0_5`).
 
 Suggested Methods sentence: *“The reported detector is YOLOv8m (`best2.pt`) chosen by minimum held-out test count MAE at a validation-locked confidence; supplementary multi-architecture runs (YOLOv10/11/26 at 1280) use the same HSP protocol; Ultralytics RT-DETR training at 1280 is deferred on 8 GiB GPUs (VRAM), while external DETR baselines depend on stack integration.”*
 

@@ -296,7 +296,7 @@ def resolve_parity_image_sample(
 
             spec = resolve_dataset(
                 manifest_path=optional_str(manifest_path) or "data/manifest.json",
-                default_dataset_name=optional_str(default_dataset_name) or "sunflower-cvat-2500",
+                default_dataset_name=optional_str(default_dataset_name) or "sunflower-cvat-1093",
                 dataset_name=optional_str(dataset_name),
                 dataset_root=None,
                 yolo_data_yaml=optional_str(yolo_data_yaml),

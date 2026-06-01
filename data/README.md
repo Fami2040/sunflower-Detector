@@ -1,6 +1,6 @@
 # Data (local)
 
-**Canonical corpus:** CVAT-annotated sunflower seed dataset (~**2500** images), share **`y9xGFqCW`** — see [`manifest.json`](manifest.json) (`sunflower-cvat-2500`). Modeling pool: **1093** images with frozen splits.
+**Canonical corpus:** CVAT-annotated sunflower seed dataset (**1093** images), share **`y9xGFqCW`** — see [`manifest.json`](manifest.json) (`sunflower-cvat-1093`) and frozen splits below.
 
 **Manuscript Methods text:** [`reports/manuscript/dataset.md`](../reports/manuscript/dataset.md).  
 **Reproducibility:** [`manifest.json`](manifest.json) + [`splits/`](splits/) SHA256 + [`docs/ORIGIN_MAIN_AND_DATASET.md`](../docs/ORIGIN_MAIN_AND_DATASET.md).
@@ -65,7 +65,7 @@ See `data/splits/README.md` for policy, seed, and SHA256.
 After extract:
 
 ```bash
-export DATASET_ROOT="$(python -c 'from harchoc.datasets import dataset_root_from_manifest; print(dataset_root_from_manifest(dataset_name=\"sunflower-cvat-2500\"))')"
+export DATASET_ROOT="$(python -c 'from harchoc.datasets import dataset_root_from_manifest; print(dataset_root_from_manifest(dataset_name=\"sunflower-cvat-1093\"))')"
 mkdir -p "$DATASET_ROOT/data/splits"
 cp data/splits/{train,val,test}.txt "$DATASET_ROOT/data/splits/"
 cp data/data.yaml.example "$DATASET_ROOT/data.yaml"
@@ -79,7 +79,7 @@ Update `data/manifest.json` (tracked) with source URL, archive path, and `extrac
 
 1. `DATASET_ROOT` — dataset root directory  
 2. `YOLO_DATA_YAML` — path to `data.yaml`  
-3. `DATASET_NAME` — entry in `data/manifest.json` (default `sunflower-cvat-2500`)
+3. `DATASET_NAME` — entry in `data/manifest.json` (default `sunflower-cvat-1093`)
 
 Helper: `harchoc.datasets.resolve_dataset`.
 

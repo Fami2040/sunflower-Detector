@@ -46,9 +46,11 @@ class TestDocIndexParity(unittest.TestCase):
     def test_experiments_md_points_at_canonical_index_and_queue(self) -> None:
         text = EXPERIMENTS.read_text(encoding="utf-8")
         self.assertIn("aug_smoke_index.json", text)
-        self.assertIn("gpu_queue_aug_pending.json", text)
+        self.assertIn("gpu_queue_post_zoo.json", text)
+        self.assertIn("archive/gpu_queue_aug_pending.json", text)
         self.assertIn("./scripts/run_gpu_queue.sh", text)
-        self.assertIn("backlog.md#runbook-gpu", text)
+        self.assertIn("backlog.md", text)
+        self.assertTrue("backlog.md#" in text or "status.md" in text)
 
     def test_aug_dedup_canonical_registry_and_doc_links(self) -> None:
         """Preds/recipe dedup audit lives in aug_smoke_index equivalence_classes, not orphan markdown."""

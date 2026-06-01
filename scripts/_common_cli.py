@@ -58,7 +58,7 @@ def add_dataset_args(p: argparse.ArgumentParser, *, suppress_defaults: bool = Fa
     )
     p.add_argument(
         "--default-dataset-name",
-        default=dflt if suppress_defaults else "sunflower-cvat-2500",
+        default=dflt if suppress_defaults else "sunflower-cvat-1093",
         help="Dataset name used if DATASET_NAME is not set.",
     )
     p.add_argument(

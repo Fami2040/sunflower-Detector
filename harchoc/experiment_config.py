@@ -101,7 +101,7 @@ def normalize_config(cfg: dict[str, Any], repo_root: str | os.PathLike) -> dict[
     """
     rr = Path(repo_root).expanduser().resolve()
     manifest_path = _repo_abspath(rr, cfg.get("manifest")) or (rr / "data" / "manifest.json").resolve()
-    default_dataset_name = str(cfg.get("default_dataset_name") or "sunflower-cvat-2500")
+    default_dataset_name = str(cfg.get("default_dataset_name") or "sunflower-cvat-1093")
 
     dataset_env = cfg.get("dataset_env")
     environ = dataset_env if isinstance(dataset_env, dict) else None
@@ -144,7 +144,7 @@ def normalize_experiment_spec(cfg: dict[str, Any], repo_root: str | os.PathLike)
         "schema_version": "experiments.v1",
         "dataset": {
           "manifest": "data/manifest.json",
-          "default_dataset_name": "sunflower-cvat-2500",
+          "default_dataset_name": "sunflower-cvat-1093",
           "dataset_env": {"DATASET_ROOT": "...", "YOLO_DATA_YAML": "...", "DATASET_NAME": "..."}  // optional
         },
         "run": {

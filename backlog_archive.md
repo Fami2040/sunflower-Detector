@@ -69,10 +69,10 @@ mamba run -n harchoc python scripts/check_gpu.py --json-out reports/hsp/gpu_chec
 
 | Phase | Manifest / job | Status |
 |-------|----------------|--------|
-| Aug confirm | [`gpu_queue_aug_confirm.json`](configs/experiments/gpu_queue_aug_confirm.json) | Done — **64.1** MAE |
-| Aug smokes S0–S14 + Tier 2 | [`gpu_queue_aug_pending.json`](configs/experiments/gpu_queue_aug_pending.json) | Done 2026-05-30 |
-| RT-DETR refresh | [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) | `skip_if` on 8 GiB — **P1-RTDETR-COUNT-REFRESH** |
-| **Zoo (P0-5)** | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) (`matrix_group: zoo_yolo_only`) | **Next** (~**480** min, 4 YOLO rows) |
+| Aug confirm | [`gpu_queue_aug_confirm.json`](configs/experiments/archive/gpu_queue_aug_confirm.json) | Done — **64.1** MAE |
+| Aug smokes S0–S14 + Tier 2 | [`gpu_queue_aug_pending.json`](configs/experiments/archive/gpu_queue_aug_pending.json) | Done 2026-05-30 |
+| RT-DETR refresh | [`gpu_queue_full.json`](configs/experiments/archive/gpu_queue_full.json) | `skip_if` on 8 GiB — **P1-RTDETR-COUNT-REFRESH** |
+| **Zoo (P0-5)** | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/archive/gpu_queue_full.json) (`matrix_group: zoo_yolo_only`) | **Next** (~**480** min, 4 YOLO rows) |
 | **Post-zoo** | [`gpu_queue_post_zoo.json`](configs/experiments/gpu_queue_post_zoo.json) | **Queued** — repro/preflight → domain audit → finetune weak trays (after P0-5) |
 | CV 5-fold / `zoo_scale` / full `zoo_core` DETR | full manifest tail or >8 GiB | Defer on 8 GiB |
 

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-# Sunflower CVAT-2500 frozen splits (describe_split on full dataset, 2026-05).
+# Sunflower CVAT-1093 frozen splits (describe_split on full dataset, 2026-05).
 SUNFLOWER_DOCUMENTED_PEAK_GT_BOXES_PER_IMAGE = 1015
 
 # Ultralytics RT-DETR decoder default unless overridden in train kwargs.

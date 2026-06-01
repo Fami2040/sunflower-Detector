@@ -5,7 +5,7 @@
   "upstream_branch": "main",
   "artifact": "models/best2.pt",
   "historical_run_name": "sunflower_seed_detection_v1",
-  "dataset_note": "Upstream script used Kaggle linaaabrahim/dataset1 during development. Canonical HARCHOC dataset is CVAT share y9xGFqCW — see data/manifest.json (sunflower-cvat-2500).",
+  "dataset_note": "Upstream script used Kaggle linaaabrahim/dataset1 during development. Canonical HARCHOC dataset is CVAT share y9xGFqCW — see data/manifest.json (sunflower-cvat-1093).",
   "ultralytics_train": {
     "model": "yolov8m.pt",
     "epochs": 100,

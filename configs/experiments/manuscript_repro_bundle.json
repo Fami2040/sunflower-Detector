@@ -15,9 +15,9 @@
   "aug_config_role": "codified_recipe_approximating_origin_train_not_proof_of_provenance",
   "dataset": {
     "manifest": "data/manifest.json",
-    "default_dataset_name": "sunflower-cvat-2500",
+    "default_dataset_name": "sunflower-cvat-1093",
     "share_url": "https://izba-memes.ru/share/y9xGFqCW",
-    "note": "Canonical corpus is CVAT ~2500 images (manifest); not Kaggle hub as published dataset."
+    "note": "Canonical corpus is CVAT 1093 images (manifest); not Kaggle hub as published dataset."
   },
   "repo_splits": {
     "splits_dir": "data/splits",

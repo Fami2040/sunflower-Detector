@@ -1,0 +1,6 @@
+{
+  "extends": "configs/experiments/finetune_tray_stage1.json",
+  "epochs": 1,
+  "patience": 1,
+  "notes": "Smoke: 1-epoch tray finetune wiring (gpu_queue_post_zoo_smoke.json, now-todos-smoke --stage gpu)."
+}

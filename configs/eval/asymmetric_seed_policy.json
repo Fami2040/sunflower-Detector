@@ -1,9 +1,9 @@
 {
   "schema_version": "asymmetric_seed_policy.v1",
-  "description": "Eval policy for asymmetric developed vs aborted seed prevalence on sunflower-cvat-2500. Manuscript headline metrics use the frozen test split only; val is for threshold tuning.",
+  "description": "Eval policy for asymmetric developed vs aborted seed prevalence on sunflower-cvat-1093. Manuscript headline metrics use the frozen test split only; val is for threshold tuning.",
   "dataset": {
     "manifest": "data/manifest.json",
-    "default_dataset_name": "sunflower-cvat-2500"
+    "default_dataset_name": "sunflower-cvat-1093"
   },
   "classes": {
     "0": "developed",

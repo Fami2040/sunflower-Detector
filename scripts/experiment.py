@@ -750,6 +750,35 @@ def main(argv: list[str] | None = None) -> int:
     pe.add_argument("--split-file", default=argparse.SUPPRESS)
     pe.add_argument("--out", default=argparse.SUPPRESS)
 
+    pts = sp.add_parser("threshold-sweep", help="Val confidence sweep; lock conf for test (HSP).")
+    add_dataset_args(pts, suppress_defaults=True)
+    add_dry_run_arg(pts, suppress_defaults=True)
+    pts.add_argument("--weights", default=argparse.SUPPRESS)
+    pts.add_argument("--out", default=argparse.SUPPRESS)
+    pts.add_argument("--gt-json", default=argparse.SUPPRESS)
+    pts.add_argument("--preds-json", default=argparse.SUPPRESS)
+    pts.add_argument("--locked-conf-from", default=argparse.SUPPRESS)
+    pts.add_argument("--select", default=argparse.SUPPRESS)
+    pts.add_argument("--split-file", default=argparse.SUPPRESS)
+
+    pea = sp.add_parser("error-analysis", help="Error analysis + optional TIDE/confusion from HSP JSON.")
+    add_dataset_args(pea, suppress_defaults=True)
+    add_dry_run_arg(pea, suppress_defaults=True)
+    pea.add_argument("--weights", default=argparse.SUPPRESS)
+    pea.add_argument("--out", default=argparse.SUPPRESS)
+    pea.add_argument("--report", default=argparse.SUPPRESS)
+    pea.add_argument("--gt-json", default=argparse.SUPPRESS)
+    pea.add_argument("--preds-json", default=argparse.SUPPRESS)
+    pea.add_argument("--locked-conf-from", default=argparse.SUPPRESS)
+
+    psd = sp.add_parser("split-drift", help="Train/val/test proxy drift report (HSP P0).")
+    add_dataset_args(psd, suppress_defaults=True)
+    add_dry_run_arg(psd, suppress_defaults=True)
+    psd.add_argument("--splits-dir", default=argparse.SUPPRESS)
+    psd.add_argument("--out", default=argparse.SUPPRESS)
+    psd.add_argument("--with-ks", action="store_true", default=argparse.SUPPRESS)
+    psd.add_argument("--extended", action="store_true", default=argparse.SUPPRESS)
+
     # `benchmark` legacy args
     pb = sp.add_parser("benchmark", help="Run benchmark matrix harness.")
     add_dataset_args(pb, suppress_defaults=True)
@@ -1093,7 +1122,7 @@ def main(argv: list[str] | None = None) -> int:
     pgq.add_argument(
         "--manifest",
         required=True,
-        help="Path to gpu_queue_manifest.v1 JSON (e.g. configs/experiments/gpu_queue_full.json).",
+        help="Path to gpu_queue_manifest.v1 JSON (e.g. configs/experiments/archive/gpu_queue_full.json).",
     )
     add_dry_run_arg(pgq, suppress_defaults=True)
     pgq.add_argument(
@@ -1215,6 +1244,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Also write optional .tex fragments per table.",
     )
 
+    pnts = sp.add_parser(
+        "now-todos-smoke",
+        help="Run testable smoke checks for now_todos.md (CPU default; GPU with HARCHOC_RUN_GPU_SMOKE=1).",
+    )
+    pnts.add_argument(
+        "--bundle",
+        default="configs/experiments/now_todos_smoke_bundle.json",
+        help="now_todos_smoke_bundle.v1 JSON.",
+    )
+    pnts.add_argument(
+        "--stage",
+        default="cpu",
+        choices=("verify", "cpu", "gpu", "all"),
+        help="Stage group to run (default cpu).",
+    )
+
     pac = sp.add_parser(
         "aug-compare",
         help="Aug comparative analysis JSON, figure, and narrative from index + summaries (CPU-only).",
@@ -1279,6 +1324,21 @@ def main(argv: list[str] | None = None) -> int:
         from scripts.eval import main as legacy_main
 
         return legacy_main(argv_for_eval(merged_fields))
+    if cmd == "threshold-sweep":
+        from harchoc.experiment_argv import argv_for_threshold_sweep
+        from scripts.threshold_sweep import main as legacy_main
+
+        return legacy_main(argv_for_threshold_sweep(merged_fields))
+    if cmd == "error-analysis":
+        from harchoc.experiment_argv import argv_for_error_analysis
+        from scripts.error_analysis import main as legacy_main
+
+        return legacy_main(argv_for_error_analysis(merged_fields))
+    if cmd == "split-drift":
+        from harchoc.experiment_argv import argv_for_split_drift
+        from scripts.split_drift import main as legacy_main
+
+        return legacy_main(argv_for_split_drift(merged_fields))
     if cmd == "benchmark":
         from harchoc.experiment_argv import argv_for_benchmark
         from scripts.benchmark_matrix import main as legacy_main
@@ -1423,6 +1483,24 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if cmd == "tables-repro":
         return _run_tables_repro(merged_fields)
+    if cmd == "now-todos-smoke":
+        from harchoc.now_todos_smoke import run_now_todos_smoke
+
+        repo_root = Path(__file__).resolve().parents[1]
+        bundle = str(merged_fields.get("bundle") or cli_fields.get("bundle") or "")
+        stage = str(merged_fields.get("stage") or cli_fields.get("stage") or "cpu")
+        payload, rc = run_now_todos_smoke(
+            repo_root,
+            bundle_path=bundle or "configs/experiments/now_todos_smoke_bundle.json",
+            stage_group=stage,
+        )
+        print(
+            f"now-todos-smoke [{stage}]: {payload['overall_status']} "
+            f"(ok={payload['n_ok']} skip={payload['n_skip']} fail={payload['n_fail']})"
+        )
+        for row in payload.get("stages") or []:
+            print(f"  {row['id']}: {row['status']} — {row['detail'][:120]}")
+        return rc
     if cmd == "aug-compare":
         return _run_aug_compare(merged_fields)
     if cmd == "gpu-queue":

@@ -161,7 +161,8 @@ def _try_ks_payload(a: list[float], b: list[float]) -> dict[str, Any]:
 def _collect_proxy_series(
     *, dataset_root: Path, split_list: list[str], limit: int
 ) -> tuple[list[float], list[float], list[float]]:
-    from scripts.describe_split import _infer_label_path, _parse_yolo_label_file, _read_image_size
+    from harchoc.eval_export import read_image_size
+    from scripts.describe_split import _infer_label_path, _parse_yolo_label_file
 
     widths: list[float] = []
     heights: list[float] = []
@@ -173,7 +174,7 @@ def _collect_proxy_series(
         if not img.is_file():
             continue
         with capture_failure(f"read image size {img}") as cap:
-            w, h = _read_image_size(img)
+            w, h = read_image_size(img)
         if cap.failed:
             fail_or_warn(f"{cap.context}: {cap.exc_type}: {cap.exc_msg}")
             continue
@@ -238,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--out",
-        default="reports/split_drift/report.json",
+        default="reports/hsp/split_drift_p0.json",
         help="Where to write JSON report (parent dir created as needed).",
     )
     p.add_argument(

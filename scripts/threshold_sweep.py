@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     add_dry_run_arg(p)
     add_light_mode_arg(p)
     p.add_argument("--weights", default=HSP_DETECTION_WEIGHTS, help="Path to model weights.")
-    p.add_argument("--out", default="reports/thresholds/sweep.json", help="Where to write sweep JSON.")
+    p.add_argument("--out", default="reports/hsp/threshold_sweep.json", help="Where to write sweep JSON.")
     p.add_argument("--csv-out", default="", help="Optional: write compact CSV alongside JSON.")
     p.add_argument("--min", dest="tmin", type=float, default=0.05, help="Min threshold.")
     p.add_argument("--max", dest="tmax", type=float, default=0.95, help="Max threshold.")
@@ -304,39 +304,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = p.parse_args(argv)
 
-    # Merge all --config entries (left-to-right). Expected section: threshold_sweep.
-    config_obj: dict[str, Any] = {}
-    for raw in args.config:
-        cfg = load_config_json(raw)
-        config_obj = merge_experiment_config(config=config_obj, cli=cfg)
-    dataset_cfg = config_obj.get("dataset")
-    dataset_cfg_obj = dataset_cfg if isinstance(dataset_cfg, dict) else {}
-    sweep_cfg_obj = script_section_from_config(config_obj, "threshold_sweep")
+    from harchoc.experiment_cli import (
+        apply_dataset_args,
+        merge_config_objects,
+        pick_cli_or_section,
+        section_and_dataset_from_config,
+    )
+
+    config_obj = merge_config_objects(list(args.config))
+    sweep_cfg_obj, dataset_cfg_obj = section_and_dataset_from_config(config_obj, "threshold_sweep")
+    apply_dataset_args(args, dataset_cfg_obj)
 
     def _pick(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name)
-        if cli_v != default:
-            return cli_v
-        if name in sweep_cfg_obj:
-            return sweep_cfg_obj[name]
-        return default
-
-    def _pick_dataset(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name)
-        if cli_v != default:
-            return cli_v
-        if name in dataset_cfg_obj:
-            return dataset_cfg_obj[name]
-        return default
-
-    args.manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
-    args.default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    args.dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
-    args.dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
-    args.yolo_data_yaml = optional_str(_pick_dataset("yolo_data_yaml", default=None))
+        return pick_cli_or_section(args, name, section_cfg=sweep_cfg_obj, default=default)
 
     args.weights = str(_pick("weights", default=HSP_DETECTION_WEIGHTS))
-    args.out = str(_pick("out", default="reports/thresholds/sweep.json"))
+    args.out = str(_pick("out", default="reports/hsp/threshold_sweep.json"))
     args.csv_out = str(_pick("csv_out", default=""))
     args.tmin = pick_float(_pick("tmin", default=0.05), default=0.05)
     args.tmax = pick_float(_pick("tmax", default=0.95), default=0.95)

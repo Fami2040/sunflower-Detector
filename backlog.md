@@ -6,11 +6,11 @@ Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **B
 |--------|--------|
 | Headline metric | Test **count MAE** @ val-locked conf |
 | **best2** | **61.3** MAE @ conf ~0.15 — [`ORIGIN_MAIN_AND_DATASET.md`](docs/ORIGIN_MAIN_AND_DATASET.md) |
-| Dataset | CVAT ~2500 — [`data/manifest.json`](data/manifest.json) (`y9xGFqCW`) |
+| Dataset | CVAT **1093** — [`data/manifest.json`](data/manifest.json) (`y9xGFqCW`) |
 | Aug 100 ep confirm | **64.1** — did not beat best2 |
-| **Next GPU job** | `zoo_matrix_p0_5` — [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) |
+| **Next GPU job** | P0-5 → [`gpu_queue_post_zoo.json`](configs/experiments/gpu_queue_post_zoo.json) |
 
-**Doc map:** [EXPERIMENTS](docs/EXPERIMENTS.md) · [reports/manuscript](reports/manuscript/) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer2](reports/reviewer2.md) · [backlog_archive.md](backlog_archive.md)
+**Doc map:** [EXPERIMENTS](docs/EXPERIMENTS.md) · [**status**](docs/manuscript/status.md) · [gap map](docs/manuscript/reviewer_comments_backlog_gap.md) · [reports/manuscript](reports/manuscript/) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer2](reports/reviewer2.md) · [backlog_archive.md](backlog_archive.md)
 
 **Convention:** Active work in [Now](#now) only. Completed items: [backlog_archive.md](backlog_archive.md).
 
@@ -35,25 +35,27 @@ Classes **0 = developed**, **1 = aborted**. Splits [`data/splits/*.txt`](data/sp
 
 ## Now
 
+**Checklist:** [`docs/manuscript/status.md`](docs/manuscript/status.md)
+
 | ID | Pri | Status | Next |
 |----|-----|--------|------|
-| **P0-5** | P0 | **Next** | `zoo_yolo_only` 4×100 ep → [`matrix_train.json`](reports/hsp/matrix_train.json) |
-| **P1-ZOO-PARITY** | P1 | Next | Count MAE columns after P0-5 |
-| **DATA-ACQ-GEN** | P1 | Next | Weak-tray acquisition — [archive § Data](backlog_archive.md) |
-| **P1-FINETUNE-TRAY** | P1 | Partial | GPU stages — [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) |
-| **P1-RTDETR-COUNT-REFRESH** | P1 | Next | Refresh RT-DETR count MAE or document skip |
-| **MS-SOTA** | P1 | Blocked | P0-5 complete |
-| **MS-GEN** | P1 | Partial | Tray spread narrative |
-| **MS-ABS** | P2 | Next | Use [`reports/manuscript/abstract.md`](reports/manuscript/abstract.md) |
-| **LIT-VALIDATE** | P2 | **Partial Done** | 11/11 DOI audit 2026-06-01 — [`literature_doi_audit_2026-06-01.md`](reports/manuscript/literature_doi_audit_2026-06-01.md); cite only from [`literature_validated.json`](docs/manuscript/literature_validated.json) |
+| **P0-5** | P0 | **In progress** | v10m training; repair [`matrix_train.json`](reports/hsp/matrix_train.json) when idle |
+| **P1-ZOO-PARITY** | P1 | Next | After P0-5 — `tables-repro` / MS-SOTA |
+| **DATA-ACQ-GEN** | P1 | Next | +50 year cohort — [`data/cohorts/README.md`](data/cohorts/README.md); zero-shot before train |
+| **P1-FINETUNE-TRAY** | P1 | Queued | [`gpu_queue_post_zoo.json`](configs/experiments/gpu_queue_post_zoo.json) (gated on P0-5) |
+| **P1-RTDETR-COUNT-REFRESH** | P1 | Skip (8 GiB) | Document deferral |
+| **MS-SOTA** | P1 | Partial | 3/4 zoo MAE; prose + v10m footnote |
+| **MS-GEN** | P1 | CPU now | [`domain_count_mae.json`](reports/domains/domain_count_mae.json) |
+| **MS-ABS** | P2 | Next | [`abstract.md`](reports/manuscript/abstract.md) |
+| **LIT-VALIDATE** | P2 | Done | [`literature_validated.json`](docs/manuscript/literature_validated.json) |
 
-**GPU order:** `kill_stray_gpu_jobs.sh` → **P0-5** → `gpu_queue_post_zoo.json` (domain audit, finetune). Details: [EXPERIMENTS § GPU queue](docs/EXPERIMENTS.md#gpu-sequential-queue).
+**GPU order:** finish **P0-5** → `run_gpu_queue.sh --manifest configs/experiments/gpu_queue_post_zoo.json --run`. Details: [EXPERIMENTS § GPU queue](docs/EXPERIMENTS.md#gpu-sequential-queue).
 
 ---
 
 ## Aug (closed)
 
-Anchor **61.3**; best smoke **68.9**; 100-ep confirm **64.1**; mosaic-off rejected **147.4** (S2; LWCD reports mosaic disabled for **corn**, not evidence for sunflower — [`lit_audit/lwcd_yolo2025.md`](reports/manuscript/lit_audit/lwcd_yolo2025.md)). Leaderboard: [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md). Full table: [archive § Aug](backlog_archive.md).
+Anchor **61.3**; best smoke **68.9**; 100-ep confirm **64.1**; mosaic-off rejected **147.4** (S2; LWCD reports mosaic disabled for **corn**, not evidence for sunflower — [`lit_audit/lwcd_yolo2025.md`](reports/manuscript/lit_audit/lwcd_yolo2025.md)). Leaderboard: [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md); registry [`configs/experiments/aug_smoke_index.json`](configs/experiments/aug_smoke_index.json) (`equivalence_classes`). Full table: [archive § Aug](backlog_archive.md).
 
 ---
 

@@ -108,6 +108,74 @@ def argv_for_benchmark(fields: dict[str, Any]) -> list[str]:
     return out
 
 
+def argv_for_threshold_sweep(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/threshold_sweep.py`` via ``experiment.py threshold-sweep``."""
+    out: list[str] = []
+    out += _argv_dataset(fields)
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _bool_flag("--light", fields.get("light"))
+    out += _opt("--weights", fields.get("weights"))
+    out += _opt("--out", fields.get("out"))
+    out += _opt("--csv-out", fields.get("csv_out"))
+    out += _opt("--gt-json", fields.get("gt_json"))
+    out += _opt("--preds-json", fields.get("preds_json"))
+    out += _opt("--split-file", fields.get("split_file"))
+    out += _opt("--locked-conf-from", fields.get("locked_conf_from"))
+    out += _opt("--sweep-from", fields.get("sweep_from"))
+    out += _opt("--select", fields.get("select"))
+    out += _opt("--iou", fields.get("iou"))
+    out += _opt("--min", fields.get("tmin"))
+    out += _opt("--max", fields.get("tmax"))
+    out += _opt("--steps", fields.get("steps"))
+    out += _opt("--fixed-conf", fields.get("fixed_conf"))
+    out += _opt("--fp-budget-sweep-out", fields.get("fp_budget_sweep_out"))
+    out += _opt_repeat("--fp-budget-grid", fields.get("fp_budget_grid"))
+    out += _bool_flag("--allow-test-tuning", fields.get("allow_test_tuning"))
+    out += _bool_flag("--class-agnostic", fields.get("class_agnostic"))
+    out += _bool_flag("--calibration-metrics", fields.get("calibration_metrics"))
+    out += _opt("--calibrate", fields.get("calibrate"))
+    return out
+
+
+def argv_for_error_analysis(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/error_analysis.py`` via ``experiment.py error-analysis``."""
+    out: list[str] = []
+    out += _argv_dataset(fields)
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--weights", fields.get("weights"))
+    out += _opt("--out", fields.get("out"))
+    out += _opt("--report", fields.get("report"))
+    out += _opt("--gt-json", fields.get("gt_json"))
+    out += _opt("--preds-json", fields.get("preds_json"))
+    out += _opt("--locked-conf-from", fields.get("locked_conf_from"))
+    out += _opt("--conf", fields.get("conf"))
+    out += _opt("--iou", fields.get("iou"))
+    out += _opt("--iou-bg", fields.get("iou_bg"))
+    out += _opt("--tide-out", fields.get("tide_out"))
+    out += _opt("--confusion-matrix-out", fields.get("confusion_matrix_out"))
+    out += _bool_flag("--export-fp-crops", fields.get("export_fp_crops"))
+    out += _opt("--fp-crops-dir", fields.get("fp_crops_dir"))
+    return out
+
+
+def argv_for_split_drift(fields: dict[str, Any]) -> list[str]:
+    """Argv tail for ``scripts/split_drift.py`` via ``experiment.py split-drift``."""
+    out: list[str] = []
+    out += _argv_dataset(fields)
+    out += _bool_flag("--dry-run", fields.get("dry_run"))
+    out += _opt("--splits-dir", fields.get("splits_dir"))
+    out += _opt("--out", fields.get("out"))
+    out += _bool_flag("--with-ks", fields.get("with_ks"))
+    out += _opt("--ks-limit", fields.get("ks_limit"))
+    out += _opt("--acceptance-config", fields.get("acceptance_config"))
+    out += _bool_flag("--emit-plots", fields.get("emit_plots"))
+    out += _opt("--plots-dir", fields.get("plots_dir"))
+    out += _bool_flag("--extended", fields.get("extended"))
+    out += _opt("--extended-limit", fields.get("extended_limit"))
+    out += _opt("--catalog", fields.get("catalog"))
+    return out
+
+
 def argv_for_eval(fields: dict[str, Any]) -> list[str]:
     out: list[str] = []
     out += _argv_dataset(fields)

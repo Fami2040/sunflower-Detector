@@ -1,0 +1,103 @@
+{
+  "schema_version": "now_todos_smoke_bundle.v1",
+  "description": "Runnable smoke checks for docs/manuscript/now_todos.md pending items. CI runs --stage cpu; GPU stages need HARCHOC_RUN_GPU_SMOKE=1.",
+  "report_out": "reports/manuscript/now_todos_smoke.json",
+  "stages": {
+    "verify": [
+      {
+        "id": "config_paths",
+        "type": "config_paths_exist",
+        "paths": [
+          "configs/experiments/gpu_queue_zoo_p0_5.json",
+          "configs/experiments/gpu_queue_post_zoo.json",
+          "configs/experiments/gpu_queue_post_zoo_smoke.json",
+          "configs/experiments/archive/gpu_queue_full.json",
+          "configs/experiments/finetune_tray_smoke_1ep.json",
+          "configs/experiments/cohort_zeroshot_eval_smoke.json",
+          "tests/fixtures/cohort_smoke_test.txt"
+        ]
+      },
+      {
+        "id": "matrix_train_gate",
+        "type": "matrix_train_gate",
+        "train_out": "reports/hsp/matrix_train.json",
+        "matrix_group": "zoo_yolo_only",
+        "accept_skipped_no_weights": false,
+        "expect_blocked": true
+      }
+    ],
+    "cpu": [
+      {
+        "id": "tables_repro",
+        "type": "experiment",
+        "command": "tables-repro",
+        "kwargs": {"dry_run": false}
+      },
+      {
+        "id": "domain_tray_audit",
+        "type": "experiment",
+        "command": "domain-tray-audit",
+        "kwargs": {
+          "out": "reports/domains/weak_tray_plan_smoke.json",
+          "count_mae": "reports/domains/domain_count_mae.json"
+        },
+        "skip_if_missing": ["reports/domains/domain_count_mae.json"]
+      },
+      {
+        "id": "reviewer2_repro",
+        "type": "experiment",
+        "command": "reviewer2-repro",
+        "kwargs": {"dry_run": true},
+        "require_artifacts": ["reports/hsp/gt_test.json", "reports/hsp/preds_test.json"]
+      },
+      {
+        "id": "reviewer2_paste_check",
+        "type": "experiment",
+        "command": "reviewer2-paste-check",
+        "kwargs": {"dry_run": true}
+      },
+      {
+        "id": "cohort_eval_dry",
+        "type": "experiment",
+        "command": "eval",
+        "config": "configs/experiments/cohort_zeroshot_eval_smoke.json",
+        "kwargs": {"dry_run": true}
+      },
+      {
+        "id": "post_zoo_queue_dry",
+        "type": "gpu_queue_dry",
+        "manifest": "configs/experiments/gpu_queue_post_zoo_smoke.json"
+      },
+      {
+        "id": "finetune_tray_dry",
+        "type": "finetune_stages_dry",
+        "manifest": "configs/experiments/gpu_queue_post_zoo_smoke.json",
+        "job_id": "finetune_tray_smoke_1ep"
+      }
+    ],
+    "gpu": [
+      {
+        "id": "finetune_tray_1ep",
+        "type": "experiment",
+        "command": "finetune-tray",
+        "kwargs": {
+          "config": "configs/experiments/finetune_tray_smoke_1ep.json",
+          "tray_key": "200-3-1",
+          "stage": 1,
+          "train_mode": "tray_adapt",
+          "out": "reports/transfer/finetune_queue_finetune_tray_smoke_1ep.json",
+          "locked_conf_from": "reports/hsp/threshold_val.json",
+          "weak_plan": "reports/domains/weak_tray_plan.json",
+          "from_weak_plan": true
+        },
+        "env": {"HARCHOC_MAX_EPOCHS": "1"}
+      },
+      {
+        "id": "post_zoo_smoke_queue",
+        "type": "gpu_queue_run",
+        "manifest": "configs/experiments/gpu_queue_post_zoo_smoke.json",
+        "job_filter": "finetune_tray_smoke_1ep"
+      }
+    ]
+  }
+}

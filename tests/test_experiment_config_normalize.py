@@ -22,6 +22,12 @@ class ExperimentConfigNormalizeTests(unittest.TestCase):
                 raw = load_config(p)
                 if raw.get("schema_version") != "experiments.v1":
                     continue
+                run_raw = raw.get("run")
+                if not isinstance(run_raw, dict) or not str(run_raw.get("kind") or "").strip():
+                    self.fail(
+                        f"{p} declares experiments.v1 but has no run.kind "
+                        "(use a top-level section block without schema_version, e.g. reviewer_counting.json)"
+                    )
                 raw.setdefault("dataset", {})
                 self.assertIsInstance(raw["dataset"], dict)
                 raw["dataset"]["dataset_env"] = {
@@ -104,7 +110,7 @@ class ExperimentConfigNormalizeTests(unittest.TestCase):
 
             self.assertEqual(rcfg["split_source"]["kind"], "split_file")
             self.assertEqual(Path(rcfg["split_source"]["path"]), (repo_root / "data" / "splits" / "test.txt").resolve())
-            self.assertEqual(rcfg["default_dataset_name"], "sunflower-cvat-2500")
+            self.assertEqual(rcfg["default_dataset_name"], "sunflower-cvat-1093")
             self.assertEqual(Path(rcfg["manifest"]), (repo_root / "data" / "manifest.json").resolve())
 
 

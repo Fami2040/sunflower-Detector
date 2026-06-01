@@ -1,14 +1,14 @@
 {
   "datasets": [
     {
-      "name": "sunflower-cvat-2500",
+      "name": "sunflower-cvat-1093",
       "source_url": "https://izba-memes.ru/api/public/dl/y9xGFqCW",
       "downloaded_at": "2026-05-27",
       "archive_filename": "data/raw/dataset.zip",
       "extracted_paths": [
         "data/raw/extracted/dataset"
       ],
-      "notes": "Downloaded via direct endpoint; raw dataset remains git-ignored.",
+      "notes": "1093 images with YOLO labels; frozen modeling splits 875/109/109 in data/splits/. Downloaded via direct endpoint; raw dataset remains git-ignored.",
       "archive_sha256": "12f009ad2b4bf7246670584d855bcefd3451508ea22d45de0f206c771860d988"
     }
   ]

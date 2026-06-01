@@ -63,6 +63,17 @@ class ExperimentCliDryRunTests(unittest.TestCase):
             self.assertEqual(obj.get("status"), "dry-run")
             self.assertEqual(obj.get("script"), "eval")
 
+    def test_threshold_sweep_dry_run(self) -> None:
+        from scripts.experiment import main
+
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "sweep.json"
+            rc = main(["--dry-run", "threshold-sweep", "--out", str(out)])
+            self.assertEqual(rc, 0)
+            obj = json.loads(out.read_text("utf-8"))
+            self.assertEqual(obj.get("status"), "dry-run")
+            self.assertEqual(obj.get("script"), "threshold_sweep")
+
     def test_benchmark_dry_run_writes_plan(self) -> None:
         from scripts.experiment import main
 

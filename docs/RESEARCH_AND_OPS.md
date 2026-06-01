@@ -1,6 +1,6 @@
 # HARCHOC research & operations (consolidated)
 
-Single entry point for **how we train, evaluate, and improve** sunflower seed detection (`sunflower-cvat-2500`). Deep dives stay in [`research/`](research/) and [`EXPERIMENTS.md`](EXPERIMENTS.md); this doc layers **ops → science → backlog**.
+Single entry point for **how we train, evaluate, and improve** sunflower seed detection (`sunflower-cvat-1093`). Deep dives stay in [`research/`](research/) and [`EXPERIMENTS.md`](EXPERIMENTS.md); this doc layers **ops → science → backlog**.
 
 **Validated:** 2026-05-29 (consolidated from ten doc-validation passes + three 2026 tech scans).
 
@@ -162,7 +162,7 @@ mamba run -n harchoc python scripts/<script>.py ...
 
 Details: [EXPERIMENTS.md](EXPERIMENTS.md) § GPU environment, [training_budget.md](training_budget.md).
 
-**GPU queue manifests (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) — default aug manifest is complete; **P0-5** lives in [`configs/experiments/gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) (`zoo_matrix_p0_5`, `zoo_yolo_only`, ~480 min on 8 GiB). **Post-zoo** (repro, preflight, finetune): [`configs/experiments/gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Manifest map and P0-5 job spec: [EXPERIMENTS § GPU queue manifest map](EXPERIMENTS.md#gpu-queue-manifest-map) · [backlog § GPU runbook](../backlog.md#gpu-runbook).
+**GPU queue manifests (one GPU, sequential):** [`./scripts/run_gpu_queue.sh`](../scripts/run_gpu_queue.sh) — default aug manifest is complete; **P0-5** lives in [`configs/experiments/archive/gpu_queue_full.json`](../configs/experiments/archive/gpu_queue_full.json) (`zoo_matrix_p0_5`, `zoo_yolo_only`, ~480 min on 8 GiB). **Post-zoo** (repro, preflight, finetune): [`configs/experiments/gpu_queue_post_zoo.json`](../configs/experiments/gpu_queue_post_zoo.json). Manifest map and P0-5 job spec: [EXPERIMENTS § GPU queue manifest map](EXPERIMENTS.md#gpu-queue-manifest-map) · [backlog § GPU runbook](../backlog.md#gpu-runbook).
 
 ### Budget caps
 

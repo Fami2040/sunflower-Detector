@@ -82,16 +82,16 @@ mamba run -n harchoc python scripts/eval.py --weights models/best2.pt --max-det 
 
 ---
 
-## Dataset — CVAT 2500 (canonical here)
+## Dataset — CVAT 1093 (canonical here)
 
 **This fork does not treat Kaggle `linaaabrahim/dataset1` as the published dataset.**
 
-The **canonical** corpus for HARCHOC is the **CVAT-annotated sunflower seed dataset (~2500 images)**:
+The **canonical** corpus for HARCHOC is the **CVAT-annotated sunflower seed dataset (1093 images)**:
 
 | Field | Value |
 |-------|--------|
 | **Share URL** | https://izba-memes.ru/share/y9xGFqCW |
-| **Manifest** | [`data/manifest.json`](../data/manifest.json) (`sunflower-cvat-2500`) |
+| **Manifest** | [`data/manifest.json`](../data/manifest.json) (`sunflower-cvat-1093`) |
 | **Local root** | `data/raw/extracted/dataset` (via `DATASET_ROOT` / manifest) |
 | **Modeling splits** | Tracked [`data/splits/{train,val,test}.txt`](../data/splits/) (875 / 109 / 109) |
 

@@ -875,14 +875,17 @@ def main(argv: list[str] | None = None) -> int:
             cli_print(f"WARN: {w}")
         return 0
 
+    from harchoc.experiment_cli import (
+        apply_dataset_args,
+        merge_config_objects,
+        pick_cli_or_section,
+    )
+
     # Merge all --config entries (left-to-right). Shape:
     # - dataset: {manifest, default_dataset_name}
     # - benchmark: {bench_dir, pattern, limit, out, eval_out, dry_run/no_dry_run, ...}
     # - experiments.v1: {schema_version, dataset, run:{kind,...}} → flattened below
-    config_obj: dict[str, Any] = {}
-    for raw in args.config:
-        cfg = load_config_json(raw)
-        config_obj = merge_experiment_config(config=config_obj, cli=cfg)
+    config_obj = merge_config_objects(list(args.config))
 
     if config_obj.get("schema_version") == "experiments.v1":
         from harchoc.experiment_config import script_section_from_config
@@ -901,28 +904,16 @@ def main(argv: list[str] | None = None) -> int:
     bench_cfg = config_obj.get("benchmark")
     bench_cfg_obj = bench_cfg if isinstance(bench_cfg, dict) else {}
 
-    # Prefer config over defaults; prefer explicit CLI over both.
+    apply_dataset_args(args, dataset_cfg_obj)
+
     def _pick(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name, default)
-        if cli_v != default:
-            return cli_v
-        if name in bench_cfg_obj:
-            return bench_cfg_obj[name]
-        return default
+        return pick_cli_or_section(args, name, section_cfg=bench_cfg_obj, default=default)
 
-    def _pick_dataset(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name, default)
-        if cli_v != default:
-            return cli_v
-        if name in dataset_cfg_obj:
-            return dataset_cfg_obj[name]
-        return default
-
-    manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
-    default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
-    dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
-    yolo_data_yaml_override = optional_str(_pick_dataset("yolo_data_yaml", default=None))
+    manifest = str(args.manifest)
+    default_dataset_name = str(args.default_dataset_name)
+    dataset_name = optional_str(args.dataset_name)
+    dataset_root = optional_str(args.dataset_root)
+    yolo_data_yaml_override = optional_str(args.yolo_data_yaml)
 
     dataset_env: dict[str, str] = {}
     if dataset_name is not None and str(dataset_name).strip():
@@ -1022,8 +1013,15 @@ def main(argv: list[str] | None = None) -> int:
     dry_run = bool(dry_run_flag) and not bool(no_dry_run_flag)
     intent_train = not bool(no_train)
     intent_eval = not bool(no_eval)
-    would_train = (not dry_run) and intent_train
-    would_eval = (not dry_run) and intent_eval
+    if dry_run:
+        # Plan JSON: no train/eval in this invocation; eval-only dry plans show intent when --no-train.
+        summary_would_train = False
+        summary_would_eval = bool(no_train) and intent_eval
+    else:
+        summary_would_train = intent_train
+        summary_would_eval = intent_eval
+    would_train = summary_would_train
+    would_eval = summary_would_eval
     yolo_data_yaml: Path | None = None
     if not dry_run and (not no_eval):
         yolo_data_yaml = _resolve_yolo_data_yaml(dataset_root=spec.root, explicit_yaml=spec.yolo_data_yaml)
@@ -1034,8 +1032,8 @@ def main(argv: list[str] | None = None) -> int:
         dataset_description=dataset_description,
         dataset_root=spec.root,
         yolo_data_yaml=yolo_data_yaml,
-        would_train=intent_train if dry_run else would_train,
-        would_eval=intent_eval if dry_run else would_eval,
+        would_train=summary_would_train,
+        would_eval=summary_would_eval,
         selected_groups=selected_groups,
         sahi_eval=sahi_eval,
         sahi_rows=sahi_rows,

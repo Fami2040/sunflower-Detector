@@ -17,7 +17,7 @@ class GpuQueueDedupIntegrationTests(unittest.TestCase):
         return Path(__file__).resolve().parents[1]
 
     def _aug_pending_template(self, repo: Path) -> Path:
-        return repo / "configs/experiments/gpu_queue_aug_pending.json"
+        return repo / "configs/experiments/archive/gpu_queue_aug_pending.json"
 
     def _load_pending_manifest(
         self,

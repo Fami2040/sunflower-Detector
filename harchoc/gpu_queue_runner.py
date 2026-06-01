@@ -22,6 +22,7 @@ from harchoc.gpu_exclusive import acquire_gpu_exclusive, release_gpu_exclusive
 from harchoc.gpu_queue_manifest import load_gpu_queue_manifest
 from harchoc.gpu_queue_skip import (
     _prune_dry_run_log_stubs,
+    job_blocked_by_require_before,
     should_skip_job,
     wait_gpu_free,
 )
@@ -681,6 +682,18 @@ def run_gpu_queue(
 
     log_root = rr / DEFAULT_LOG_ROOT
     completed_ids = set(state.get("completed") or [])
+
+    blocked, block_reason = job_blocked_by_require_before(manifest, repo_root=rr)
+    if blocked:
+        print(f"queue blocked: {block_reason}")
+        if not dry_run:
+            state["failed"] = {
+                "job_id": None,
+                "reason": block_reason,
+                "stage_id": "require_before",
+            }
+            save_run_state(st_path, state)
+            return 1
 
     if not dry_run:
         acquire_gpu_exclusive(repo_root=rr, owner="gpu_queue")

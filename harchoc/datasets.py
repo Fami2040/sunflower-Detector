@@ -39,7 +39,7 @@ def dataset_root_from_manifest(
 def resolve_dataset(
     *,
     manifest_path: str | os.PathLike = "data/manifest.json",
-    default_dataset_name: str = "sunflower-cvat-2500",
+    default_dataset_name: str = "sunflower-cvat-1093",
     dataset_name: str | None = None,
     dataset_root: str | os.PathLike | None = None,
     yolo_data_yaml: str | os.PathLike | None = None,

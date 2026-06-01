@@ -154,6 +154,35 @@ def _summary_is_verified_complete(
     return True
 
 
+def job_blocked_by_require_before(
+    job: dict[str, Any], *, repo_root: Path
+) -> tuple[bool, str]:
+    """Return (blocked, reason) when manifest-level gates are not satisfied."""
+    require = job.get("require_before")
+    if not isinstance(require, dict):
+        return False, ""
+    mt = require.get("matrix_train")
+    if isinstance(mt, dict):
+        train_out = str(mt.get("train_out") or "reports/hsp/matrix_train.json")
+        matrix_group = str(mt.get("matrix_group") or "zoo_yolo_only")
+        accept_skipped = mt.get("accept_skipped_no_weights")
+        ok, detail = matrix_train_verified(
+            repo_root,
+            train_out,
+            matrix_group,
+            accept_skipped_no_weights=(
+                bool(accept_skipped) if accept_skipped is not None else False
+            ),
+        )
+        if not ok:
+            return True, (
+                f"P0-5 incomplete: {train_out} missing ok rows + test_count_mae "
+                f"for matrix_group={matrix_group!r}"
+                + (f" ({detail})" if detail else "")
+            )
+    return False, ""
+
+
 def should_skip_job(job: dict[str, Any], *, repo_root: Path) -> tuple[bool, str]:
     kind = str(job.get("kind") or "")
     if kind == "finetune_tray" and job.get("skip_if_missing_plan"):

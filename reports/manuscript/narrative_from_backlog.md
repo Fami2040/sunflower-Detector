@@ -8,10 +8,10 @@
 |--------|-------|
 | Headline metric | Test count MAE at val-locked conf (not val mAP alone) |
 | best2 | 61.3 MAE @ conf ~0.15 — upstream [`main`](https://github.com/Fami2040/sunflower-Detector) — [`ORIGIN_MAIN_AND_DATASET.md |
-| Dataset | CVAT ~2500 — [`data/manifest.json`](data/manifest.json) (`y9xGFqCW`) |
+| Dataset | CVAT **1093** — [`data/manifest.json`](data/manifest.json) (`y9xGFqCW`) |
 | Aug HARCHOC retrain (100 ep) | 64.1 — did not beat best2 — [`aug_confirm_winner_100ep_summary.json`](reports/aug_smoke/aug_confirm_winner_100ep_summary |
 | Error mix @ locked conf | FN ~53% ΔAP share; among FPs loc ~58%, bg ~35%, cls ~3% — [`error_test_report.json`](reports/hsp/error_test_report.json) |
-| Next GPU job | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) |
+| Next GPU job | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/archive/gpu_queue_full.json) |
 
 **Model stack (reference):**
 

@@ -1,0 +1,76 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Testable post-zoo smoke (1 ep finetune, CPU domain audit, head-ROI eval). No require_before gate — use only to verify queue wiring; production: gpu_queue_post_zoo.json after P0-5.",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "weak_plan": "reports/domains/weak_tray_plan.json",
+    "tide_summary": "reports/hsp/tide_bucket_summary.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_MAX_BATCH": "1",
+      "HARCHOC_MAX_EPOCHS": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "domain_tray_audit_smoke",
+      "kind": "domain_tray_audit_refresh",
+      "backlog": ["P1-DOMAIN-AUDIT"],
+      "estimated_minutes": 5,
+      "mamba": false,
+      "merge_mamba": true,
+      "catalog": "reports/domains/catalog.json",
+      "domains_dir": "data/domains",
+      "domain_eval": "reports/domains/domain_eval.json",
+      "count_mae": "reports/domains/domain_count_mae.json",
+      "weak_plan_out": "reports/domains/weak_tray_plan_smoke.json",
+      "top_k": 3,
+      "global_mae": 61.3,
+      "device": "cpu",
+      "notes": "Writes weak_tray_plan_smoke.json so production weak_tray_plan.json is untouched."
+    },
+    {
+      "id": "finetune_tray_smoke_1ep",
+      "kind": "finetune_tray",
+      "backlog": ["P1-FINETUNE-TRAY"],
+      "tray_key": "200-3-1",
+      "stage": 1,
+      "train_config": "configs/experiments/finetune_tray_smoke_1ep.json",
+      "transfer_config": "configs/transfer/finetune_stage1.yaml",
+      "train_mode": "tray_adapt",
+      "weak_plan": "reports/domains/weak_tray_plan.json",
+      "skip_if_missing_plan": true,
+      "mamba": true,
+      "device": "0",
+      "env": {"HARCHOC_EXPORT_DEVICE": "0", "HARCHOC_MAX_EPOCHS": "1"},
+      "run_name": "finetune_200-3-1_smoke_s1",
+      "out": "reports/transfer/finetune_queue_finetune_tray_smoke_1ep.json",
+      "estimated_minutes": 15,
+      "hyperparams": {
+        "epochs": 1,
+        "lr": 0.001,
+        "imgsz": 1280,
+        "batch": 1,
+        "freeze_backbone": true,
+        "patience": 1
+      },
+      "rationale": "Smallest weak-tray smoke: 1 epoch @ 1280 from best2; verifies finetune.py + domain splits + HSP counting hook.",
+      "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_tray_smoke_1ep.json"}
+    },
+    {
+      "id": "head_roi_eval_smoke",
+      "kind": "head_roi_eval",
+      "backlog": ["P2-HEAD-ROI-EVAL"],
+      "eval_only": true,
+      "estimated_minutes": 10,
+      "mamba": true,
+      "split_file": "tests/fixtures/cohort_smoke_test.txt",
+      "weights": "models/best2.pt",
+      "device": "0",
+      "env": {"HARCHOC_EXPORT_DEVICE": "0"},
+      "out": "reports/hsp/head_roi_eval_now_todos_smoke.json",
+      "locked_conf_from": "reports/hsp/threshold_val.json",
+      "notes": "2-image split fixture; eval-only ROI mask smoke."
+    }
+  ]
+}

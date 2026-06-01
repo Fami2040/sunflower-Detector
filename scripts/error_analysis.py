@@ -16,7 +16,6 @@ bootstrap_repo_imports()
 
 from harchoc.config_coerce import as_dict, coerce_float, coerce_int, optional_str
 from harchoc.datasets import describe_dataset, resolve_dataset
-from harchoc.experiment_config import load_config_json, merge_experiment_config, script_section_from_config
 from harchoc.error_analysis_core import analyze_errors, export_topk_fp_crops
 from harchoc.run_metadata import collect_run_metadata
 from harchoc.error_analysis_schema import (
@@ -95,41 +94,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = p.parse_args(argv)
 
-    config_obj: dict[str, Any] = {}
-    for raw in args.config:
-        cfg = load_config_json(raw)
-        config_obj = merge_experiment_config(config=config_obj, cli=cfg)
-    dataset_cfg = config_obj.get("dataset")
-    dataset_cfg_obj = dataset_cfg if isinstance(dataset_cfg, dict) else {}
-    analysis_cfg_obj = script_section_from_config(config_obj, "error_analysis")
+    from harchoc.experiment_cli import (
+        apply_dataset_args,
+        merge_config_objects,
+        pick_cli_or_section,
+        section_and_dataset_from_config,
+    )
+
+    config_obj = merge_config_objects(list(args.config))
+    analysis_cfg_obj, dataset_cfg_obj = section_and_dataset_from_config(config_obj, "error_analysis")
+    apply_dataset_args(args, dataset_cfg_obj)
 
     def _pick(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name)
-        if cli_v != default:
-            return cli_v
-        if name in analysis_cfg_obj:
-            return analysis_cfg_obj[name]
-        return default
+        return pick_cli_or_section(args, name, section_cfg=analysis_cfg_obj, default=default)
 
-    def _pick_dataset(name: str, *, default: object) -> object:
-        cli_v = getattr(args, name)
-        if cli_v != default:
-            return cli_v
-        if name in dataset_cfg_obj:
-            return dataset_cfg_obj[name]
-        return default
-
-    args.manifest = str(_pick_dataset("manifest", default="data/manifest.json"))
-    args.default_dataset_name = str(_pick_dataset("default_dataset_name", default="sunflower-cvat-2500"))
-    args.dataset_name = optional_str(_pick_dataset("dataset_name", default=None))
-    args.dataset_root = optional_str(_pick_dataset("dataset_root", default=None))
-    args.yolo_data_yaml = optional_str(_pick_dataset("yolo_data_yaml", default=None))
     args.weights = str(_pick("weights", default=HSP_DETECTION_WEIGHTS))
-    args.out = str(_pick("out", default="reports/error_analysis/summary.json"))
-    args.report = str(_pick("report", default="reports/error_analysis/report.json"))
+    args.out = str(_pick("out", default="reports/hsp/error_analysis_summary.json"))
+    args.report = str(_pick("report", default="reports/hsp/error_test_report.json"))
     args.topk = coerce_int(_pick("topk", default=50)) or 50
     args.export_fp_crops = bool(_pick("export_fp_crops", default=False))
-    args.fp_crops_dir = str(_pick("fp_crops_dir", default="reports/error_analysis/fp_crops"))
+    args.fp_crops_dir = str(_pick("fp_crops_dir", default="reports/hsp/error_fp_crops"))
     args.fp_crops_topk = coerce_int(_pick("fp_crops_topk", default=100)) or 100
     args.gt_json = str(_pick("gt_json", default=""))
     args.preds_json = str(_pick("preds_json", default=""))

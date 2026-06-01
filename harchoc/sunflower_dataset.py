@@ -1,5 +1,5 @@
 """
-Sunflower seed detection dataset (sunflower-cvat-2500).
+Sunflower seed detection dataset (sunflower-cvat-1093).
 
 Canonical class terminology for training, eval, and reports — use only these names.
 """

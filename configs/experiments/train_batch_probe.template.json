@@ -1,0 +1,16 @@
+{
+  "_canonical": false,
+  "notes": "1-epoch VRAM probe @ imgsz=1280 (8 GiB). Copy to train_batch_probe_<model>.json and set model + batch. Run: mamba run -n harchoc python scripts/train.py --config <copy> --name batch_probe_<stem> --skip-eval",
+  "model": "yolov8m.pt",
+  "epochs": 1,
+  "imgsz": 1280,
+  "batch": 1,
+  "patience": 50,
+  "seed": 0,
+  "workers": 2,
+  "device": 0,
+  "cache": false,
+  "eval": {
+    "skip": true
+  }
+}

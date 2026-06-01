@@ -4,8 +4,6 @@ import argparse
 import os
 from pathlib import Path
 import statistics
-import struct
-
 import sys; from pathlib import Path; _r = Path(__file__).resolve().parent.parent; (str(_r) not in sys.path) and sys.path.insert(0, str(_r)); from harchoc.script_entry import bootstrap_repo_imports; bootstrap_repo_imports()
 from harchoc.datasets import describe_dataset, resolve_dataset
 from harchoc.yaml_minimal import parse_minimal_yaml_flat
@@ -18,64 +16,10 @@ _IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 
 def _read_image_size(p: Path) -> tuple[int, int]:
-    """
-    Dependency-free image size reader for PNG and JPEG.
-    Returns (width, height).
-    """
-    suf = p.suffix.lower()
-    if suf == ".png":
-        # PNG IHDR: 8-byte signature then IHDR chunk with 4-byte length, 4-byte type, then w/h (big-endian).
-        with p.open("rb") as f:
-            sig = f.read(8)
-            if sig != b"\x89PNG\r\n\x1a\n":
-                raise ValueError(f"Invalid PNG signature: {p}")
-            _len = f.read(4)
-            ctype = f.read(4)
-            if ctype != b"IHDR":
-                # Some PNGs may have ancillary chunks first, but for our generated/typical PNGs IHDR is first.
-                raise ValueError(f"PNG missing IHDR first: {p}")
-            w = struct.unpack(">I", f.read(4))[0]
-            h = struct.unpack(">I", f.read(4))[0]
-            return int(w), int(h)
+    """Delegate to shared PIL reader (``harchoc.eval_export.read_image_size``)."""
+    from harchoc.eval_export import read_image_size
 
-    if suf in {".jpg", ".jpeg"}:
-        # Minimal JPEG SOF parser.
-        with p.open("rb") as f:
-            if f.read(2) != b"\xff\xd8":
-                raise ValueError(f"Invalid JPEG SOI: {p}")
-            while True:
-                b = f.read(1)
-                if not b:
-                    break
-                if b != b"\xff":
-                    continue
-                # Skip fill bytes
-                while True:
-                    m = f.read(1)
-                    if not m:
-                        return (0, 0)
-                    if m != b"\xff":
-                        break
-                marker = m[0]
-                # Standalone markers
-                if marker in {0xD9, 0xDA}:
-                    break
-                seglen_bytes = f.read(2)
-                if len(seglen_bytes) != 2:
-                    break
-                seglen = struct.unpack(">H", seglen_bytes)[0]
-                if seglen < 2:
-                    break
-                if marker in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
-                    # Start of Frame: precision(1), height(2), width(2)
-                    f.read(1)
-                    h = struct.unpack(">H", f.read(2))[0]
-                    w = struct.unpack(">H", f.read(2))[0]
-                    return int(w), int(h)
-                f.seek(seglen - 2, 1)
-        raise ValueError(f"Could not read JPEG size: {p}")
-
-    raise ValueError(f"Unsupported image type for size read: {p}")
+    return read_image_size(p)
 
 
 def _resolve_data_yaml(spec_root: Path, yolo_data_yaml: Path | None) -> Path | None:

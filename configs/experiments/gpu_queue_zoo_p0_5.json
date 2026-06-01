@@ -1,0 +1,44 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Active P0-5 only: zoo_yolo_only 4×100 ep → matrix_train.json. Historical aug/CV queues: configs/experiments/archive/. Post-zoo: gpu_queue_post_zoo.json.",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "env": {
+      "HARCHOC_MAX_BATCH": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "zoo_matrix_p0_5",
+      "kind": "zoo_matrix_train",
+      "backlog": ["P0-5"],
+      "matrix_group": "zoo_yolo_only",
+      "runs_dir": "runs/hsp_zoo",
+      "out": "reports/hsp/matrix_train.json",
+      "plan_out": "reports/hsp/matrix_plan.json",
+      "estimated_minutes": 480,
+      "bench_configs": [
+        "configs/bench/yolov8m_default.yaml",
+        "configs/bench/yolov10m_default.yaml",
+        "configs/bench/yolo11m_default.yaml",
+        "configs/bench/yolo26m_default.yaml"
+      ],
+      "matrix_hyperparams": {
+        "epochs": 100,
+        "imgsz": 1280,
+        "patience": 50,
+        "aug_config": "configs/aug/robustness_minimal.yaml",
+        "seed": 0,
+        "batch_yolov8m": 1
+      },
+      "rationale": "P0-5 detector zoo on 8 GiB: four Ultralytics M-scale rows @ imgsz 1280, 100 ep, robustness_minimal aug.",
+      "skip_if": {
+        "matrix_train_out": "reports/hsp/matrix_train.json",
+        "matrix_group": "zoo_yolo_only",
+        "accept_skipped_no_weights": false
+      },
+      "notes": "benchmark_matrix.py --group zoo_yolo_only. Then gpu_queue_post_zoo.json."
+    }
+  ]
+}

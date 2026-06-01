@@ -1,6 +1,13 @@
 {
   "schema_version": "gpu_queue_manifest.v1",
-  "description": "Post–P0-5 zoo backlog: CPU domain/tray audit refresh, top-3 weak-tray finetune (stage 1→2 per tray), head-ROI eval smoke. Run after gpu_queue_full.json zoo_matrix_p0_5 (zoo_yolo_only → matrix_train.json). Hyperparam source of truth: finetune_tray_stage{1,2}.json + finetune_stage{1,2}.yaml; stage-2 base_weights: runs/transfer/<stage1_run_name>/weights/best.pt (see stage1_run_name on s2 jobs). See configs/experiments/README.md § GPU queue jobs.",
+  "description": "Post–P0-5 zoo backlog: CPU domain/tray audit refresh, top-3 weak-tray finetune (stage 1→2 per tray), head-ROI eval smoke. Run only after gpu_queue_zoo_p0_5.json (or archive/gpu_queue_full.json zoo_matrix_p0_5) verifies matrix_train.json. Checklist: docs/manuscript/status.md.",
+  "require_before": {
+    "matrix_train": {
+      "train_out": "reports/hsp/matrix_train.json",
+      "matrix_group": "zoo_yolo_only",
+      "accept_skipped_no_weights": false
+    }
+  },
   "defaults": {
     "locked_conf_from": "reports/hsp/threshold_val.json",
     "weak_plan": "reports/domains/weak_tray_plan.json",

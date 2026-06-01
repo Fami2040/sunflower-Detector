@@ -20,6 +20,20 @@ AUG_SMOKE_PENDING_STATUSES = frozenset({"gpu_pending"})
 
 
 from harchoc.json_io import load_json_dict
+
+
+def _resolve_repo_root_from_manifest(manifest_path: Path) -> Path:
+    """Walk parents until repo markers (supports manifests under configs/experiments/archive/)."""
+    cand = manifest_path.parent
+    for _ in range(8):
+        if (cand / "scripts" / "experiment.py").is_file() or (cand / "data" / "manifest.json").is_file():
+            return cand.resolve()
+        if cand.parent == cand:
+            break
+        cand = cand.parent
+    return manifest_path.parent.parent.parent.resolve()
+
+
 def expand_aug_smoke_jobs_from_index(
     *,
     repo_root: Path,
@@ -118,7 +132,10 @@ def load_gpu_queue_manifest(
     out["manifest_path"] = str(p)
     jobs = list(out.get("jobs") or [])
 
-    rr = Path(repo_root or p.parent.parent.parent).expanduser().resolve()
+    if repo_root is not None:
+        rr = Path(repo_root).expanduser().resolve()
+    else:
+        rr = _resolve_repo_root_from_manifest(p)
     idx = str(out.get("aug_smoke_index") or "configs/experiments/aug_smoke_index.json")
     if out.get("aug_smoke_from_index"):
         jobs = merge_aug_smoke_jobs(jobs, repo_root=rr, index_path=idx)

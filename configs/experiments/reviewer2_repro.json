@@ -1,6 +1,7 @@
 {
   "schema_version": "reviewer2_repro_bundle.v1",
-  "description": "Post-zoo reviewer-2 pack: counting → mAP50 → §11 confusion → Word paste gate (CPU; needs HSP exports from experiment.py repro or benchmark_matrix HSP eval).",
+  "description": "Post-zoo reviewer-2 pack (standalone entry). Canonical nesting: manuscript_repro_bundle.json → post_zoo_reviewer2. CPU chain: counting → mAP50 → §11 confusion → Word paste gate.",
+  "manuscript_bundle": "configs/experiments/manuscript_repro_bundle.json",
   "hsp_artifacts": {
     "gt_test": "reports/hsp/gt_test.json",
     "preds_test": "reports/hsp/preds_test.json",
