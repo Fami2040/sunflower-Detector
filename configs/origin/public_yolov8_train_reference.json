@@ -1,0 +1,40 @@
+{
+  "schema_version": "origin_train_reference.v1",
+  "description": "Ultralytics train() args from public Fami2040/sunflower-Detector (main). best2.pt was produced upstream; HARCHOC uses this for diff only.",
+  "upstream_repo": "https://github.com/Fami2040/sunflower-Detector",
+  "upstream_branch": "main",
+  "artifact": "models/best2.pt",
+  "historical_run_name": "sunflower_seed_detection_v1",
+  "dataset_note": "Upstream script used Kaggle linaaabrahim/dataset1 during development. Canonical HARCHOC dataset is CVAT share y9xGFqCW — see data/manifest.json (sunflower-cvat-2500).",
+  "ultralytics_train": {
+    "model": "yolov8m.pt",
+    "epochs": 100,
+    "imgsz": 1280,
+    "batch": 1,
+    "device": 0,
+    "optimizer": "AdamW",
+    "conf": 0.05,
+    "iou": 0.3,
+    "max_det": 3000,
+    "mosaic": 0.1,
+    "hsv_h": 0.02,
+    "hsv_s": 0.3,
+    "hsv_v": 0.3,
+    "translate": 0.05,
+    "scale": 0.15,
+    "lr0": 0.0002,
+    "lrf": 0.01,
+    "momentum": 0.97,
+    "weight_decay": 0.0005,
+    "patience": 50,
+    "workers": 2,
+    "verbose": true,
+    "name": "sunflower_seed_detection_v1"
+  },
+  "harchoc_replication": {
+    "aug_config": "configs/aug/robustness_minimal.yaml",
+    "train_config": "configs/experiments/train_yolov8m_baseline.json",
+    "splits": "data/splits/*.txt",
+    "note": "YAML adds close_mosaic, erasing, fliplr; hsv_s/v 0.35 vs upstream 0.3 — intentional codification, not byte-identical."
+  }
+}

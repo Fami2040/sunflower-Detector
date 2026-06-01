@@ -78,6 +78,7 @@ def build_run_record(
     sahi: SahiEvalParams | None = None,
     sahi_eval: bool = False,
     repo_root: Path | None = None,
+    runs_dir: Path | None = None,
 ) -> dict[str, object]:
     backend = select_backend(cfg)
     available, missing_reason = _backend_availability(backend, cfg)
@@ -115,6 +116,13 @@ def build_run_record(
         )
     planned_train = would_train and rtdetr_gate is None
     planned_eval = would_eval and rtdetr_gate is None
+    bench_run_weights: str | None = None
+    if runs_dir is not None:
+        from harchoc.queue_skip_gates import existing_bench_run_weights
+
+        bw = existing_bench_run_weights(cfg, runs_dir)
+        if bw is not None:
+            bench_run_weights = str(bw)
     return {
         "schema_version": "benchmark_run.v1",
         "config": {"path": str(cfg.path), "name": cfg.name, "groups": list(cfg.groups)},
@@ -137,6 +145,7 @@ def build_run_record(
             "infer": {"imgsz": imgsz},
             "resources": planned_resources,
             "weights": weights,
+            "bench_run_weights": bench_run_weights,
             "dataset": {
                 "description": dataset_description,
                 "root": str(dataset_root.resolve()),
@@ -172,6 +181,7 @@ def build_summary(
     sahi_eval: bool = False,
     sahi_rows: list[SahiEvalParams] | None = None,
     repo_root: Path | None = None,
+    runs_dir: Path | None = None,
 ) -> dict[str, object]:
     generated_at = datetime.now(timezone.utc).isoformat()
     expanded = expand_bench_configs_with_sahi(
@@ -214,6 +224,7 @@ def build_summary(
                 sahi=sahi,
                 sahi_eval=sahi_eval,
                 repo_root=repo_root,
+                runs_dir=runs_dir,
             )
             for c, sahi in expanded
         ],
@@ -261,7 +272,7 @@ def _invoke_ultralytics_hsp_for_matrix(
     imgsz = _infer_imgsz(cfg)
     if imgsz is None:
         imgsz = int(train_doc.get("imgsz") or 1280)
-    max_det = _bench_eval_max_det(cfg, train_doc)
+    max_det = _bench_eval_max_det(cfg, train_doc) or 3000
     if not hsp_eval_artifacts_verified(repo_root, run_name=run_name, out_dir=hsp_out_dir):
         run_hsp_eval_chain(
             repo_root=repo_root,
@@ -1009,8 +1020,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     dry_run = bool(dry_run_flag) and not bool(no_dry_run_flag)
-    would_train = (not dry_run) and (not bool(no_train))
-    would_eval = (not dry_run) and (not bool(no_eval))
+    intent_train = not bool(no_train)
+    intent_eval = not bool(no_eval)
+    would_train = (not dry_run) and intent_train
+    would_eval = (not dry_run) and intent_eval
     yolo_data_yaml: Path | None = None
     if not dry_run and (not no_eval):
         yolo_data_yaml = _resolve_yolo_data_yaml(dataset_root=spec.root, explicit_yaml=spec.yolo_data_yaml)
@@ -1021,21 +1034,25 @@ def main(argv: list[str] | None = None) -> int:
         dataset_description=dataset_description,
         dataset_root=spec.root,
         yolo_data_yaml=yolo_data_yaml,
-        would_train=would_train,
-        would_eval=would_eval,
+        would_train=intent_train if dry_run else would_train,
+        would_eval=intent_eval if dry_run else would_eval,
         selected_groups=selected_groups,
         sahi_eval=sahi_eval,
         sahi_rows=sahi_rows,
         repo_root=repo_root,
+        runs_dir=runs_dir,
     )
     out_path = write_json(out, payload)
 
-    if not dry_run and would_train:
+    matrix_execute = (not dry_run) and (would_train or (bool(no_train) and would_eval))
+    if matrix_execute:
         from harchoc.queue_notify import notify_matrix_row
         from harchoc.queue_skip_gates import (
             enrich_matrix_train_run_from_artifacts,
             existing_bench_run_weights,
+            matrix_row_missing_weights_row,
             matrix_run_is_complete,
+            normalize_matrix_train_row,
         )
         from harchoc.rtdetr_zoo_gate import zoo_core_rtdetr_gate_skip_reason
 
@@ -1085,13 +1102,16 @@ def main(argv: list[str] | None = None) -> int:
                 train_out,
                 {
                     "schema_version": "benchmark_matrix_train.v1",
-                    "status": "train",
+                    "status": "eval" if no_train and not would_train else "train",
                     "generated_at": datetime.now(timezone.utc).isoformat(),
                     "dataset": {"description": dataset_description},
                     "runs_dir": str(runs_dir.resolve()),
+                    "selection": {"groups": selected_groups},
                     "runs": train_runs,
                 },
             )
+
+        eval_only = bool(no_train) and not would_train
 
         for cfg in configs:
             prior = _prior_matrix_run(cfg)
@@ -1099,6 +1119,7 @@ def main(argv: list[str] | None = None) -> int:
                 row = dict(prior)
                 train_runs.append(row)
                 _notify_row(row, cfg)
+                _flush_train_checkpoint()
                 continue
             gate_reason = zoo_core_rtdetr_gate_skip_reason(
                 repo_root=repo_root,
@@ -1118,20 +1139,28 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 train_runs.append(row)
                 _notify_row(row, cfg)
+                _flush_train_checkpoint()
                 continue
+            backend = select_backend(cfg)
             existing_w = existing_bench_run_weights(cfg, runs_dir)
             if existing_w is not None:
                 run_name = _bench_run_name(cfg)
                 tr: dict[str, object] = {
                     "status": "ok",
                     "reason": "weights_exist",
-                    "backend": select_backend(cfg),
+                    "backend": backend,
                     "config_path": str(cfg.path),
                     "name": cfg.name,
                     "run_name": run_name,
                     "run_dir": str((runs_dir / run_name).resolve()),
                     "weights": str(existing_w),
                 }
+            elif eval_only:
+                tr = matrix_row_missing_weights_row(cfg, runs_dir, backend=backend)
+                train_runs.append(tr)
+                _notify_row(tr, cfg)
+                _flush_train_checkpoint()
+                continue
             else:
                 tr = _invoke_train_for_bench(
                     cfg=cfg,
@@ -1141,6 +1170,13 @@ def main(argv: list[str] | None = None) -> int:
                     runs_dir=runs_dir,
                     dataset_root=spec.root,
                 )
+                tr = normalize_matrix_train_row(tr, cfg, runs_dir)
+                if not tr.get("weights"):
+                    tr["matrix_metadata"] = bench_matrix_metadata(cfg)
+                    train_runs.append(tr)
+                    _notify_row(tr, cfg)
+                    _flush_train_checkpoint()
+                    continue
             tr["matrix_metadata"] = bench_matrix_metadata(cfg)
             run_name = str(tr.get("run_name") or _bench_run_name(cfg))
             tr = enrich_matrix_train_run_from_artifacts(
@@ -1173,8 +1209,8 @@ def main(argv: list[str] | None = None) -> int:
                         tr["error_test_report"] = ev["error_json"]
                     train_runs.append(tr)
                     _notify_row(tr, cfg)
+                    _flush_train_checkpoint()
                     continue
-                    train_doc = {"eval": recipe.get("eval") if isinstance(recipe.get("eval"), dict) else {}}
                 else:
                     cached = _cached_ultralytics_weights(cfg)
                     train_doc = _bench_to_train_config(
@@ -1186,6 +1222,7 @@ def main(argv: list[str] | None = None) -> int:
                 if post_train_eval_skipped(cli_skip=False, eval_section=eval_section):
                     train_runs.append(tr)
                     _notify_row(tr, cfg)
+                    _flush_train_checkpoint()
                     continue
                 if backend == "supergradients":
                     max_det = _bench_eval_max_det(cfg, train_doc)
@@ -1231,15 +1268,16 @@ def main(argv: list[str] | None = None) -> int:
             _flush_train_checkpoint()
         train_payload: dict[str, object] = {
             "schema_version": "benchmark_matrix_train.v1",
-            "status": "train",
+            "status": "eval" if eval_only else "train",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "dataset": {"description": dataset_description},
             "runs_dir": str(runs_dir.resolve()),
+            "selection": {"groups": selected_groups},
             "runs": train_runs,
         }
         write_json(train_out, train_payload)
 
-    if not dry_run and would_eval and not would_train:
+    if not dry_run and would_eval and not would_train and not matrix_execute:
         assert yolo_data_yaml is not None
         eval_runs: list[dict[str, object]] = []
         for cfg in configs:

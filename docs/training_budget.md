@@ -119,7 +119,8 @@ Short GPU memory probes use non-canonical `configs/experiments/train_batch_probe
 | Model | Bench batch | 1-ep probe config | Peak VRAM (this machine) |
 |-------|-------------|-------------------|--------------------------|
 | `yolov8m.pt` | 1 | `train_batch_probe_yolov8m.json` | **7416 MiB** @ batch=1 (V100S-8Q, 2026-05-29) |
-| `rtdetr-l.pt` | 1 | `train_batch_probe_rtdetr-l.json` | *(pending)* |
+| `yolov10m.pt` | 1 | `train_batch_probe_yolov10m.json` | **~3.3 GiB** peak (V100S-8Q, 2026-06-01; log `reports/gpu_queue/logs/batch_probe_yolov10m.log`) |
+| `rtdetr-l.pt` | 1 | `train_batch_probe_rtdetr-l.json` | **OOM** @ batch=1 ~6.5 GiB+ (V100S-8Q; `reports/gpu_queue/logs/vram_probe_rtdetr/train.log`) |
 
 ```bash
 export DATASET_ROOT="$(pwd)/data/raw/extracted/dataset"

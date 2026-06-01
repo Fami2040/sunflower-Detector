@@ -1,13 +1,12 @@
 {
   "schema_version": "gpu_queue_manifest.v1",
-  "description": "Full sequential GPU backlog queue (Phase A→C). 8 GiB path: RT-DETR skipped; Tier 2 close sweeps + amp/sg eval → P0-5 zoo_core_8gb. Optional aug tails: gpu_queue_aug_close_phase_a.json (15 ep only), gpu_queue_aug_close_100ep.json (100 ep post-zoo).",
+  "description": "Full sequential GPU backlog queue (Phase A→C). 8 GiB path: RT-DETR skipped; Tier 2 close sweeps + amp/sg eval → P0-5 zoo_yolo_only (~480 min). Post-zoo finetune/domain jobs: configs/experiments/gpu_queue_post_zoo.json. Optional aug tails: gpu_queue_aug_close_phase_a.json (15 ep only), gpu_queue_aug_close_100ep.json (100 ep post-zoo).",
   "aug_smoke_from_index": true,
   "aug_smoke_index": "configs/experiments/aug_smoke_index.json",
   "defaults": {
     "locked_conf_from": "reports/hsp/threshold_val.json",
     "min_free_mib": 5500,
     "env": {
-      "HARCHOC_EXPORT_DEVICE": "cpu",
       "HARCHOC_MAX_BATCH": "1"
     }
   },
@@ -202,17 +201,32 @@
       "id": "zoo_matrix_p0_5",
       "kind": "zoo_matrix_train",
       "backlog": ["P0-5"],
-      "matrix_group": "zoo_core_8gb",
+      "matrix_group": "zoo_yolo_only",
       "runs_dir": "runs/hsp_zoo",
       "out": "reports/hsp/matrix_train.json",
       "plan_out": "reports/hsp/matrix_plan.json",
-      "estimated_minutes": 1600,
+      "estimated_minutes": 480,
+      "bench_configs": [
+        "configs/bench/yolov8m_default.yaml",
+        "configs/bench/yolov10m_default.yaml",
+        "configs/bench/yolo11m_default.yaml",
+        "configs/bench/yolo26m_default.yaml"
+      ],
+      "matrix_hyperparams": {
+        "epochs": 100,
+        "imgsz": 1280,
+        "patience": 50,
+        "aug_config": "configs/aug/robustness_minimal.yaml",
+        "seed": 0,
+        "batch_yolov8m": 1
+      },
+      "rationale": "P0-5 detector zoo on 8 GiB: four Ultralytics M-scale rows @ imgsz 1280, 100 ep, robustness_minimal aug — parity with best2 baseline narrative (configs/bench/_defaults.yaml + train_bench_base.json).",
       "skip_if": {
         "matrix_train_out": "reports/hsp/matrix_train.json",
-        "matrix_group": "zoo_core_8gb"
+        "matrix_group": "zoo_yolo_only",
+        "accept_skipped_no_weights": false
       },
-      "notes": "8 GiB P0-5: zoo_core_8gb = 4× YOLO *m (v8/v10/11/26) + 4× external DETR stack @ batch=1. Excludes Ultralytics rtdetr_l_nq1024/rtdetr_x (OOM @ 1280). Full zoo_core (10 rows) on >8 GiB only.",
-      "env": {"HARCHOC_MAX_EPOCHS": "120"}
+      "notes": "benchmark_matrix.py --group zoo_yolo_only; bench YAMLs list zoo_yolo_only group. Post-zoo: configs/experiments/gpu_queue_post_zoo.json."
     },
     {
       "id": "cv_fold_train",

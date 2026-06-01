@@ -2,7 +2,7 @@ include: _defaults.yaml
 name: bench_yolov10m_default
 backend: ultralytics
 model: yolov10m.pt
-groups: zoo_core, zoo_core_8gb, yolov10_scales, sota_2026
+groups: zoo_core, zoo_core_8gb, zoo_yolo_only, yolov10_scales, sota_2026
 infer:
   max_det: 3000
   tiling: "none"

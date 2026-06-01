@@ -100,12 +100,35 @@ def _matrix_run_has_test_mae(repo_root: Path, run: dict[str, Any]) -> bool:
     return mae_val is not None
 
 
+def _matrix_row_satisfies_p0_skip(
+    run: dict[str, Any],
+    *,
+    accept_skipped_no_weights: bool,
+) -> bool:
+    """Row counts toward P0-5 queue skip when ok+weights+MAE, or terminal skipped_no_weights."""
+    status = str(run.get("status") or "")
+    if status == "ok":
+        return bool(run.get("weights"))
+    # zoo_yolo_only: allow terminal skipped_no_weights (e.g. yolov10m not yet trained) so post-zoo queue is not blocked.
+    if accept_skipped_no_weights and status == "skipped_no_weights":
+        if run.get("weights"):
+            return False
+        return str(run.get("reason") or "") in ("no_bench_run_weights", "weights_not_found")
+    return False
+
+
 def matrix_train_verified(
     repo_root: Path,
     train_out: str | Path,
     matrix_group: str,
+    *,
+    accept_skipped_no_weights: bool | None = None,
 ) -> tuple[bool, str]:
-    """True when matrix_train.json has ok weights + test MAE for every row in matrix_group."""
+    """True when matrix_train.json has ok weights + test MAE for every row in matrix_group.
+
+    When ``accept_skipped_no_weights`` is true (or ``matrix_group`` is ``zoo_yolo_only``),
+    rows with ``status: skipped_no_weights`` and no weights satisfy the gate (e.g. yolov10m not yet run).
+    """
     path = (repo_root / str(train_out)).resolve()
     if not path.is_file():
         return False, ""
@@ -120,6 +143,9 @@ def matrix_train_verified(
     if not configs:
         return False, ""
 
+    if accept_skipped_no_weights is None:
+        accept_skipped_no_weights = matrix_group.strip() == "zoo_yolo_only"
+
     runs = doc.get("runs") or []
     by_config = {str(r.get("config_path") or ""): r for r in runs if isinstance(r, dict)}
     by_name = {str(r.get("name") or ""): r for r in runs if isinstance(r, dict)}
@@ -128,11 +154,13 @@ def matrix_train_verified(
         run = by_config.get(str(cfg.path.resolve())) or by_name.get(str(cfg.name))
         if not isinstance(run, dict):
             return False, ""
-        if str(run.get("status") or "") != "ok":
+        if not _matrix_row_satisfies_p0_skip(
+            run, accept_skipped_no_weights=accept_skipped_no_weights
+        ):
             return False, ""
-        if not run.get("weights"):
-            return False, ""
-        if not _matrix_run_has_test_mae(repo_root, run):
+        if str(run.get("status") or "") == "ok" and not _matrix_run_has_test_mae(
+            repo_root, run
+        ):
             return False, ""
 
     return True, f"matrix_train verified: {path} ({matrix_group}, {len(configs)} rows)"
@@ -208,6 +236,96 @@ def existing_bench_run_weights(cfg: Any, runs_dir: Path) -> Path | None:
         if p.is_file():
             return p.resolve()
     return None
+
+
+def bench_run_dir_started_without_weights(cfg: Any, runs_dir: Path) -> bool:
+    """True when a matrix run directory exists but ``best.pt`` / ``best.pth`` is missing."""
+    from harchoc.bench_config import _bench_run_name
+
+    if existing_bench_run_weights(cfg, runs_dir) is not None:
+        return False
+    run_dir = runs_dir / _bench_run_name(cfg)
+    if not run_dir.is_dir():
+        return False
+    for rel in ("results.csv", "args.yaml", "weights/last.pt", "weights/last.pth"):
+        if (run_dir / rel).exists():
+            return True
+    return True
+
+
+def matrix_row_missing_weights_row(
+    cfg: Any,
+    runs_dir: Path,
+    *,
+    backend: str,
+) -> dict[str, Any]:
+    """Terminal ``matrix_train`` row when bench weights are absent (eval-only or post-train)."""
+    from harchoc.bench_config import _bench_run_name, bench_matrix_metadata
+
+    run_name = _bench_run_name(cfg)
+    run_dir = (runs_dir / run_name).resolve()
+    base: dict[str, Any] = {
+        "config_path": str(cfg.path.resolve()),
+        "name": cfg.name,
+        "model": cfg.model,
+        "run_name": run_name,
+        "backend": backend,
+        "matrix_metadata": bench_matrix_metadata(cfg),
+        "weights": None,
+    }
+    if bench_run_dir_started_without_weights(cfg, runs_dir):
+        detail_parts = [
+            rel
+            for rel in ("results.csv", "args.yaml", "weights/last.pt", "weights/last.pth")
+            if (run_dir / rel).exists()
+        ]
+        base.update(
+            {
+                "status": "train_failed",
+                "reason": "train_run_without_best_pt",
+                "detail": ", ".join(detail_parts) if detail_parts else "run_dir_exists",
+                "run_dir": str(run_dir),
+            }
+        )
+    else:
+        base.update(
+            {
+                "status": "skipped_no_weights",
+                "reason": "no_bench_run_weights",
+                "run_dir": str(run_dir) if run_dir.is_dir() else None,
+            }
+        )
+    return base
+
+
+def normalize_matrix_train_row(
+    run: dict[str, Any],
+    cfg: Any,
+    runs_dir: Path,
+) -> dict[str, Any]:
+    """Map failed/skipped train rows to ``train_failed`` / ``skipped_no_weights`` when appropriate."""
+    out = dict(run)
+    if out.get("weights"):
+        return out
+    if bench_run_dir_started_without_weights(cfg, runs_dir):
+        out["status"] = "train_failed"
+        out.setdefault("reason", "train_run_without_best_pt")
+        from harchoc.bench_config import _bench_run_name
+
+        run_name = str(out.get("run_name") or _bench_run_name(cfg))
+        out["run_name"] = run_name
+        out["run_dir"] = str((runs_dir / run_name).resolve())
+        return out
+    reason = str(out.get("reason") or "")
+    if out.get("status") in ("skipped",) and reason in (
+        "weights_not_cached",
+        "weights_not_found",
+        "no_bench_run_weights",
+    ):
+        out["status"] = "skipped_no_weights"
+        if reason == "weights_not_cached":
+            out["reason"] = "no_bench_run_weights"
+    return out
 
 
 def matrix_run_is_complete(repo_root: Path, run: dict[str, Any]) -> bool:

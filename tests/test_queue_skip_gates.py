@@ -104,6 +104,18 @@ class TestQueueSkipGates(unittest.TestCase):
             ok, reason = matrix_train_verified(repo, train_out, group)
             self.assertTrue(ok, reason)
 
+    def test_matrix_train_verified_accepts_skipped_no_weights_zoo(self) -> None:
+        from harchoc.queue_skip_gates import matrix_train_verified
+
+        repo = Path(__file__).resolve().parents[1]
+        train_out = repo / "reports/hsp/matrix_train.json"
+        if not train_out.is_file():
+            self.skipTest("matrix_train.json missing")
+        ok, reason = matrix_train_verified(
+            repo, train_out, "zoo_yolo_only", accept_skipped_no_weights=True
+        )
+        self.assertTrue(ok, reason)
+
     def test_should_skip_zoo_matrix_when_verified(self) -> None:
         from harchoc.gpu_queue import should_skip_job
 
