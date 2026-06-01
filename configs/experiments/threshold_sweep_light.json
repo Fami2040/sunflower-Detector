@@ -1,0 +1,13 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "run": {
+    "kind": "threshold_sweep",
+    "light": true,
+    "out": "reports/thresholds/sweep.json",
+    "csv_out": "reports/thresholds/sweep.csv"
+  }
+}

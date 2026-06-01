@@ -1,0 +1,10 @@
+# Stage 2 — unfreeze all layers (second train invocation).
+name: finetune_stage2
+freeze_backbone: false
+freeze: 0
+epochs: 25
+lr: 0.0005
+seed: 0
+notes: >
+  Second stage: start from stage-1 best.pt (--base-weights). unfreeze_epoch is not used
+  when freeze=0.

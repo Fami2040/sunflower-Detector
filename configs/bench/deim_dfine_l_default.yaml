@@ -1,0 +1,15 @@
+name: bench_deim_dfine_l_default
+task: detect
+backend: external
+source_id: deim_dfine_l
+model_id: deim_dfine_l
+groups: zoo_core, zoo_core_8gb, sota_deim, zoo_detr_stack
+infer:
+  imgsz: 1280
+  max_det: 3000
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  DEIM-D-FINE-L (Intellindust-AI-Lab/DEIM). Same L-scale as dfine_l; compares DEIM training recipe on D-FINE backbone.

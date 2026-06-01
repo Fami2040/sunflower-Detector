@@ -1,0 +1,19 @@
+{
+  "schema_version": "benchmark_matrix_train.v1",
+  "runs": [
+    {
+      "status": "ok",
+      "name": "yolov8n",
+      "run_name": "yolov8n_e100_s0",
+      "mAP50": 0.8,
+      "mAP50_95": 0.4
+    },
+    {
+      "status": "ok",
+      "name": "yolov8n",
+      "run_name": "yolov8n_e100_s1",
+      "mAP50": 0.82,
+      "mAP50_95": 0.41
+    }
+  ]
+}

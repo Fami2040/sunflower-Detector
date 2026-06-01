@@ -33,6 +33,7 @@ ENV/
 .env.*.local
 
 # Local deploy notes / helpers that must not contain real tokens (never commit)
+configs/local/queue_notify.json
 RAILWAY_TOKEN_UPDATE_STEPS.txt
 RAILWAY_DEPLOY.md
 EXACT_STEPS*.md
@@ -46,6 +47,9 @@ add_token_railway_cli.bat
 *.swo
 *~
 .DS_Store
+
+# Stray Ultralytics downloads at repo root (use data/weights/ultralytics/ or runs/)
+/*.pt
 
 # Model files (too large for GitHub - use Git LFS if needed)
 models/*.pt
@@ -81,4 +85,44 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Cloned upstream training repos (configs/external/*.json stays tracked)
+/external/
+
+# Local datasets (keep raw data untracked)
+data/*
+!data/README.md
+!data/manifest.json
+!data/data.yaml.example
+!data/splits/
+!data/splits/**
+!data/examples/
+!data/examples/**
+# Cached checkpoints (Ultralytics + external); see scripts/check_weights_cache.py
+# data/weights/ is under data/* above
+
+# Generated artifacts (keep README + markdown summaries only; no eval/error JSON or figures)
+reports/*
+!reports/.gitkeep
+!reports/README.md
+!reports/*/
+!reports/*/README.md
+reports/**/*
+!reports/**/*.md
+!reports/aug_smoke/
+!reports/aug_smoke/dedup_root_cause.md
+figures/*
+!figures/.gitkeep
+!figures/README.md
+
+# Structured pipeline outputs (local)
+outputs/*
+!outputs/.gitkeep
+!outputs/README.md
+
+# Ultralytics runs output
+runs/
+
+# Local venv used for requirements checks
+.venv_reqcheck/
 

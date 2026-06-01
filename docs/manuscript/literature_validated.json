@@ -1,0 +1,215 @@
+{
+  "schema_version": "literature_validated.v1",
+  "checked_date": "2026-05-29",
+  "notes": "Web-verified metadata; approach summaries for HARCHOC backlog and manuscript response.",
+  "entries": [
+    {
+      "id": "yang2024_oct_tl",
+      "doi": "10.1371/journal.pone.0296175",
+      "title": "Explainable ensemble learning method for OCT detection with transfer learning",
+      "authors": "Yang J, Wang G, Xiao X, Bao M, Tian G",
+      "year": 2024,
+      "venue": "PLoS ONE",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0296175"
+      },
+      "approach_summary": "Ensemble of AlexNet, VGG16, and ResNet34 on retinal OCT with ImageNet transfer; majority soft voting; Grad-CAM/CAM for lesion localization. Small clinical OCT set (15 samples per class).",
+      "architecture_takeaway": "Pretrain + ensemble + XAI for domain shift to a new imaging modality; tray/session finetune should use staged backbone freeze (see tfa2020, gandhi2025_yolov8_freeze), not full retrain from scratch.",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["MS-DOMAIN-ADAPT", "P1-FINETUNE-LOOP", "P1-DOMAIN-EVAL"],
+      "manuscript_use": "discussion_analogy",
+      "reviewer_alignment": "Reviewer suggests transfer to fresh heads / field lighting. Paper is medical OCT classification, not object detection — valid as **analogy** for source→target adaptation, not a direct architecture swap. Discussion draft: [reviewer gap §12](reviewer_comments_backlog_gap.md#12-manuscript-draft--domain-adaptation-plan-discussion) (**MS-DOMAIN-ADAPT** Done)."
+    },
+    {
+      "id": "ren2025_scripta_interp",
+      "doi": "10.1016/j.scriptamat.2024.116350",
+      "title": "Harmonizing physical and deep learning modeling: A computationally efficient and interpretable approach for property prediction",
+      "authors": "Ren D, Wei WC, Zhang Y, Han S, Xu W",
+      "year": 2025,
+      "venue": "Scripta Materialia",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.1016/j.scriptamat.2024.116350"
+      },
+      "approach_summary": "Hybrid physics-informed and deep learning framework for material property prediction with emphasis on interpretability and efficiency (tabular/material descriptors, not vision detection).",
+      "architecture_takeaway": "Motivate **which features drive developed vs aborted** (texture, size, colour) alongside Grad-CAM on seed crops; do not add a separate physics branch without new measurements.",
+      "harchoc_fit": "low",
+      "harchoc_backlog": ["MS-EXPLAIN", "P2-FIG-CAM"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Reviewer cites interpretability for breeding trust. Paper is materials science regression — use for **interpretability framing**, pair with **fig_gradcam_panel** and error_taxonomy crops."
+    },
+    {
+      "id": "alshehri2025_uav",
+      "doi": "10.3389/fnbot.2025.1582995",
+      "title": "Unmanned aerial vehicle based multi-person detection via deep neural network models",
+      "authors": "Alshehri M, Zahoor L, AlQahtani Y, et al.",
+      "year": 2025,
+      "venue": "Frontiers in Neurorobotics",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2025.1582995/full"
+      },
+      "approach_summary": "Deep learning + feature extraction for multi-person **action recognition** in UAV video (MOD20, Okutama-Action); reports ~91.5% / ~89.7% accuracy. Not a literal detect-then-classify cascade paper.",
+      "architecture_takeaway": "HARCHOC deploy already uses **classifier.pt gate → best2.pt detector** (two-stage). Manuscript should describe this explicitly; HSP eval remains single-stage full-frame export.",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["MS-DEPLOY-2STG", "R-SCI-2"],
+      "manuscript_use": "methods_analogy",
+      "reviewer_alignment": "Reviewer analogy (person detect → identify) is **conceptual**. Our gate rejects non-sunflower images before seed detection — cite as parallel robustness pattern, not identical pipeline."
+    },
+    {
+      "id": "yao2025_hfuzzy",
+      "doi": "10.1109/TFUZZ.2025.3549791",
+      "title": "Hierarchical Fuzzy Topological System for High-Dimensional Data Regression Problems",
+      "authors": "Yao M, Zhao TY, Cao J, Li J",
+      "year": 2025,
+      "venue": "IEEE Transactions on Fuzzy Systems",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.1109/TFUZZ.2025.3549791"
+      },
+      "approach_summary": "Hierarchical fuzzy system with topology optimization for **high-dimensional regression** (13 real-world tabular datasets); multi-objective evolution balances accuracy vs complexity.",
+      "architecture_takeaway": "Graded trust on predictions (fuzzy membership on **regression** outputs). Map to detection via locked-conf gate, low-conf band, and FP taxonomy (background/localization dominate; class-agnostic FP volume).",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["MS-FUZZY-BOUND", "P1-UNCERT-FP", "P2-FIG", "P1-FP-BUDGET"],
+      "manuscript_use": "methods_discussion_analogy",
+      "reviewer_alignment": "Reviewer §270 (boundary / ambiguous seeds). Yao optimizes fuzzy rules for tabular regression — cite as **analogy** for graded detection trust in Methods + Discussion (gap §15). Implement with existing 2-class YOLO + `error_analysis` ambiguous flags + FP breakdown + `fig_ambiguous_panel`; not a third class or fuzzy YOLO head."
+    },
+    {
+      "id": "grainnet2025",
+      "doi": "10.1186/s13007-025-01363-y",
+      "title": "GrainNet: efficient detection and counting of wheat grains based on an improved YOLOv7 modeling",
+      "authors": "Wang et al.",
+      "year": 2025,
+      "venue": "Plant Methods",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.1186/s13007-025-01363-y"
+      },
+      "approach_summary": "YOLOv7 + EMA attention for dense benchtop wheat grains; heavy offline aug (cutout, mixup, mosaic); reports counting MAE/R² vs manual.",
+      "architecture_takeaway": "Closest kernel-counting peer: report **count MAE + rRMSE** alongside mAP; cite EMA for background-FP narrative only (ARCH-EMA-BG-SPIKE Done — impl. cancelled, see arch_ema_bg_spike_literature.md).",
+      "harchoc_fit": "high",
+      "harchoc_backlog": ["MS-ORIG", "MS-SOTA"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Reviewer theme #2 (originality). Closest kernel-counting peer—contrast single-class counting + EMA/background with harchoc two-class tray MAE + TIDE fp_breakdown. Introduction draft: originality_contribution_peers.md §2–3."
+    },
+    {
+      "id": "lwcd_yolo2025",
+      "doi": "10.3390/agriculture15181968",
+      "title": "LWCD-YOLO: A Lightweight Corn Seed Detection Model Based on YOLOv11",
+      "authors": "Sun et al.",
+      "year": 2025,
+      "venue": "Agriculture",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.3390/agriculture15181968"
+      },
+      "approach_summary": "Benchtop corn seeds; offline 10× geometric aug; **Ultralytics mosaic disabled** in training; Grad-CAM for localization errors.",
+      "architecture_takeaway": "Supports **ARCH-MOSAIC0-AB** (S2 mosaic=0) and Grad-CAM narrative; mosaic-off is evidence-based for dense benchtop seeds.",
+      "harchoc_fit": "high",
+      "harchoc_backlog": ["P1-AUG", "ARCH-MOSAIC0-AB", "MS-EXPLAIN"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Reviewer theme #2 (originality). Dense benchtop corn seeds; mosaic-off precedent for ARCH-MOSAIC0-AB. Pair with GrainNet in Introduction peer table (originality_contribution_peers.md)."
+    },
+    {
+      "id": "tfa2020",
+      "doi": "10.48550/arXiv.2003.06957",
+      "title": "Frustratingly Simple Few-Shot Object Detection",
+      "authors": "Wang X, Huang TE, Darrell T, Gonzalez JE, Saenko K",
+      "year": 2020,
+      "venue": "ICML",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://arxiv.org/abs/2003.06957"
+      },
+      "approach_summary": "Two-stage fine-tune: train detector on base classes, freeze backbone+RPN, tune box heads on few-shot set with reduced LR.",
+      "architecture_takeaway": "Template for **P1-FINETUNE-LOOP** on held-out tray_key: freeze early YOLO layers, fine-tune head on target tray labels.",
+      "harchoc_fit": "high",
+      "harchoc_backlog": ["P1-FINETUNE-LOOP", "MS-DOMAIN-ADAPT"],
+      "manuscript_use": "methods_analogy"
+    },
+    {
+      "id": "gandhi2025_yolov8_freeze",
+      "doi": "10.48550/arXiv.2505.01016",
+      "title": "Fine-Tuning Without Forgetting: Adaptation of YOLOv8 Preserves COCO Performance",
+      "authors": "Gandhi & Gandhi",
+      "year": 2025,
+      "venue": "arXiv preprint",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://arxiv.org/abs/2505.01016"
+      },
+      "approach_summary": "YOLOv8n freeze-depth sweep; freeze=10 reports large fruit-domain mAP gain with minimal COCO regression.",
+      "architecture_takeaway": "Operational freeze schedule for `finetune.py` / Ultralytics `freeze` + lower `lr0` on tray holdout.",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["P1-FINETUNE-LOOP"],
+      "manuscript_use": "methods_analogy",
+      "reviewer_alignment": "Not peer-reviewed at check date — label as preprint in manuscript."
+    },
+    {
+      "id": "gwhd2020",
+      "doi": "10.34133/2020.3521832",
+      "title": "Global Wheat Head Detection (GWHD) Dataset: A Benchmark Dataset to Estimate the Density and Size of Wheat Heads on Field Conditions",
+      "authors": "David E, et al.",
+      "year": 2020,
+      "venue": "Plant Phenomics",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.34133/2020.3521832"
+      },
+      "approach_summary": "Multi-country wheat head bounding boxes; dense overlap/occlusion; mAP@0.5 matching; defines phenotyping-scale detection benchmarks and duplicate-FP challenges.",
+      "architecture_takeaway": "Cite for dense-organ phenotyping and counting-error framing (overlap, duplicate FPs); not sunflower-specific.",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["MS-LIT", "MS-ORIG", "P1-TIDE"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Reviewer theme #6 (literature depth). GWHD is the standard dense-head phenotyping benchmark — positions tray-scale seed counting vs field head detection."
+    },
+    {
+      "id": "iamchuen2026_sunflower_uav",
+      "doi": "10.3390/su18021026",
+      "title": "Automated Sunflower Head Detection and Yield Estimation from High-Resolution UAV Imagery Using YOLOv11",
+      "authors": "Iamchuen N, Hongpradit P, Puttinaovarat S, Anucharn T",
+      "year": 2026,
+      "venue": "Sustainability",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.3390/su18021026"
+      },
+      "approach_summary": "YOLOv11 on 512×512 UAV tiles for sunflower heads; conf and NMS IoU grids; single-plot study with spatially separated train/val tiles.",
+      "architecture_takeaway": "Helianthus detection precedent for conf/IoU sweeps; out of benchtop HSP scope — cite in Related Work + limitations, not as direct SOTA comparator.",
+      "harchoc_fit": "med",
+      "harchoc_backlog": ["MS-LIT", "MS-GEN"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Sunflower imaging axis for MS-LIT. Head-level UAV counting ≠ developed/aborted tray seeds; supports threshold methodology and generalization caveats."
+    },
+    {
+      "id": "gulzar2025_sunflower_tl",
+      "doi": "10.55730/1300-0152.2763",
+      "title": "Applications of Transfer Learning in Sunflower Disease Detection: Advances, Challenges, and Future Directions",
+      "authors": "Gulzar Y",
+      "year": 2025,
+      "venue": "Turkish Journal of Biology",
+      "validation": {
+        "status": "ok",
+        "checked_date": "2026-05-29",
+        "url": "https://doi.org/10.55730/1300-0152.2763"
+      },
+      "approach_summary": "Systematic review (30 papers) on TL for sunflower disease in field imagery; stresses domain shift and cross-regional validation needs.",
+      "architecture_takeaway": "Supports Discussion limitations on field/lighting/variety; not seed counting or viability classes.",
+      "harchoc_fit": "low",
+      "harchoc_backlog": ["MS-LIT", "MS-GEN"],
+      "manuscript_use": "cite_in_related_work",
+      "reviewer_alignment": "Sunflower + domain-shift narrative for MS-LIT / MS-GEN; disease classification review, not detection counting peer."
+    }
+  ]
+}

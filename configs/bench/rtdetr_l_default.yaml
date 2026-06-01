@@ -1,0 +1,15 @@
+name: bench_rtdetr_l_default
+task: detect
+backend: ultralytics
+model: rtdetr-l.pt
+groups: sota_2026
+infer:
+  imgsz: 1280
+  max_det: 300
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  RT-DETR-L zoo entry @ 1280. Matrix train via train_bench_rtdetr-l.json.
+  Decoder num_queries=300 vs documented peak GT boxes/image=1015 on frozen splits.

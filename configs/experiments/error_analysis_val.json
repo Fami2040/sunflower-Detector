@@ -1,0 +1,18 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "run": {
+    "kind": "error_analysis",
+    "gt_json": "reports/hsp/gt_val.json",
+    "preds_json": "reports/hsp/preds_val.json",
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "export_fp_crops": true,
+    "fp_crops_topk": 200,
+    "tide_out": "reports/hsp/tide_bucket_summary_val.json",
+    "out": "reports/hsp/error_val.json",
+    "report": "reports/hsp/error_val_report.json"
+  }
+}

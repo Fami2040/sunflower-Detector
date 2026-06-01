@@ -1,0 +1,19 @@
+# Transfer policy for tray/domain fine-tune (see docs/EXPERIMENTS.md § Transfer fine-tune).
+name: transfer_finetune_minimal
+
+# freeze_backbone: when true and ``freeze`` is unset, train.py forwards Ultralytics
+#   freeze=10 (YOLO layer index; Gandhi/TFA heuristic for partial backbone).
+freeze_backbone: true
+
+# unfreeze_epoch: planned second-stage unfreeze epoch — meta-only today; train.py logs
+#   one warning per run. Use two separate train invocations for true staged unfreeze.
+unfreeze_epoch: 10
+
+# Optional explicit Ultralytics freeze (int layer count or list of layer indices).
+# freeze: 10
+
+epochs: 50
+lr: 0.001
+seed: 0
+notes: >
+  Pretrained -> tray holdout fine-tune; compare before/after via eval_domains / finetune.json.

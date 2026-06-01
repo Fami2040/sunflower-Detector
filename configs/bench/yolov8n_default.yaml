@@ -1,0 +1,9 @@
+include: _defaults.yaml
+name: bench_yolov8n_default
+backend: ultralytics
+model: yolov8n.pt
+groups: yolov8_scales, sota_2026, zoo_scale
+infer:
+  max_det: 3000
+notes: >
+  YOLOv8n scale entry @ 1280. Matrix train via train_bench_yolov8n.json.

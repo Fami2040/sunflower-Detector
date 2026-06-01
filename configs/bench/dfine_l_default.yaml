@@ -1,0 +1,15 @@
+name: bench_dfine_l_default
+task: detect
+backend: external
+source_id: dfine_l
+model_id: dfine_l
+groups: zoo_core, zoo_core_8gb, sota_deim, zoo_detr_stack
+infer:
+  imgsz: 1280
+  max_det: 3000
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  D-FINE-L (Peterande/D-FINE). COCO-pretrain dfine_l_coco.pth. Baseline for DEIM-D-FINE-L row.

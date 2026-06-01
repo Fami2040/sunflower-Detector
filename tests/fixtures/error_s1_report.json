@@ -1,0 +1,8 @@
+{
+  "schema_version": "error_analysis_report.v1",
+  "status": "ok",
+  "counting_metrics": {
+    "mae": 14.0,
+    "n_images": 2
+  }
+}

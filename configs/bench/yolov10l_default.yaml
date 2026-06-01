@@ -1,0 +1,10 @@
+include: _defaults.yaml
+name: bench_yolov10l_default
+backend: ultralytics
+model: yolov10l.pt
+groups: yolov10_scales, sota_2026, zoo_scale
+infer:
+  max_det: 3000
+  tiling: "none"
+notes: >
+  YOLOv10l zoo entry @ 1280. Matrix train via train_bench_yolov10l.json.

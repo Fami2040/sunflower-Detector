@@ -1,0 +1,59 @@
+{
+  "schema_version": "manuscript_repro_bundle.v1",
+  "description": "Canonical HSP P0 manuscript reproducibility bundle for models/best2.pt (YOLOv8m @ 1280).",
+  "weights": "models/best2.pt",
+  "train_config": "configs/experiments/train_yolov8m_baseline.json",
+  "aug_config": "configs/aug/robustness_minimal.yaml",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "repo_splits": {
+    "splits_dir": "data/splits",
+    "pattern": "collect_run_metadata(..., include_repo_splits=True) → repo_splits.files",
+    "files": {
+      "train": {
+        "path": "data/splits/train.txt",
+        "sha256": "48b433418e631e7a08854793a3240b01f060825e35574600319f8c95b060f342"
+      },
+      "val": {
+        "path": "data/splits/val.txt",
+        "sha256": "2514b7881cd0dc0d18fd8f05fde51bdaec4fd35ffda3b529bb1fc9221a721268"
+      },
+      "test": {
+        "path": "data/splits/test.txt",
+        "sha256": "49f5efc46732689f993aae8b2bdfed98695cee1db030708d96418d459bc5922a"
+      }
+    }
+  },
+  "configs": {
+    "eval_hsp_baseline": "configs/experiments/eval_hsp_baseline.json",
+    "threshold_sweep_val": "configs/experiments/threshold_sweep_val.json",
+    "threshold_sweep_test_locked": "configs/experiments/threshold_sweep_test_locked.json",
+    "error_analysis_val": "configs/experiments/error_analysis_val.json",
+    "error_analysis_test": "configs/experiments/error_analysis_test.json"
+  },
+  "export_hyperparams": {
+    "imgsz": 1280,
+    "conf": 0.001,
+    "iou": 0.3,
+    "max_det": 3000,
+    "export_device": "cpu"
+  },
+  "artifacts": {
+    "split_drift": "reports/hsp/split_drift_p0.json",
+    "eval_val": "reports/hsp/eval_val.json",
+    "eval_test": "reports/hsp/eval_test.json",
+    "gt_val": "reports/hsp/gt_val.json",
+    "gt_test": "reports/hsp/gt_test.json",
+    "preds_val": "reports/hsp/preds_val.json",
+    "preds_test": "reports/hsp/preds_test.json",
+    "threshold_val": "reports/hsp/threshold_val.json",
+    "threshold_test_locked": "reports/hsp/threshold_test_locked.json",
+    "error_val": "reports/hsp/error_val.json",
+    "error_test": "reports/hsp/error_test.json",
+    "dual_metric": "reports/hsp/dual_metric.json",
+    "eval_test_map": "reports/hsp/eval_test_map.json",
+    "p0_summary": "reports/hsp/p0_summary.md"
+  }
+}

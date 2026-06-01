@@ -1,0 +1,7 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "model": "models/best2.pt",
+  "epochs": 50,
+  "lr0": 0.001,
+  "notes": "Tray/domain finetune from best2.pt; freeze policy merged from configs/transfer/finetune_minimal.yaml into temp train JSON."
+}

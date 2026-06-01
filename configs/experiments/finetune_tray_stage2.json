@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/finetune_tray.json",
+  "epochs": 25,
+  "notes": "Stage 2: full unfreeze. Set --base-weights to stage 1 runs/transfer/finetune_tray_s1/weights/best.pt (or your stage-1 run dir)."
+}

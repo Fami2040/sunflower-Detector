@@ -1,0 +1,12 @@
+{
+  "schema_version": "threshold_sweep_run.v1",
+  "status": "ok",
+  "locked": {
+    "mode": "fixed_conf",
+    "row": {"conf_thr": 0.15},
+    "counting_metrics": {
+      "mae": 16.0,
+      "n_images": 2
+    }
+  }
+}

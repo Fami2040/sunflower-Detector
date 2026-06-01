@@ -1,0 +1,15 @@
+name: bench_deim_rtdetrv2_l_default
+task: detect
+backend: external
+source_id: deim_rtdetrv2_l
+model_id: deim_rtdetrv2_l
+groups: zoo_core, zoo_core_8gb, sota_deim, zoo_detr_stack
+infer:
+  imgsz: 1280
+  max_det: 3000
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  DEIM-RT-DETRv2-L (Intellindust-AI-Lab/DEIM). Same L-scale as upstream rtdetrv2_l; compares DEIM matching vs vanilla v2.

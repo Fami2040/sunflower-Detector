@@ -1,0 +1,42 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500",
+    "split_file_val": "data/splits/val.txt",
+    "split_file_test": "data/splits/test.txt"
+  },
+  "run": {
+    "kind": "eval",
+    "dry_run": false,
+    "weights": "models/best2.pt",
+    "split_file": "data/splits/test.txt",
+    "imgsz": 1280,
+    "out": "reports/hsp/eval_test_map.json",
+    "notes": "HSP baseline detector (best2.pt). Classifier not used. For val export + sweep, point split_file/out/export paths at reports/hsp/* per docs/research/threshold_calibration_literature.md Phase C.",
+    "eval": {
+      "max_det": 3000
+    },
+    "export": {
+      "conf": 0.001,
+      "iou": 0.3,
+      "max_det": 3000,
+      "device_env": "HARCHOC_EXPORT_DEVICE",
+      "device_default": "cuda",
+      "val": {
+        "export_only": true,
+        "split_file": "data/splits/val.txt",
+        "export_gt_json": "reports/hsp/gt_val.json",
+        "export_preds_json": "reports/hsp/preds_val.json",
+        "out": "reports/hsp/eval_val.json"
+      },
+      "test": {
+        "export_only": true,
+        "split_file": "data/splits/test.txt",
+        "export_gt_json": "reports/hsp/gt_test.json",
+        "export_preds_json": "reports/hsp/preds_test.json",
+        "out": "reports/hsp/eval_test.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "extends": "configs/experiments/finetune_tray.json",
+  "epochs": 25,
+  "notes": "Stage 1: frozen backbone (see configs/transfer/finetune_stage1.yaml). Run stage 2 with --stage 2 and --base-weights from stage 1 best.pt."
+}

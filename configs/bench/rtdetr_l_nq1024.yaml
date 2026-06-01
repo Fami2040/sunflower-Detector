@@ -1,0 +1,14 @@
+name: bench_rtdetr_l_nq1024
+task: detect
+backend: ultralytics
+model: configs/models/rtdetr-l_nq1024.yaml
+groups: zoo_core, sota_2026
+infer:
+  imgsz: 1280
+  max_det: 1024
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  RT-DETR-L query-cap ablation @ 1280, decoder nq=1024 (>= peak GT 1015/image).
+  Matrix train via train_bench_rtdetr-l_nq1024.json. Scratch YAML — not rtdetr-l.pt.

@@ -1,0 +1,67 @@
+{
+  "schema_version": "asymmetric_seed_policy.v1",
+  "description": "Eval policy for asymmetric developed vs aborted seed prevalence on sunflower-cvat-2500. Manuscript headline metrics use the frozen test split only; val is for threshold tuning.",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "classes": {
+    "0": "developed",
+    "1": "aborted"
+  },
+  "prevalence": {
+    "summary": "Developed seeds (class 0) outnumber aborted seeds (class 1) by roughly 10 percentage points (~55% / ~45% of boxes). This reflects biological head composition, not a deliberate class-balancing protocol.",
+    "source_artifact": "reports/hsp/split_drift_p0.json",
+    "splits": {
+      "train": {
+        "n_images": 875,
+        "class_counts": {"0": 269704, "1": 219821},
+        "developed_fraction": 0.5508,
+        "aborted_fraction": 0.4492
+      },
+      "val": {
+        "n_images": 109,
+        "class_counts": {"0": 32463, "1": 29121},
+        "developed_fraction": 0.5271,
+        "aborted_fraction": 0.4729
+      },
+      "test": {
+        "n_images": 109,
+        "class_counts": {"0": 33445, "1": 26916},
+        "developed_fraction": 0.5541,
+        "aborted_fraction": 0.4459
+      }
+    },
+    "split_drift_acceptance": {
+      "train_vs_test_class_dist_l1": 0.0063,
+      "val_vs_test_class_dist_l1": 0.0539,
+      "note": "Class prevalence is stable train→test (L1 ≈ 0.006); val↔test slightly noisier at n=109 but same order of magnitude."
+    }
+  },
+  "eval_policy": {
+    "primary_split": "test",
+    "split_file": "data/splits/test.txt",
+    "split_sha256": "49f5efc46732689f993aae8b2bdfed98695cee1db030708d96418d459bc5922a",
+    "split_role": "held-out manuscript split; Ultralytics early-stop uses val.txt only",
+    "metrics": {
+      "primary": "total_count_mae",
+      "report_per_class": true,
+      "per_class_fields": ["developed_count", "aborted_count", "cls_confusion_in_fp_breakdown"],
+      "threshold_protocol": "val sweep → lock global conf → test error_analysis (--locked-conf-from); no per-class conf in manuscript HSP sweep"
+    },
+    "configs": {
+      "error_analysis_test": "configs/experiments/error_analysis_test.json",
+      "threshold_sweep_test_locked": "configs/experiments/threshold_sweep_test_locked.json"
+    }
+  },
+  "optional_supplementary": {
+    "asymmetric_subset_list": "data/eval_sets/asymmetric.txt",
+    "purpose": "Optional image list for high-aborted-fraction or ambiguous cases (MS uncertainty / integration tests); not used for primary test MAE.",
+    "status": "optional"
+  },
+  "related_docs": [
+    "docs/research/training_tech_scan_2026_eval_calibration.md",
+    "docs/manuscript/reviewer_comments_backlog_gap.md",
+    "data/splits/README.md"
+  ]
+}

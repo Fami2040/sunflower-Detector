@@ -1,0 +1,10 @@
+# Stage 1 — frozen backbone (P1-FINETUNE-LOOP staged unfreeze).
+name: finetune_stage1
+freeze_backbone: true
+unfreeze_epoch: 10
+epochs: 25
+lr: 0.001
+seed: 0
+notes: >
+  First stage: partial freeze. After completion, run finetune.py --stage 2 with
+  --base-weights pointing at stage-1 best.pt.

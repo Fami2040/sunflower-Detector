@@ -1,0 +1,7 @@
+name: ablation_early_stopping
+epochs: 200
+patience: 10
+seed: 0
+notes: >
+  Placeholder for early-stopping / regularization ablations to reduce val-test discrepancy.
+

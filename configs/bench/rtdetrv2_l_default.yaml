@@ -1,0 +1,16 @@
+name: bench_rtdetrv2_l_default
+task: detect
+backend: external
+source_id: rtdetrv2_l
+model_id: rtdetrv2_l
+groups: zoo_core, zoo_core_8gb, sota_deim, zoo_detr_stack
+infer:
+  imgsz: 1280
+  max_det: 3000
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  RT-DETRv2-L upstream (lyuwenyu/RT-DETR rtdetrv2_pytorch). COCO-pretrain via detector_sources.v1.json.
+  Fine-tune with COCO-format sunflower export; train via that repo or DEIM fork configs.

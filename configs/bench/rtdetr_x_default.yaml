@@ -1,0 +1,15 @@
+name: bench_rtdetr_x_default
+task: detect
+backend: ultralytics
+model: rtdetr-x.pt
+groups: zoo_core, sota_2026
+infer:
+  imgsz: 1280
+  max_det: 300
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  RT-DETR-X (Ultralytics hub) @ 1280. Matrix train via train_bench_rtdetr-x.json.
+  Same 300-query decoder cap as rtdetr-l until nq1024 scratch ablation.

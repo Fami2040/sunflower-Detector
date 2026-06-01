@@ -1,0 +1,7 @@
+# Shared benchmark matrix defaults (include from bench YAML via `include: _defaults.yaml`).
+task: detect
+epochs: 100
+patience: 50
+seed: 0
+infer:
+  imgsz: 1280

@@ -1,0 +1,9 @@
+include: _defaults.yaml
+name: bench_yolov8m_default
+backend: ultralytics
+model: yolov8m.pt
+groups: zoo_core, zoo_core_8gb, yolov8_scales, sota_2026
+infer:
+  max_det: 3000
+notes: >
+  Tier B anchor: yolov8m matrix retrain @ 1280 (production-class baseline vs best2.pt on count MAE). train_bench_yolov8m.json.

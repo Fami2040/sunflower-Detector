@@ -1,0 +1,20 @@
+{
+  "schema_version": "experiments.v1",
+  "dataset": {
+    "manifest": "data/manifest.json",
+    "default_dataset_name": "sunflower-cvat-2500"
+  },
+  "run": {
+    "kind": "threshold_sweep",
+    "dry_run": true,
+    "gt_json": "data/examples/gt.json",
+    "preds_json": "data/examples/preds.json",
+    "min": 0.05,
+    "max": 0.95,
+    "steps": 19,
+    "iou": 0.5,
+    "out": "reports/ci/threshold_sweep.dry.json",
+    "csv_out": "reports/ci/threshold_sweep.dry.csv"
+  }
+}
+

@@ -12,28 +12,35 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-os.chdir(ROOT)
 
 GT_F = 417
 GT_U = 420
 
-try:
-    import torch
+def _select_device() -> str:
+    try:
+        import torch  # heavy; only import when running
 
-    FORCE_DEVICE = os.getenv("FORCE_DEVICE", "").lower()
-    if FORCE_DEVICE == "cuda" and torch.cuda.is_available():
-        DEVICE = "cuda"
-    elif FORCE_DEVICE == "cpu":
-        DEVICE = "cpu"
-    else:
-        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-except Exception:
-    DEVICE = "cpu"
+        force = os.getenv("FORCE_DEVICE", "").lower()
+        if force == "cuda" and torch.cuda.is_available():
+            return "cuda"
+        if force == "cpu":
+            return "cpu"
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except Exception:
+        return "cpu"
 
-MODEL_PATH = os.path.join(ROOT, "models", "best2.pt")
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
-from sahi import AutoDetectionModel
-from sahi.predict import get_sliced_prediction
+import sys
+from pathlib import Path as _Path
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, ROOT)
+from harchoc.hsp_weights import resolve_detection_weights
+
+MODEL_PATH = str(resolve_detection_weights())
+if not os.path.isabs(MODEL_PATH):
+    MODEL_PATH = os.path.join(ROOT, MODEL_PATH.replace("/", os.sep))
 
 
 def compute_counts(result, conf_fert: float, conf_unfert: float) -> tuple[int, int]:
@@ -52,7 +59,17 @@ def loss(f: int, u: int) -> float:
     return abs(f - GT_F) + abs(u - GT_U)
 
 
-def run_once(detection_model, image: str, sl: int, ov: float, cf: float, nms: float) -> tuple[int, int, float]:
+def run_once(
+    *,
+    detection_model,
+    get_sliced_prediction,
+    device: str,
+    image: str,
+    sl: int,
+    ov: float,
+    cf: float,
+    nms: float,
+) -> tuple[int, int, float]:
     t1 = time.time()
     result = get_sliced_prediction(
         image=image,
@@ -68,8 +85,10 @@ def run_once(detection_model, image: str, sl: int, ov: float, cf: float, nms: fl
     elapsed = time.time() - t1
     del result
     gc.collect()
-    if DEVICE == "cuda":
+    if device == "cuda":
         try:
+            import torch
+
             torch.cuda.empty_cache()
         except Exception:
             pass
@@ -91,19 +110,28 @@ def preset_combos() -> list[tuple[int, float, float, float, str]]:
     ]
 
 
-def main() -> None:
-    image = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "test_sunflower_tune.png")
+def main(argv: list[str] | None = None) -> int:
+    # Heavy deps are intentionally imported only at runtime so CI does not
+    # require torch/sahi just to import/compile this module.
+    from sahi import AutoDetectionModel
+    from sahi.predict import get_sliced_prediction
+
+    device = _select_device()
+
+    args = list(argv) if argv is not None else sys.argv[1:]
+    default_image = os.path.join(ROOT, "test_sunflower_tune.png")
+    image = args[0] if args else default_image
     if not os.path.isfile(image):
         print(f"Image not found: {image}")
-        sys.exit(1)
+        return 1
     if not os.path.isfile(MODEL_PATH):
         print(f"Model not found: {MODEL_PATH}")
-        sys.exit(1)
+        return 1
 
     model_conf = float(os.getenv("TUNE_MODEL_CONF", "0.01"))
     mode = os.getenv("TUNE_COMBOS", "quick").lower()
 
-    print(f"Device: {DEVICE} | image: {image}")
+    print(f"Device: {device} | image: {image}")
     print(f"Ground truth: Fertilized={GT_F}, Unfertilized={GT_U}, total={GT_F + GT_U}")
     print(f"Loading model (internal conf={model_conf})...")
     t0 = time.time()
@@ -111,7 +139,7 @@ def main() -> None:
         model_type="ultralytics",
         model_path=MODEL_PATH,
         confidence_threshold=model_conf,
-        device=DEVICE,
+        device=device,
     )
     print(f"Model loaded in {time.time() - t0:.1f}s\n")
 
@@ -132,7 +160,16 @@ def main() -> None:
 
     results: list[tuple[float, int, int, int, float, float, float, float, str]] = []
     for sl, ov, cf, nms, label in combos:
-        f, u, elapsed = run_once(detection_model, image, sl, ov, cf, nms)
+        f, u, elapsed = run_once(
+            detection_model=detection_model,
+            get_sliced_prediction=get_sliced_prediction,
+            device=device,
+            image=image,
+            sl=sl,
+            ov=ov,
+            cf=cf,
+            nms=nms,
+        )
         L = loss(f, u)
         results.append((L, f, u, sl, ov, cf, nms, elapsed, label))
         print(
@@ -154,7 +191,8 @@ def main() -> None:
     print(f'  OVERLAP = float(os.getenv("OVERLAP", "{ov}"))')
     print(f'  CONF_THR = float(os.getenv("CONF_THR", "{cf}"))')
     print(f'  NMS_IOU = float(os.getenv("NMS_IOU", "{nms}"))')
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

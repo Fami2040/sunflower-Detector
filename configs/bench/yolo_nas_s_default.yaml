@@ -1,0 +1,14 @@
+name: bench_yolo_nas_s_default
+task: detect
+backend: supergradients
+model_id: yolo_nas_s
+groups: sota_2026
+infer:
+  imgsz: 1280
+  max_det: 3000
+  tiling: none
+epochs: 100
+patience: 50
+seed: 0
+notes: >
+  YOLO-NAS-S via SuperGradients. Matrix train via train_bench_yolo_nas_s.json.
