@@ -232,7 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--verify-deps",
         action="store_true",
-        help="Run pip check + optional super_gradients import (uses CONDA_PREFIX env name).",
+        help=(
+            "Run pip check + optional super_gradients / external DETR imports "
+            "(HARCHOC_CHECK_SG=1, HARCHOC_CHECK_EXTERNAL=1)."
+        ),
     )
     args = p.parse_args(argv)
 
@@ -243,7 +246,12 @@ def main(argv: list[str] | None = None) -> int:
 
         env_name = _os.path.basename((_os.getenv("CONDA_PREFIX") or "harchoc").rstrip("/"))
         sg = _os.getenv("HARCHOC_CHECK_SG", "").strip() in ("1", "true", "yes")
-        health = env_health_report(env=env_name, with_super_gradients=sg)
+        external = _os.getenv("HARCHOC_CHECK_EXTERNAL", "").strip() in ("1", "true", "yes")
+        health = env_health_report(
+            env=env_name,
+            with_super_gradients=sg,
+            with_external_detr=external,
+        )
         print(json.dumps(health, indent=2))
         return 0 if health.get("status") == "ok" else 1
 

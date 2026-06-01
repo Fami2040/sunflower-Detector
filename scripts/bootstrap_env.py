@@ -10,6 +10,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 _DATASET_MANIFEST = REPO_ROOT / "data" / "manifest.json"
 _WEIGHTS_MANIFEST = REPO_ROOT / "data" / "weights" / "weights_manifest.json"
@@ -27,6 +29,23 @@ SuperGradients (--with-super-gradients):
   if pip check reports numpy conflicts with super-gradients.
   Epilog re-pins numpy<2 and opencv-python-headless after data-gradients install.
 """
+
+_EXTERNAL_DETR_EPILOG = """
+External DETR (--with-external-detr):
+  Installs pip deps for DEIM, D-FINE, and RT-DETRv2 matrix rows:
+    faster-coco-eval>=1.6.6
+    calflops, transformers, loguru
+    gdown  (DEIM Google Drive checkpoints via check_weights_cache --download)
+  Matches external/D-FINE/requirements.txt plus gdown for weight prep.
+  Use with zoo matrix / gpu_queue rows that set backend: external.
+"""
+
+
+def _install_external_detr(env: str) -> None:
+    """Install pip deps for external DETR train stacks (DEIM, D-FINE, RT-DETRv2)."""
+    from harchoc.external_detector_train import EXTERNAL_DETR_PIP_PACKAGES
+
+    _pip_install(env, list(EXTERNAL_DETR_PIP_PACKAGES))
 
 
 def _run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
@@ -163,13 +182,22 @@ def _load_bootstrap_checklist() -> dict:
     return json.loads(_BOOTSTRAP_CHECKLIST.read_text(encoding="utf-8"))
 
 
-def print_post_install_checklist(*, env: str, with_super_gradients: bool) -> None:
+def print_post_install_checklist(
+    *,
+    env: str,
+    with_super_gradients: bool,
+    with_external_detr: bool,
+) -> None:
     data = _load_bootstrap_checklist()
     print(f"\n{data.get('heading', 'Post-install checklist:')}")
     for cmd in data.get("commands", []):
         print(f"  {str(cmd).format(env=env)}")
+    when = data.get("when") or {}
     if with_super_gradients:
-        for cmd in (data.get("when") or {}).get("with_super_gradients", []):
+        for cmd in when.get("with_super_gradients", []):
+            print(f"  {str(cmd).format(env=env)}")
+    if with_external_detr:
+        for cmd in when.get("with_external_detr", []):
             print(f"  {str(cmd).format(env=env)}")
     footer = data.get("footer")
     if footer:
@@ -179,7 +207,7 @@ def print_post_install_checklist(*, env: str, with_super_gradients: bool) -> Non
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="GPU-aware, robust environment bootstrap.",
-        epilog=_SG_PIN_EPILOG,
+        epilog=_SG_PIN_EPILOG + _EXTERNAL_DETR_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument("--env", default="harchoc", help="Mamba env name to use/create.")
@@ -194,6 +222,14 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Install YOLO-NAS backend (super-gradients) with pinned numpy<2, onnx, "
             "onnxruntime, and headless OpenCV (see epilog)."
+        ),
+    )
+    p.add_argument(
+        "--with-external-detr",
+        action="store_true",
+        help=(
+            "Install external DETR stack deps (faster-coco-eval, calflops, "
+            "transformers, loguru, gdown) for DEIM/D-FINE/RT-DETRv2 rows."
         ),
     )
     p.add_argument(
@@ -257,6 +293,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.with_super_gradients:
         _install_super_gradients(args.env)
 
+    if args.with_external_detr:
+        _install_external_detr(args.env)
+
     print("Done. Sanity check:")
     _run(["mamba", "run", "-n", args.env, "python", str(REPO_ROOT / "scripts" / "check_gpu.py")])
 
@@ -271,25 +310,40 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("\nManifest verification: OK (dataset + weights paths exist).")
 
-    print_post_install_checklist(env=args.env, with_super_gradients=bool(args.with_super_gradients))
+    print_post_install_checklist(
+        env=args.env,
+        with_super_gradients=bool(args.with_super_gradients),
+        with_external_detr=bool(args.with_external_detr),
+    )
 
     from harchoc.env_health import env_health_report
 
-    health = env_health_report(env=args.env, with_super_gradients=bool(args.with_super_gradients))
+    health = env_health_report(
+        env=args.env,
+        with_super_gradients=bool(args.with_super_gradients),
+        with_external_detr=bool(args.with_external_detr),
+    )
     print(f"\nEnv health: {health['status']}")
     pip = health.get("pip_check") if isinstance(health.get("pip_check"), dict) else {}
-    if pip.get("ignored_sg_numpy"):
+    if pip.get("ignored_sg_numpy") and args.with_super_gradients:
         print("  pip check: SG-related numpy warnings suppressed (expected after --with-super-gradients)")
     if pip.get("issues"):
         print("  pip check issues:")
         for ln in pip["issues"]:
             print(f"    - {ln}")
-        print(f"  {health.get('remediation')}")
+        rem = health.get("remediation")
+        if rem:
+            print(f"  {rem}")
     sg = health.get("super_gradients")
     if isinstance(sg, dict) and sg.get("ok"):
         print(f"  super_gradients: OK ({sg.get('version')})")
     elif isinstance(sg, dict) and not sg.get("ok"):
         print(f"  super_gradients import failed: {sg.get('import_error')}")
+    ext = health.get("external_detr")
+    if isinstance(ext, dict) and ext.get("ok"):
+        print(f"  external_detr: OK ({ext.get('versions')})")
+    elif isinstance(ext, dict) and not ext.get("ok"):
+        print(f"  external_detr import failed: missing={ext.get('missing')}")
 
     if manifest_issues:
         return 1

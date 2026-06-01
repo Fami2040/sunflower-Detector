@@ -11,6 +11,8 @@ mamba run -n harchoc python scripts/train.py --help
 ```
 
 - Create or refresh the env: `python scripts/bootstrap_env.py --env harchoc --create`
+- External DETR zoo rows: add `--with-external-detr` (see [`configs/external/README.md`](../configs/external/README.md))
+- YOLO-NAS: add `--with-super-gradients`
 - CUDA sanity: `mamba run -n harchoc python scripts/check_gpu.py`
 - Some helpers (`check_gpu.py`, `rtdetr_smoke.py`) re-exec into mamba via `harchoc/ml_env.py` when torch is missing on base Python.
 - **CI / dry imports:** GitHub Actions sets `PYTHONPATH=.` and `HARCHOC_ALLOW_BASE_PYTHON=1` on the unit-test job so `unittest` can import modules without a GPU env.
@@ -94,7 +96,7 @@ Modeling splits live in repo-tracked `data/splits/{train,val,test}.txt`. Ultraly
 | `scripts/split_drift.py` | Train/val/test drift report → `reports/hsp/split_drift_p0.json` (P0); rich proxies → `--extended` → `reports/hsp/split_drift_rich.json` |
 | `scripts/make_figures.py` | Figures + `reports/figures/run.json` |
 | `scripts/check_weights_cache.py` | Pre-flight Ultralytics weights under `data/weights/ultralytics/` |
-| `scripts/check_gpu.py` | PyTorch/CUDA probe (`check` default), `sanity`, `smoke-ultralytics` subcommands; legacy `gpu_sanity.py` / `gpu_smoke_ultralytics.py` are shims |
+| `scripts/check_gpu.py` | PyTorch/CUDA probe (`check` default), `sanity`, `smoke-ultralytics` subcommands (legacy `gpu_sanity.py` / `gpu_smoke_ultralytics.py` **removed**) |
 | `scripts/finetune.py` | Transfer fine-tune → `train.main` (`configs/transfer/finetune_minimal.yaml`, `configs/experiments/finetune_tray.json`; default `--dry-run`) |
 | `scripts/strict_ml_smoke.py` | Agent debug-all: `HARCHOC_STRICT_ML=1 mamba run -n harchoc python scripts/strict_ml_smoke.py` → `reports/hsp/strict_ml_smoke.json` |
 | `scripts/pre_train_gate.py` | Pre-train preflight: manifest + env reminders + unittest (`--quick`); `--full` + `HARCHOC_STRICT_ML=1` runs strict ML smoke (no reports unless `--json-out`) |
@@ -126,13 +128,14 @@ Ordered workflow to improve **test count MAE** at val-locked conf — not val mA
 
 ### P1-AUG smoke index (S0–S14)
 
-Canonical registry: [`configs/experiments/aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json). All smokes: 15 epochs, YOLOv8m @ 1280, test **count MAE** primary. Per-smoke train configs (`train_aug_s*_smoke.json`), aug YAMLs, status, and summaries live in the index — do not duplicate rows here.
+Canonical registry: [`configs/experiments/aug_smoke_index.json`](../configs/experiments/aug_smoke_index.json). All smokes: 15 epochs, YOLOv8m @ 1280 (except S10 YOLO11s), test **count MAE** primary. **Runtime train:** [`train_smoke_rank_15ep.json`](../configs/experiments/train_smoke_rank_15ep.json) + index `aug_config` for S0–S8; committed train JSON for S9–S13 only. Aug YAMLs, status, and summaries live in the index — do not duplicate rows here.
 
 Dry-run any pending smoke (CI-safe):
 
 ```bash
 mamba run -n harchoc python scripts/train.py --dry-run --name aug_smoke_close3 \
-  --config configs/experiments/train_aug_s1_close3_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_smoke_close3.yaml
 ```
 
 Post-train test eval: [aug scan §5 shared eval](research/training_tech_scan_2026_augmentation.md#5-mapped-15-epoch-smoke-experiments) → `reports/aug_smoke/<name>_error.json`. Automated via [`harchoc/aug_smoke_runner.py`](../harchoc/aug_smoke_runner.py) and the GPU queue below.
@@ -281,7 +284,7 @@ mamba run -n harchoc python scripts/experiment.py dual-metric \
 
 Use `--select min_count_mae` on the val sweep for count-first operating-point selection (**P1-FP-BUDGET**; see [§ Threshold sweep](#threshold-sweep--error-analysis-real-preds)).
 
-**4 — Aug smokes** — 15-ep S0–S14 grid; compare **test** count MAE: [aug scan §5](research/training_tech_scan_2026_augmentation.md). Example: `train_aug_s1_close3_smoke.json` under [§ Augmentation](#augmentation-trainpy---aug-config).
+**4 — Aug smokes** — 15-ep S0–S14 grid; compare **test** count MAE: [aug scan §5](research/training_tech_scan_2026_augmentation.md). Example: `train_smoke_rank_15ep.json` + aug YAML from [aug smoke index](../configs/experiments/aug_smoke_index.json) under [§ Augmentation](#augmentation-trainpy---aug-config).
 
 **5 — Matrix zoo** (after **P0-4** RT-DETR smoke completes)
 
@@ -518,6 +521,38 @@ Canonical policy: [`configs/eval/asymmetric_seed_policy.json`](../configs/eval/a
 
 **Reporting:** primary metric = **total count MAE** at val-locked conf; report per-class counts and `cls_confusion` in `error_analysis` JSON. Manuscript sweep uses one **global** conf for both classes (deploy may tune per-class conf separately — see [HSP_BASELINE_MODELS](HSP_BASELINE_MODELS.md)).
 
+### Detection confusion matrix (developed / aborted / background)
+
+3×3 matrix at the val-locked operating point (`detection_confusion_matrix.v1`). Prefer the **streaming** path (no preds JSON):
+
+```bash
+# One model load — test + train (zoo row example)
+mamba run -n harchoc python scripts/eval.py \
+  --weights runs/hsp_zoo/yolo26m_e100_s0/weights/best.pt \
+  --confusion-matrix-only \
+  --confusion-matrix-splits test,train \
+  --confusion-matrix-out reports/hsp/yolo26m_e100_s0 \
+  --locked-conf-from reports/hsp/threshold_val.json \
+  --imgsz 1280 --export-max-det 3000 \
+  --out reports/hsp/yolo26m_e100_s0_confusion_run.json
+```
+
+Writes `reports/hsp/yolo26m_e100_s0_test_confusion.json` and `_train_confusion.json`. GPU default (`cuda` unless `HARCHOC_EXPORT_DEVICE` set); optional micro-batch via `HARCHOC_PREDICT_BATCH=4`.
+
+If `*_gt.json` / `*_preds.json` already exist, reuse exports (no re-inference):
+
+```bash
+mamba run -n harchoc python scripts/error_analysis.py \
+  --gt-json reports/hsp/yolo26m_e100_s0_gt.json \
+  --preds-json reports/hsp/yolo26m_e100_s0_preds.json \
+  --locked-conf-from reports/hsp/threshold_val.json \
+  --confusion-matrix-out reports/hsp/yolo26m_e100_s0_test_confusion.json \
+  --out reports/hsp/yolo26m_e100_s0_error.json \
+  --report reports/hsp/yolo26m_e100_s0_error_report.json
+```
+
+Library API: `harchoc/detection_confusion.py` (`confusion_matrix_streaming`, `confusion_matrix_multi_split`, `confusion_matrix_from_exports`).
+
 Optional supplementary list for high-aborted or ambiguous images: `data/eval_sets/asymmetric.txt` (not required for primary test metrics; see [eval calibration scan §2.6](research/training_tech_scan_2026_eval_calibration.md)).
 
 Backlog: **P2-ASYM-SEED** Done; manuscript sentence → **MS-ASYM-NARR**.
@@ -528,10 +563,12 @@ Conservative counting-first recipe: `configs/aug/robustness_minimal.yaml` (`mixu
 
 ```bash
 mamba run -n harchoc python scripts/train.py --dry-run --name yolov8m_aug_s1_close3_smoke \
-  --config configs/experiments/train_aug_s1_close3_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_smoke_close3.yaml
 
 mamba run -n harchoc python scripts/train.py --name yolov8m_aug_s1_close3_smoke \
-  --config configs/experiments/train_aug_s1_close3_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_smoke_close3.yaml
 ```
 
 Compare **test** count MAE (error analysis on exported preds), not val mAP alone. Plan: [aug scan](research/training_tech_scan_2026_augmentation.md).
@@ -578,6 +615,7 @@ mamba run -n harchoc python scripts/benchmark_matrix.py --no-dry-run \
 - Missing cache → run `skipped` with `weights_not_cached`.
 - Train recipes: `configs/experiments/train_bench_<stem>.json` (from bench `model:` stem).
 - **SuperGradients** (`yolo_nas_s`): `harchoc/supergradients_train.py` / `supergradients_eval.py`; install via `python scripts/bootstrap_env.py --env harchoc --with-super-gradients`.
+- **External DETR** (DEIM, D-FINE, RT-DETRv2): `harchoc/external_detector_train.py`; install via `--with-external-detr`, then `check_weights_cache.py --download --strict`.
 
 Example HSP zoo sweep:
 
@@ -639,7 +677,7 @@ mamba run -n harchoc python scripts/experiment.py benchmark \
   --config configs/experiments/sahi_matrix_eval_plan_dry.json
 ```
 
-Plan schema: `sahi_matrix_eval.v1` with `eval_protocol: sahi`. Per-run `planned.sahi` holds `slice_size`, `overlap`, `nms_iou`, optional class conf thresholds. Bench YAML can override via `infer.tiling: sahi` and nested `infer.sahi:` (see below). Single-image SAHI grid tuning remains `experiment.py tune-sahi` → `tune_sahi_params.py`.
+Plan schema: `sahi_matrix_eval.v1` with `eval_protocol: sahi`. Per-run `planned.sahi` holds `slice_size`, `overlap`, `nms_iou`, optional class conf thresholds. Bench YAML can override via `infer.tiling: sahi` and nested `infer.sahi:` (see below). Single-image SAHI grid tuning: `experiment.py tune-sahi --dry-run` only (live grid removed).
 
 ### Adding a bench entry
 

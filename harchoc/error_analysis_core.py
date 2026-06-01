@@ -15,6 +15,7 @@ from harchoc.detection_match import (
     _pred_pred_max_iou,
 )
 from harchoc.error_taxonomy import build_bbox_area_strata, build_conf_taxonomy_grid
+from harchoc.instance_match import classify_unmatched_prediction, find_same_class_tp_match
 from harchoc.tide_summary import build_ambiguous_fp_crosstab, build_tide_bucket_summary
 
 def _try_import_pil() -> tuple[Any | None, str | None]:
@@ -168,15 +169,7 @@ def analyze_errors(
                     }
                 )
 
-            best_i, best_iou = -1, 0.0
-            for i, g in enumerate(gt_boxes):
-                if gt_used[i]:
-                    continue
-                if int(p["category_id"]) != int(g["category_id"]):
-                    continue
-                iou = _iou_xyxy(p["bbox"], g["bbox"])
-                if iou >= iou_thr and iou > best_iou:
-                    best_i, best_iou = i, iou
+            best_i = find_same_class_tp_match(p, gt_boxes, gt_used, iou_thr=iou_thr)
             if best_i >= 0:
                 gt_used[best_i] = True
                 img_tp += 1
@@ -193,16 +186,10 @@ def analyze_errors(
                 )
                 continue
 
-            is_dupe = False
-            for i, g in enumerate(gt_boxes):
-                if not gt_used[i]:
-                    continue
-                if int(p["category_id"]) != int(g["category_id"]):
-                    continue
-                if _iou_xyxy(p["bbox"], g["bbox"]) >= iou_thr:
-                    is_dupe = True
-                    break
-            if is_dupe:
+            outcome, _confused_gt = classify_unmatched_prediction(
+                p, gt_boxes, gt_used, iou_thr=iou_thr, iou_bg_thr=iou_bg_thr
+            )
+            if outcome == "dupe":
                 img_dupe += 1
                 img_fp_breakdown["dupe"] += 1
                 pred_outcomes.append(
@@ -228,31 +215,7 @@ def analyze_errors(
                 )
                 continue
 
-            # If not a TP or dupe, classify FP cause:
-            # - classification: overlaps any GT (IoU>=iou_thr) but wrong class
-            # - localization: same-class IoU in [iou_bg_thr, iou_thr)
-            # - background: max IoU with any GT < iou_bg_thr
-            overlapped_wrong_cls = False
-            for i, g in enumerate(gt_boxes):
-                if int(p["category_id"]) == int(g["category_id"]):
-                    continue
-                if _iou_xyxy(p["bbox"], g["bbox"]) >= iou_thr:
-                    overlapped_wrong_cls = True
-                    break
-
-            overlapped_same_cls_low_iou = False
-            if not overlapped_wrong_cls:
-                for i, g in enumerate(gt_boxes):
-                    if int(p["category_id"]) != int(g["category_id"]):
-                        continue
-                    iou = _iou_xyxy(p["bbox"], g["bbox"])
-                    if iou_bg_thr <= iou < iou_thr:
-                        overlapped_same_cls_low_iou = True
-                        break
-
-            max_iou_any = _max_iou_to_gts(p["bbox"], gt_boxes)
-
-            if overlapped_wrong_cls:
+            if outcome == "cls_confusion":
                 img_conf += 1
                 img_fp_breakdown["classification"] += 1
                 pred_outcomes.append(
@@ -280,27 +243,10 @@ def analyze_errors(
                         "error_type": "classification",
                     }
                 )
-            elif overlapped_same_cls_low_iou:
-                img_fp += 1
-                img_fp_breakdown["localization"] += 1
-                err_type = "localization"
-                pred_outcomes.append(
-                    {
-                        "ambiguous": bool(amb_flags),
-                        "flags": list(amb_flags),
-                        "bucket": "localization",
-                    }
-                )
-                instance_events.append(
-                    {
-                        "error_type": "fp_localization",
-                        "bbox": p["bbox"],
-                        "score": p.get("score"),
-                        "image_id": img_id,
-                    }
-                )
-            elif max_iou_any < iou_bg_thr:
-                img_fp += 1
+                continue
+
+            img_fp += 1
+            if outcome == "fp_background":
                 img_fp_breakdown["background"] += 1
                 err_type = "background"
                 pred_outcomes.append(
@@ -319,7 +265,6 @@ def analyze_errors(
                     }
                 )
             else:
-                img_fp += 1
                 img_fp_breakdown["localization"] += 1
                 err_type = "localization"
                 pred_outcomes.append(
@@ -337,18 +282,16 @@ def analyze_errors(
                         "image_id": img_id,
                     }
                 )
-
-            if not overlapped_wrong_cls:
-                fp_examples.append(
-                    {
-                        "image_id": img_id,
-                        "file_name": file_name,
-                        "bbox": p["bbox"],
-                        "category_id": int(p["category_id"]),
-                        "score": p["score"],
-                        "error_type": err_type,
-                    }
-                )
+            fp_examples.append(
+                {
+                    "image_id": img_id,
+                    "file_name": file_name,
+                    "bbox": p["bbox"],
+                    "category_id": int(p["category_id"]),
+                    "score": p["score"],
+                    "error_type": err_type,
+                }
+            )
 
         img_fn = sum(1 for used in gt_used if not used)
         for i, g in enumerate(gt_boxes):

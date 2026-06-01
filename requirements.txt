@@ -11,7 +11,15 @@ python-dotenv>=1.0.0
 aiohttp>=3.9.0
 
 #
-# Optional / heavyweight dependencies (NOT installed in CI by default).
+# Optional / heavyweight dependencies (NOT installed in CI or default bootstrap).
+# Install via scripts/bootstrap_env.py flags (see docs/RESEARCH_AND_OPS.md).
 #
-# YOLO-NAS backend (SuperGradients)
-super-gradients
+# External DETR stack (DEIM, D-FINE, RT-DETRv2) — bootstrap --with-external-detr
+# faster-coco-eval
+# calflops
+# transformers
+# loguru
+# gdown
+
+# YOLO-NAS backend (SuperGradients) — bootstrap --with-super-gradients
+# super-gradients

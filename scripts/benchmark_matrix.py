@@ -279,7 +279,13 @@ def _invoke_test_eval_for_bench(
         train_imgsz=int(imgsz),
     )
 
-    rc = int(eval_main(argv))
+    cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
+    try:
+        rc = int(eval_main(argv))
+    finally:
+        from harchoc.post_train_eval import restore_cuda_visible_devices_after_ultralytics_cpu
+
+        restore_cuda_visible_devices_after_ultralytics_cpu(cuda_visible_prior)
     map50: float | None = None
     map50_95: float | None = None
     if eval_out is not None and eval_out.is_file():

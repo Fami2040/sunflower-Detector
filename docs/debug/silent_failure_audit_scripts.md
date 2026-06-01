@@ -81,9 +81,8 @@ None (2026-05-29): `benchmark_matrix._ultralytics_eval_one` records `results_dic
 | `scripts/eval_domains.py` | 8 | `_path` bootstrap | low | Keep | — |
 | `scripts/experiment.py` | 8 | `_path` bootstrap | low | Keep | — |
 | `scripts/finetune.py` | 7 | `_path` bootstrap | low | Keep | — |
-| `scripts/gpu_sanity.py` | 10 | `_path` bootstrap | low | Keep | — |
-| `scripts/gpu_sanity.py` | 48 | bench → `bench_failed` in JSON | low | Already surfaced | — |
-| `scripts/gpu_smoke_ultralytics.py` | 10 | `_path` bootstrap | low | Keep | — |
+| `scripts/gpu_sanity.py` | — | **Removed** — use `scripts/check_gpu.py sanity` | — | — | — |
+| `scripts/gpu_smoke_ultralytics.py` | — | **Removed** — use `scripts/check_gpu.py smoke-ultralytics` | — | — | — |
 | `scripts/make_figures.py` | 8 | `_path` bootstrap | low | Keep | — |
 | `scripts/make_splits.py` | 9 | `_path` bootstrap | low | Keep | — |
 | `scripts/migrate_configs.py` | 11 | `_path` bootstrap | low | Keep | — |

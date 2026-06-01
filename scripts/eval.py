@@ -286,9 +286,33 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Device for val() mAP (default: --export-device, else HARCHOC_EXPORT_DEVICE, else cuda). Use cpu if GPU busy/OOM.",
     )
+    p.add_argument(
+        "--confusion-matrix-out",
+        default=None,
+        help="Write confusion matrix JSON path, or output prefix when --confusion-matrix-splits is set.",
+    )
+    p.add_argument(
+        "--confusion-matrix-splits",
+        default=None,
+        help="Comma-separated split roles (e.g. test,train) or JSON map role→split file. "
+        "One model load; writes {prefix}_{role}_confusion.json.",
+    )
+    p.add_argument(
+        "--confusion-matrix-only",
+        action="store_true",
+        help="Skip val() mAP; only run confusion matrix (requires --confusion-matrix-out or --confusion-matrix-splits).",
+    )
     args = p.parse_args(argv)
 
     weights = _resolve_weights(args.weights)
+    confusion_out = (args.confusion_matrix_out or "").strip()
+    confusion_splits_raw = (args.confusion_matrix_splits or "").strip()
+    if args.confusion_matrix_only and not confusion_out and not confusion_splits_raw:
+        raise SystemExit(
+            "--confusion-matrix-only requires --confusion-matrix-out and/or --confusion-matrix-splits."
+        )
+    if confusion_splits_raw and not confusion_out:
+        raise SystemExit("--confusion-matrix-splits requires --confusion-matrix-out as output prefix.")
 
     # Resolve dataset + split source even in dry-run, but do not require anything to exist.
     spec = resolve_dataset(
@@ -328,6 +352,9 @@ def main(argv: list[str] | None = None) -> int:
                 "export_conf": args.export_conf,
                 "export_iou": args.export_iou,
                 "export_only": bool(args.export_only),
+                "confusion_matrix_out": confusion_out or None,
+                "confusion_matrix_splits": confusion_splits_raw or None,
+                "confusion_matrix_only": bool(args.confusion_matrix_only),
                 "strict_warnings": [],
                 "out": str(Path(args.out)),
                 },
@@ -401,13 +428,16 @@ def main(argv: list[str] | None = None) -> int:
     per_class: dict[str, Any] | None = None
     runtime_s = 0.0
     eval_device: str | None = None
+    cuda_visible_prior: str | None = None
 
-    if not args.export_only:
+    if not args.export_only and not args.confusion_matrix_only:
         eval_device = args.device
         if eval_device is None:
             eval_device = args.export_device
         if eval_device is None:
             eval_device = (os.getenv("HARCHOC_EXPORT_DEVICE") or "").strip() or None
+        if str(eval_device or "").lower() == "cpu":
+            cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
         t0 = time.perf_counter()
         res = run_val(
             weights,
@@ -497,11 +527,101 @@ def main(argv: list[str] | None = None) -> int:
             payload["counting_metrics"] = counting
             payload["count_mae"] = counting.get("mae")
 
+    if confusion_out or confusion_splits_raw:
+        from harchoc.detection_confusion import (
+            confusion_matrix_multi_split,
+            confusion_matrix_out_path,
+            confusion_matrix_streaming,
+            format_confusion_matrix_text,
+            parse_confusion_matrix_splits,
+            resolve_match_settings,
+        )
+
+        cm_conf, cm_iou = resolve_match_settings(
+            conf=float(args.export_conf),
+            iou=float(args.export_iou),
+            locked_conf_from=(args.locked_conf_from or "").strip() or None,
+        )
+        export_max_det = args.export_max_det
+        if export_max_det is None:
+            export_max_det = int(args.max_det) if args.max_det is not None else 3000
+        export_device = args.export_device
+        if export_device is None:
+            export_device = (os.getenv("HARCHOC_EXPORT_DEVICE") or "").strip() or "cuda"
+
+        confusion_payloads: dict[str, Any] = {}
+        if confusion_splits_raw:
+            splits = parse_confusion_matrix_splits(confusion_splits_raw, repo_root=repo_root)
+            for role, split_path in splits.items():
+                if not split_path.is_file():
+                    raise SystemExit(f"Split file for {role!r} does not exist: {split_path}")
+            multi = confusion_matrix_multi_split(
+                weights=weights,
+                splits=splits,
+                dataset_root=spec.root,
+                conf_thr=cm_conf,
+                iou_thr=cm_iou,
+                export_conf=float(args.export_conf),
+                export_iou=float(args.export_iou),
+                max_det=int(export_max_det),
+                device=export_device,
+                imgsz=args.imgsz,
+                strict_warnings=strict_warnings,
+            )
+            out_prefix = Path(confusion_out)
+            for role, (acc, cm_runtime_s) in multi.items():
+                cm_payload = acc.to_payload(
+                    conf_thr=cm_conf,
+                    iou_thr=cm_iou,
+                    split_role=role,
+                    weights=str(weights),
+                    export_conf=float(args.export_conf),
+                    export_iou=float(args.export_iou),
+                    export_device=export_device,
+                    runtime_s=cm_runtime_s,
+                )
+                cm_path = write_json(confusion_matrix_out_path(out_prefix, role), cm_payload)
+                cli_print(format_confusion_matrix_text(acc.matrix, acc.stats, title=f"{role} split"))
+                cli_print(f"Wrote {cm_path}")
+                confusion_payloads[role] = {"path": str(cm_path), **cm_payload}
+            payload["confusion_matrices"] = confusion_payloads
+        else:
+            acc, cm_runtime_s = confusion_matrix_streaming(
+                weights=weights,
+                split_file=sp,
+                dataset_root=spec.root,
+                conf_thr=cm_conf,
+                iou_thr=cm_iou,
+                export_conf=float(args.export_conf),
+                export_iou=float(args.export_iou),
+                max_det=int(export_max_det),
+                device=export_device,
+                imgsz=args.imgsz,
+                strict_warnings=strict_warnings,
+            )
+            cm_payload = acc.to_payload(
+                conf_thr=cm_conf,
+                iou_thr=cm_iou,
+                split_role=split_role,
+                weights=str(weights),
+                export_conf=float(args.export_conf),
+                export_iou=float(args.export_iou),
+                export_device=export_device,
+                runtime_s=cm_runtime_s,
+            )
+            cm_path = write_json(confusion_out, cm_payload)
+            cli_print(format_confusion_matrix_text(acc.matrix, acc.stats, title=f"{split_role} split"))
+            cli_print(f"Wrote {cm_path}")
+            payload["confusion_matrix"] = {"path": str(Path(cm_path)), **cm_payload}
+
     out_path = write_json(args.out, payload)
     cli_print(f"Wrote {out_path}")
     if export_gt:
         cli_print(f"Wrote GT export {export_gt}")
         cli_print(f"Wrote preds export {export_preds}")
+    from harchoc.post_train_eval import restore_cuda_visible_devices_after_ultralytics_cpu
+
+    restore_cuda_visible_devices_after_ultralytics_cpu(cuda_visible_prior)
     return 0
 
 

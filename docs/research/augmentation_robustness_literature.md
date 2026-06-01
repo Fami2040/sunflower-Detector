@@ -52,7 +52,7 @@ How literature recommendations map to **current repo entrypoints** (verified aga
 |------------------|----------------|-------|
 | Conservative aug recipe | `configs/aug/robustness_minimal.yaml` | Referenced by `"aug_config"` in `configs/experiments/train_bench_base.json` and all `train_bench_*.json`; merged in `harchoc/aug_config.py` |
 | Train | `mamba run -n harchoc python scripts/train.py --config … [--aug-config …] [--name …]` | `--aug-config` overrides/extends JSON `aug_config`; keys forwarded via `harchoc/train_kwargs.py` (`close_mosaic`, `mixup`, `erasing`, …) |
-| 15-ep aug smokes | `configs/experiments/train_aug_s1_close3_smoke.json` | Same aug YAML; see [aug scan §5](training_tech_scan_2026_augmentation.md) S0–S14 table |
+| 15-ep aug smokes | [`train_smoke_rank_15ep.json`](../configs/experiments/train_smoke_rank_15ep.json) + index `aug_config` | Same aug YAML; see [aug scan §5](training_tech_scan_2026_augmentation.md) S0–S14 table |
 | Mosaic-off / photometric-only | Duplicate aug YAML or inline `ultralytics:` overrides | `ablation_variants` in YAML are **documentation only**—not auto-selected; copy keys into `configs/aug/robustness_mosaic_off.yaml` etc. |
 | `close_mosaic` vs early stop | `harchoc/train_config.validate_epochs_patience_close_mosaic` | Bench JSONs tested for `epochs - patience >= close_mosaic`; 15-ep smoke with `patience=50` never early-stops but **`close_mosaic=15` disables mosaic from epoch 0** on 15-ep runs |
 | Test metrics (count-first) | `scripts/eval.py --imgsz 1280 --max-det 3000` on `test.txt` | Post-train hook reads `eval.max_det` from JSON (**3000** in `train_bench_base.json`) |

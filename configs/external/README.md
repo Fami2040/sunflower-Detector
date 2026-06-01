@@ -26,7 +26,7 @@ Implementation: `harchoc.external_repos.write_external_repos_manifest()`.
 [`scripts/check_weights_cache.py`](../../scripts/check_weights_cache.py) wraps [`harchoc.bench_assets`](../../harchoc/bench_assets.py) (`build_weights_prep_report`):
 
 ```bash
-mamba run -n harchoc pip install gdown   # once — DEIM Drive checkpoints
+python scripts/bootstrap_env.py --env harchoc --with-external-detr   # faster-coco-eval, calflops, transformers, loguru, gdown
 mamba run -n harchoc python scripts/check_weights_cache.py --sync-repos-manifest
 mamba run -n harchoc python scripts/check_weights_cache.py --download --strict \
   --out reports/hsp/weights_cache.json
@@ -35,7 +35,17 @@ mamba run -n harchoc python scripts/check_weights_cache.py --download --strict \
 - **`--download`** — cache external `.pth` under `data/weights/external/`, git-clone into `external/` (git-ignored), update [`data/weights/weights_manifest.json`](../../data/weights/weights_manifest.json).
 - **`--strict`** — exit non-zero if bench-required assets or manifest entries are missing.
 
-Bench configs reference external rows via `backend: external` and `source_id` (see [`configs/zoo/matrix_rows.v1.json`](../zoo/matrix_rows.v1.json)). Matrix train: `harchoc/external_detector_train.py`.
+Bench configs reference external rows via `backend: external` and `source_id` (see [`configs/zoo/matrix_rows.v1.json`](../zoo/matrix_rows.v1.json)). Matrix train: `harchoc/external_detector_train.py` writes `harchoc_train_overlay.yml` per stack:
+
+| Stack | Epoch key | Collate @ 1280 |
+|-------|-----------|----------------|
+| D-FINE | `epochs` | `base_size` + scaled `stop_epoch` |
+| DEIM | `epoches` | `base_size` + scaled DEIM schedule (`flat_epoch`, mixup, …); overlay disables Mosaic and uses D-FINE-style `policy.epoch` (int). **Torchvision ≥0.21:** runtime shim in [`harchoc/deim_tv_compat.py`](../../harchoc/deim_tv_compat.py) via [`harchoc/run_external_train.py`](../../harchoc/run_external_train.py) — do not patch `external/DEIM`. |
+| RT-DETRv2 | `epoches` | `scales` (not `base_size`; stale overlays with `base_size` fail at collate) |
+
+Preflight: `train_bench_run` runs `verify_external_train_smoke()` (isolated subprocess per stack) before distributed train.
+
+Also passes `-u epochs=…` / `-u epoches=…` and `eval_spatial_size=[1280,1280]` on the train CLI so overrides survive YAML merge quirks.
 
 ## Env overrides (local clones)
 

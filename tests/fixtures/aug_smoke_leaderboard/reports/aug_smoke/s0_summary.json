@@ -3,7 +3,7 @@
   "smoke_id": "S0",
   "run_name": "aug_smoke_baseline",
   "arch_ticket": "P1-AUG",
-  "train_config": "configs/experiments/train_aug_s0_baseline_smoke.json",
+  "train_config": "configs/experiments/train_smoke_rank_15ep.json",
   "status": "complete",
   "train": {
     "epochs": null,

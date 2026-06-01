@@ -3,7 +3,7 @@
   "smoke_id": "S5",
   "run_name": "aug_smoke_mosaic03",
   "arch_ticket": "P1-AUG",
-  "train_config": "configs/experiments/train_aug_s5_mosaic03_smoke.json",
+  "train_config": "configs/experiments/train_smoke_rank_15ep.json",
   "status": "complete",
   "train": {
     "epochs": null,

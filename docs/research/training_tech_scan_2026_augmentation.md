@@ -151,7 +151,7 @@ Priority order for **our** val≫test gap and dense counting — all runnable wi
 
 **Issue (historical):** Train `max_det=3000` vs eval `max_det=300` silently truncated predictions (~500 GT/image) → inflated FN and count MAE.
 
-**Shipped:** `"eval": {"max_det": 3000}` in `train_bench_base.json`, `train_aug_s1_close3_smoke.json`, and bench YAML `infer.max_det: 3000`. **S14** re-evaluates at `--max-det 300` as negative control ([`s14_maxdet_truncation.json`](../../reports/hsp/s14_maxdet_truncation.json)).
+**Shipped:** `"eval": {"max_det": 3000}` in `train_bench_base.json`, [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json), and bench YAML `infer.max_det: 3000`. **S14** re-evaluates at `--max-det 300` as negative control ([`s14_maxdet_truncation.json`](../../reports/hsp/s14_maxdet_truncation.json)).
 
 **Expected impact:** Honest test baseline before interpreting aug changes; S14 guards against cap regression.
 
@@ -252,20 +252,20 @@ Per-smoke aug YAMLs are committed under `configs/aug/` (e.g. [`robustness_smoke_
 
 | ID | Name | Train config | Key overrides vs baseline smoke | Hypothesis | Primary metric |
 |----|------|--------------|--------------------------------|------------|----------------|
-| S0 | `aug_smoke_baseline` | [`train_aug_s0_baseline_smoke.json`](../../configs/experiments/train_aug_s0_baseline_smoke.json) | [`robustness_minimal.yaml`](../../configs/aug/robustness_minimal.yaml) (`close_mosaic=15` → **3** @ 15 ep) | Production minimal baseline smoke | test count MAE |
-| S1 | `aug_smoke_close3` | [`train_aug_s1_close3_smoke.json`](../../configs/experiments/train_aug_s1_close3_smoke.json) | [`robustness_smoke_close3.yaml`](../../configs/aug/robustness_smoke_close3.yaml) | Mosaic active ep 0–11, off ep 12–14 | test count MAE |
-| S2 | `aug_smoke_mosaic0` | [`train_aug_s2_mosaic0_smoke.json`](../../configs/experiments/train_aug_s2_mosaic0_smoke.json) | [`robustness_mosaic_off.yaml`](../../configs/aug/robustness_mosaic_off.yaml) | No composition aug | test count MAE |
-| S3 | `aug_smoke_photometric` | [`train_aug_s3_photometric_smoke.json`](../../configs/experiments/train_aug_s3_photometric_smoke.json) | [`robustness_photometric_only.yaml`](../../configs/aug/robustness_photometric_only.yaml) | Photometric only (`hsv_s=0.45`, `hsv_v=0.40`) | test count MAE |
-| S4 | `aug_smoke_mosaic01` | [`train_aug_s4_mosaic01_smoke.json`](../../configs/experiments/train_aug_s4_mosaic01_smoke.json) | [`robustness_smoke_mosaic01.yaml`](../../configs/aug/robustness_smoke_mosaic01.yaml) | `mosaic=0.1`, `close_mosaic=3`, **`translate=0.10`** (≠ S1 @ 0.05) | test count MAE |
-| S5 | `aug_smoke_mosaic03` | Smoke JSON + aug YAML: `mosaic: 0.3, close_mosaic: 3` | Upper bound mosaic sweep | Quantify val↑ test↓ crossover | test count MAE |
-| S6 | `aug_smoke_erasing0` | S3 + `erasing: 0` | No random erasing | Is erasing hurting small seed recall? | test count MAE |
-| S7 | `aug_smoke_erasing03` | S3 + `erasing: 0.3` | Stronger occlusion | Occlusion robustness vs FN rate | test count MAE |
-| S8 | `aug_smoke_hsv_v045` | S3 + `hsv_v: 0.45` | Stronger value jitter | Session lighting DR | test count MAE |
-| S9 | `aug_smoke_no_aug_yaml` | Smoke JSON **without** `aug_config`; inline `_BASELINE_DEFAULTS` only | Legacy inline mosaic 0.1, no close_mosaic | Compare YAML merge vs code defaults | test count MAE |
-| S10 | `aug_smoke_yolo11s` | `train_bench_yolo11s.json` fields + `epochs: 15` | YOLO11s backbone | Architecture vs aug interaction | test mAP50 |
-| S11 | `aug_smoke_musgd` | S10 + `"optimizer": "MuSGD", "lr0": 0.0001` | MuSGD optimizer | 2026 optimizer recipe | test count MAE |
-| S12 | `aug_smoke_amp_off` | S1 + `"amp": false` | AMP disabled | Numerical stability @ 1280 dense | test count MAE |
-| S13 | `aug_smoke_patience5` | S1 + `"patience": 5` only | Early stop **can** fire (earliest stop ep 5) | Stress early-stop + close_mosaic interaction | **Same test MAE as S1 expected when `stop_epoch=15`** (observed 68.908…); parse `results.csv` for actual stop |
+| S0 | `aug_smoke_baseline` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) | [`robustness_minimal.yaml`](../../configs/aug/robustness_minimal.yaml) (`close_mosaic=15` → **3** @ 15 ep) | Production minimal baseline smoke | test count MAE |
+| S1 | `aug_smoke_close3` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) | [`robustness_smoke_close3.yaml`](../../configs/aug/robustness_smoke_close3.yaml) | Mosaic active ep 0–11, off ep 12–14 | test count MAE |
+| S2 | `aug_smoke_mosaic0` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) | [`robustness_mosaic_off.yaml`](../../configs/aug/robustness_mosaic_off.yaml) | No composition aug | test count MAE |
+| S3 | `aug_smoke_photometric` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) | [`robustness_photometric_only.yaml`](../../configs/aug/robustness_photometric_only.yaml) | Photometric only (`hsv_s=0.45`, `hsv_v=0.40`) | test count MAE |
+| S4 | `aug_smoke_mosaic01` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) | [`robustness_smoke_mosaic01.yaml`](../../configs/aug/robustness_smoke_mosaic01.yaml) | `mosaic=0.1`, `close_mosaic=3`, **`translate=0.10`** (≠ S1 @ 0.05) | test count MAE |
+| S5 | `aug_smoke_mosaic03` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) + [`robustness_smoke_mosaic03.yaml`](../../configs/aug/robustness_smoke_mosaic03.yaml) | `mosaic: 0.3, close_mosaic: 3` | Upper bound mosaic sweep | test count MAE |
+| S6 | `aug_smoke_erasing0` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) + [`robustness_photometric_erasing0.yaml`](../../configs/aug/robustness_photometric_erasing0.yaml) | S3 + `erasing: 0` | Is erasing hurting small seed recall? | test count MAE |
+| S7 | `aug_smoke_erasing03` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) + [`robustness_photometric_erasing03.yaml`](../../configs/aug/robustness_photometric_erasing03.yaml) | S3 + `erasing: 0.3` | Occlusion robustness vs FN rate | test count MAE |
+| S8 | `aug_smoke_hsv_v045` | [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json) + [`robustness_photometric_hsv_v045.yaml`](../../configs/aug/robustness_photometric_hsv_v045.yaml) | S3 + `hsv_v: 0.45` | Session lighting DR | test count MAE |
+| S9 | `aug_smoke_no_aug_yaml` | [`train_aug_s9_no_aug_yaml_smoke.json`](../../configs/experiments/train_aug_s9_no_aug_yaml_smoke.json) **without** `aug_config`; inline `_BASELINE_DEFAULTS` only | Legacy inline mosaic 0.1, no close_mosaic | Compare YAML merge vs code defaults | test count MAE |
+| S10 | `aug_smoke_yolo11s` | [`train_aug_s10_yolo11s_smoke.json`](../../configs/experiments/train_aug_s10_yolo11s_smoke.json) (`train_smoke_rank_yolo11s_15ep` + close3 aug) | YOLO11s backbone | Architecture vs aug interaction | test mAP50 |
+| S11 | `aug_smoke_musgd` | [`train_aug_s11_musgd_smoke.json`](../../configs/experiments/train_aug_s11_musgd_smoke.json) | S10 + `"optimizer": "MuSGD", "lr0": 0.0001` | MuSGD optimizer | test count MAE |
+| S12 | `aug_smoke_amp_off` | [`train_aug_s12_amp_off_smoke.json`](../../configs/experiments/train_aug_s12_amp_off_smoke.json) | S1 + `"amp": false` | Numerical stability @ 1280 dense | test count MAE |
+| S13 | `aug_smoke_patience5` | [`train_aug_s13_patience5_smoke.json`](../../configs/experiments/train_aug_s13_patience5_smoke.json) | S1 + `"patience": 5` only | Stress early-stop + close_mosaic interaction | **Same test MAE as S1 expected when `stop_epoch=15`** (observed 68.908…); parse `results.csv` for actual stop |
 | S14 | `aug_smoke_eval300` | eval-only (no train) | **`models/best2.pt`**; `--max-det 300` | **Negative control** for P0-1 (HSP historical baseline) | count MAE delta vs best2@3000 |
 
 ### Example train commands
@@ -273,15 +273,18 @@ Per-smoke aug YAMLs are committed under `configs/aug/` (e.g. [`robustness_smoke_
 ```bash
 # S1 — close_mosaic=3 smoke
 mamba run -n harchoc python scripts/train.py --name aug_smoke_close3 \
-  --config configs/experiments/train_aug_s1_close3_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_smoke_close3.yaml
 
 # S2 — mosaic off
 mamba run -n harchoc python scripts/train.py --name aug_smoke_mosaic0 \
-  --config configs/experiments/train_aug_s2_mosaic0_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_mosaic_off.yaml
 
 # Dry-run any smoke (CI-safe)
 mamba run -n harchoc python scripts/train.py --dry-run --name aug_smoke_close3 \
-  --config configs/experiments/train_aug_s1_close3_smoke.json
+  --config configs/experiments/train_smoke_rank_15ep.json \
+  --aug-config configs/aug/robustness_smoke_close3.yaml
 ```
 
 ### Decision gate after smokes
@@ -300,7 +303,7 @@ mamba run -n harchoc python scripts/train.py --dry-run --name aug_smoke_close3 \
 | Full mosaic sweep | `train_yolov8m_baseline.json` | `mosaic ∈ {0, 0.1, 0.3}` via aug YAML | Smoke winner unclear |
 | `close_mosaic` sweep | baseline | `{10, 15, 25}`, `patience=30` | Smoke shows mosaic helps |
 | Patience ablation | `configs/ablation/early_stopping.yaml` pattern | `patience ∈ {10, 20, 50}` | Early stop skips mosaic tail |
-| Matrix parity | `train_bench_yolo11s.json` | winner aug YAML | Zoo comparison |
+| Matrix parity | [`train_smoke_rank_yolo11s_15ep.json`](../../configs/experiments/train_smoke_rank_yolo11s_15ep.json) (runtime zoo overlay) | winner aug YAML | Zoo comparison |
 
 ---
 
@@ -337,7 +340,7 @@ mamba run -n harchoc python scripts/train.py --dry-run --name aug_smoke_close3 \
 
 ---
 
-*Validated 2026-05-29. Code-checked: `scripts/train.py`, `scripts/eval.py`, `configs/experiments/train_aug_s1_close3_smoke.json`, `configs/aug/robustness_minimal.yaml`, `harchoc/train_config.py`, `harchoc/train_kwargs.py`. Aligns with [`backlog.md` model improvement stack](../../backlog.md#model-improvement-stack-test-count-mae) steps 1 + 4.*
+*Validated 2026-05-30. Code-checked: `scripts/train.py`, `scripts/eval.py`, [`train_smoke_rank_15ep.json`](../../configs/experiments/train_smoke_rank_15ep.json), [`harchoc/aug_smoke_train.py`](../../harchoc/aug_smoke_train.py), `configs/aug/robustness_minimal.yaml`, `harchoc/train_config.py`, `harchoc/train_kwargs.py`. Aligns with [`backlog.md` model improvement stack](../../backlog.md#model-improvement-stack-test-count-mae) steps 1 + 4.*
 
 **Val vs test mAP gap:** Peak training val mAP can exceed test ranking mAP even when split drift proxies look similar — see [`val_test_map_gap.md` §5](../manuscript/val_test_map_gap.md#5-manuscript-draft--val-map-vs-test--results--22) + [`split_drift_p0.json`](../../reports/hsp/split_drift_p0.json) (**MS-SPLIT-MAPNARR** Done; **MS-VAL-MAPDOWN** Done). **Mosaic-off precedent:** `lwcd_yolo2025` → **ARCH-MOSAIC0-AB** (smoke S2).
 

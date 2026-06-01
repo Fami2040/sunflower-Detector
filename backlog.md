@@ -28,17 +28,20 @@ Class **0 = developed**, **1 = aborted** only (`harchoc/sunflower_dataset.py`, [
 
 **Success metric:** test **count MAE** at val-locked conf — not val mAP alone.
 
+**Error mix (best2 @ conf ~0.15, test):** **miss (FN) ~53%** ΔAP share; among FPs **localization ~58%**, **background ~35%**, **0↔1 cls ~3%** ([`error_test_report.json`](reports/hsp/error_test_report.json), gap §11). Lower background FPs alone will not fix counting if recall/overlap stay high.
+
 | Step | What | Active IDs |
 |------|------|------------|
 | 1 | Train/export parity | **Done** (`max_det=3000`; S14 eval-only **265.8** @ max_det 300 confirms cap — [`s14_summary.json`](reports/aug_smoke/s14_summary.json)) |
 | 2 | Full YOLO @ 1280, 100 ep | CLI [`train_yolov8m_baseline.json`](configs/experiments/train_yolov8m_baseline.json) |
 | 3 | Val lock → test; FP budget | **Done** |
 | 4 | Aug ablations | **Done** — S0–S14 + 100-ep confirm (**64.1** vs **best2 61.3**); Phase A close sweeps **closed** (close10 **96.7** rejected; close25 ≡ S1 **68.9** audit-only) — keep `robustness_minimal` @ 100 ep — [§ Aug close sweeps (closed)](#aug-close-sweeps-closed) |
-| 5 | Model zoo + count columns | **P0-5** **Ready** (`zoo_core_8gb` 8×100 ep on 8 GiB path); full matrix **26 rows** — [zoo design](docs/zoo_comparison_design.md) |
+| 5 | Model zoo + count columns | **P0-5** **Next** — early partial: **best2 61.3** still wins count MAE vs yolo11m/yolo26m/yolov8m @ locked conf; zoo improves mAP/FP tradeoffs, not headline MAE yet — [zoo design](docs/zoo_comparison_design.md) |
 | 6 | Tray / domain | **MS-GEN** Partial; **DATA-ACQ-GEN** Next — [§ Data acquisition](#data-acquisition-for-generalization-study-design) |
 | 7 | RT-DETR query cap | **P1-RTDETR-COUNT-REFRESH** (queue skipped prior summaries) |
+| 8 | Count MAE levers (non-backbone) | **P1-FINETUNE-LOOP**, hard-neg mining, dupe/overlap post, **P2-HEAD-ROI-EVAL** (mask ablation before head model) — [fp_taxonomy](docs/research/fp_taxonomy_literature.md) |
 
-**Defer (low MAE ROI):** [architecture_recommendations § Defer](docs/manuscript/architecture_recommendations.md).
+**Defer (low MAE ROI):** [architecture_recommendations § Defer](docs/manuscript/architecture_recommendations.md); trained head-ROI stage-1 until eval-only mask shows ↓bg FP without ↑FN.
 
 ---
 
@@ -60,7 +63,7 @@ Class **0 = developed**, **1 = aborted** only (`harchoc/sunflower_dataset.py`, [
 
 | ID | Pri | Status | Task | Blocker | Next |
 |----|-----|--------|------|---------|------|
-| P0-5 | P0 | **Next** | **`zoo_core`** 10×100 ep → `matrix_train.json` | — | Weights **20/20** Ultralytics + **4/4** external cached ([`weights_cache.json`](reports/hsp/weights_cache.json)); queue job `zoo_matrix_p0_5` (~2000 min). Tier 1–2 aug jobs skip on dry-run — run `./scripts/run_gpu_queue.sh resume` or `--job zoo_matrix_p0_5`. Optional **`zoo_scale`** / **`sota_2026`** deferred — [zoo_comparison_design](docs/zoo_comparison_design.md) |
+| P0-5 | P0 | **Next** | **`zoo_core`** 10×100 ep → `matrix_train.json` | — | Weights **20/20** Ultralytics + **4/4** external cached; queue `zoo_matrix_p0_5`. Partial HSP: **yolo26m ~95** MAE vs **best2 61.3**; per-row **`test_count_mae`** + fast 3×3 via `eval.py --confusion-matrix-only` ([EXPERIMENTS](docs/EXPERIMENTS.md)). Run `yolov8m_e100_s0` (renamed from `hsp_yolov8n_img800`). Optional **`zoo_scale`** deferred |
 | P2-DEIM-EVAL | P2 | **Ready** | HSP test eval for external DETR checkpoints | **P0-5** train | Wired in `benchmark_matrix.py` + `harchoc/external_detector_eval.py` (export + `error_analysis` @ locked conf); needs GPU matrix train for artifacts |
 | P2-DEIM-REPOS | P2 | Done | Upstream repos via `harchoc.bench_assets` / `check_weights_cache.py` | — | Canonical [`detector_sources.v1.json`](configs/external/detector_sources.v1.json); clones under `external/` on `--download`; generated [`external_repos.v1.json`](configs/external/external_repos.v1.json) via `--sync-repos-manifest`; pins in [`weights_manifest.json`](data/weights/weights_manifest.json) |
 | ARCH-MOSAIC0-AB | P1 | **Done (15 ep)** | S2 vs S0 mosaic-off | — | 15-ep: **S1 68.9** vs **S2 147.4** — mosaic-off **rejected**; **no 100-ep S2** (low ROI). Confirm @ 100 ep **64.1** on `robustness_minimal` — [archive § Aug smokes](#aug-smokes--15-ep-sweeps-gpu-queue-2026-05-2930) |
@@ -69,7 +72,8 @@ Class **0 = developed**, **1 = aborted** only (`harchoc/sunflower_dataset.py`, [
 | P1-RTDETR-Q | P1 | **Blocked** | `num_queries` ≥1024 15-ep smoke (live GPU) | contention | prior notes: CUDA driver @ `model.to` — see **P1-RTDETR-COUNT-REFRESH** |
 | P2-AUG-RANK-REPORT | P2 | Done | Aug smoke + sweep leaderboard artifact | P1-AUG archive | [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md) from index + CIs |
 | P1-VRAM-RTDETR | P1 | Done | rtdetr-l batch probe @ 1280 | — | queue skipped — [archive § GPU probes](#gpu-probes-tested) |
-| P1-ZOO-PARITY | P1 | Next | Matrix accuracy–efficiency columns | **P0-5** | |
+| P1-ZOO-PARITY | P1 | Next | Matrix **`test_count_mae`** + accuracy–efficiency columns | **P0-5** | Gate zoo winner on count MAE, not mAP/FP alone; confusion @ IoU 0.3 + locked conf |
+| P2-HEAD-ROI-EVAL | P2 | Next | Eval-only head-disk mask on preds | — | Quantify bg FP outside ROI before any head detector labels; deploy analogue to **MS-DEPLOY-2STG** |
 | P1-ZOO-PROV | P1 | Partial | Provenance per matrix row | **P0-5** | `detector_sources.v1.json` + matrix `weights` block for external; Ultralytics manifest in [`weights_manifest.json`](data/weights/weights_manifest.json) |
 | P1-CV-TRAIN | P1 | Next | Per-fold GPU training | GPU | routing Done — [archive § Scaffolding](#scaffolding-code-done) |
 | P2-FIG-CONCEPT | P2 | Done | Pipeline diagram `fig_concept` (redesigned) | — | [archive § Figures](#figures--explainability-done) |
@@ -77,7 +81,7 @@ Class **0 = developed**, **1 = aborted** only (`harchoc/sunflower_dataset.py`, [
 | P2-RTDETR-V2 | P2 | Partial | RT-DETRv2 / D-FINE / DEIM in matrix | **P0-5** train | Bench + [`detector_sources.v1.json`](configs/external/detector_sources.v1.json) + **train** + **HSP eval** wired; prep via `bench_assets` (`check_weights_cache --download`) |
 | P2-SAHI-MATRIX | P2 | Done | SAHI matrix eval protocol scaffold | — | dry-run plan JSON; GPU eval TBD |
 
-**Credibility order:** P0-4 Done → P1 aug **Done** → **P0-5** zoo → threshold / domain (test MAE). [RESEARCH_AND_OPS §3](docs/RESEARCH_AND_OPS.md#3-prioritized-roadmap).
+**Credibility order:** P0-4 Done → P1 aug **Done** → **P0-5** zoo (count columns) → **DATA-ACQ-GEN** / **P1-FINETUNE-LOOP** → inference levers (dupe, hard-neg, head-ROI eval). [RESEARCH_AND_OPS §3](docs/RESEARCH_AND_OPS.md#3-prioritized-roadmap).
 
 ### Blockers (zoo plan execution)
 
@@ -87,7 +91,7 @@ Class **0 = developed**, **1 = aborted** only (`harchoc/sunflower_dataset.py`, [
 | ~~**P2-DEIM-EVAL**~~ | ~~HSP test MAE for 4 external DETR rows post-train~~ | **Ready** — wired in matrix; run after **P0-5** train |
 | **P1-RTDETR-Q** | Live nq1024 15-ep smoke | GPU contention / CUDA @ `model.to` — use **P1-RTDETR-COUNT-REFRESH** `skip_if` path in full queue |
 | **MS-SOTA** | Manuscript SOTA table | **P0-5** `matrix_train.json` |
-| **15-ep aug gap vs best2** (+7.6 MAE) | Replacing `models/best2.pt` on 15-ep alone | **Resolved for recipe choice** — 100-ep confirm **64.1** vs **61.3**; zoo / finetune dominate further MAE gains |
+| **15-ep aug gap vs best2** (+7.6 MAE) | Replacing `models/best2.pt` on 15-ep alone | **Resolved for recipe choice** — 100-ep **64.1** vs **61.3**; partial zoo: no count winner — **DATA-ACQ-GEN** / finetune / step 8 |
 | ~~**P1-AUG-CLOSE-SCALE** (config)~~ | ~~Misleading `close_mosaic=15` warnings on 15-ep YAMLs~~ | **Done** — runtime scale + explicit smoke YAMLs; close10/close25 sweeps wired |
 
 Dedup audit: do not re-train **S0/S13/CLOSE25** (preds `ad6f1621…`, canonical **S1**), **S6/S7** (preds `41e79d28…`, canonical **S3**), or re-queue **`aug_sweep_15_close25`** (preds dedup vs complete smokes). **AMP≡SG** @ 15 ep diagnostic (preds `e4853607…`, MAE **204.2** — not ranked). See [dedup_root_cause.md](reports/aug_smoke/dedup_root_cause.md), [`equivalence_classes`](configs/experiments/aug_smoke_index.json).
@@ -111,10 +115,9 @@ One GPU, sequential — [manifest map](docs/EXPERIMENTS.md#gpu-queue-manifest-ma
 |----|-----|
 | ~~**P1-AUG-CLOSE Phase A**~~ | **Done** — close10 **96.7** (rejected); close25 **68.9** ≡ S1 (audit-only); decision: keep `close_mosaic=15` @ 100 ep — [§ Aug close sweeps (closed)](#aug-close-sweeps-closed). |
 | ~~**P1-AMP-HSP-EVAL** / **P1-SG-HSP-EVAL**~~ | **Done (diagnostic)** — both **204.2** MAE, identical preds `e4853607…`; no production impact. |
-| **P0-5** | **Next GPU** — `./scripts/run_gpu_queue.sh resume` or `--job zoo_matrix_p0_5`. |
-| **DATA-ACQ-GEN** | Tray/lighting acquisition for generalization — [§ Data acquisition](#data-acquisition-for-generalization-study-design). |
-| **P1-RTDETR-COUNT-REFRESH** | RT-DETR jobs skipped on 8 GiB; manuscript/SOTA needs fresh test count MAE or explicit stale-date caveat. |
-| **P2-AUG-RANK-REPORT** | Leaderboard: [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md) (regenerate via `experiment.py aug-leaderboard`). |
+| **P0-5** | Finish zoo + **`test_count_mae`** per row; early signal: **best2** retained on counting. |
+| **DATA-ACQ-GEN** | Tray/lighting acquisition — primary path after zoo if no count winner — [§ Data acquisition](#data-acquisition-for-generalization-study-design). |
+| **P1-RTDETR-COUNT-REFRESH** | RT-DETR skipped on 8 GiB; needs fresh test count MAE or stale-date caveat. |
 
 ---
 
@@ -333,6 +336,7 @@ Full HSP chain: [EXPERIMENTS § Threshold sweep](docs/EXPERIMENTS.md#threshold-s
 |--------|------|
 | Headline metrics | [`p0_summary.md`](reports/hsp/p0_summary.md) |
 | Thresholds / errors / TIDE | `reports/hsp/threshold_*.json`, `error_*.json`, `tide_bucket_summary*.json` |
+| Confusion 3×3 (fast) | `eval.py --confusion-matrix-only` → `*_confusion.json` — [`detection_confusion.py`](harchoc/detection_confusion.py) |
 | Domain eval | [`domain_eval.json`](reports/domains/domain_eval.json) |
 | Aug smokes | [`reports/aug_smoke/`](reports/aug_smoke/) |
 | Gap map | [`reviewer_comments_backlog_gap.md`](docs/manuscript/reviewer_comments_backlog_gap.md) |
@@ -402,6 +406,7 @@ Full HSP chain: [EXPERIMENTS § Threshold sweep](docs/EXPERIMENTS.md#threshold-s
 | P1-ZOO-READY | Prep gate via `harchoc.bench_assets` / [`weights_cache.json`](reports/hsp/weights_cache.json) (20 Ultralytics + 4 external); matrix **26** rows — [`matrix_rows.v1.json`](configs/zoo/matrix_rows.v1.json), validate: `benchmark_matrix.py --validate-zoo` |
 | P2-ZOO-EXPAND | YOLO26 + YOLO10/11 scales + `rtdetr-x` + external DETR registry + `zoo_core` groups — 2026-05-30 |
 | ARCH-EMA-BG-SPIKE | cite-only; impl cancelled — [arch_ema_bg_spike](docs/research/arch_ema_bg_spike_literature.md) |
+| P2-DET-CONFUSION | `harchoc/detection_confusion.py` + `eval.py` / `error_analysis.py` CLI — [EXPERIMENTS](docs/EXPERIMENTS.md) |
 
 ### FP budget & threshold (Done)
 
@@ -451,7 +456,7 @@ HSP eval: test split, conf locked from [`threshold_val.json`](reports/hsp/thresh
 
 **Audit (do not re-rank):** S0≡S1≡S13≡CLOSE25 @ 68.9; S3≡S6≡S7 @ 151.7 — [`dedup_root_cause.md`](reports/aug_smoke/dedup_root_cause.md), [`equivalence_classes`](configs/experiments/aug_smoke_index.json).
 
-**Conclusions (15 ep + Phase A):** (1) **close_mosaic=3 (S1)** wins; **S9** near winner (**73.2**). (2) **close10 96.7** — shorter tail rejected. (3) **close25 ≡ S1** — schedule-equivalent @ 15 ep (audit-only). (4) **100-ep confirm** **64.1** on `robustness_minimal` (~**+2.8** vs **best2 61.3**). (5) **Aug closed** — next MAE gains from **P0-5** zoo / **DATA-ACQ-GEN**.
+**Conclusions (15 ep + Phase A):** (1) **close_mosaic=3 (S1)** wins; **S9** near winner (**73.2**). (2) **close10 96.7** — shorter tail rejected. (3) **close25 ≡ S1** — schedule-equivalent @ 15 ep (audit-only). (4) **100-ep confirm** **64.1** on `robustness_minimal` (~**+2.8** vs **best2 61.3**). (5) **Aug closed** — partial zoo: backbone swap ≠ count win; prioritize **DATA-ACQ-GEN**, finetune, dupe/hard-neg/head-ROI eval (stack step 8).
 
 **Sweeps (Tier 2):** [`sweeps_15ep`](configs/experiments/aug_smoke_index.json) — close10 + close25 **complete**; close15 recipe-skipped (≡ S0/S1).
 

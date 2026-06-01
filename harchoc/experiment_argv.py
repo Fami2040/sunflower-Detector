@@ -179,7 +179,7 @@ def argv_for_deploy_parity(fields: dict[str, Any]) -> list[str]:
 
 
 def argv_for_tune_sahi(fields: dict[str, Any]) -> list[str]:
-    """Argv tail for ``tune_sahi_params.py`` via ``experiment.py tune-sahi``."""
+    """Argv tail for ``experiment.py tune-sahi`` (dry-run planning only)."""
     image = fields.get("image") or "test_sunflower_tune.png"
     return [str(image)]
 

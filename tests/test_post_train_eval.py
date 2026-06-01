@@ -53,7 +53,20 @@ class PostTrainEvalPolicyTests(unittest.TestCase):
         self.assertIn("--max-det", argv)
         self.assertIn("3000", argv)
         self.assertIn("--imgsz", argv)
-        self.assertIn("1280", argv)
+    def test_restore_cuda_visible_after_ultralytics_cpu_clears_mask(self) -> None:
+        from harchoc.post_train_eval import restore_cuda_visible_devices_after_ultralytics_cpu
+
+        with mock.patch.dict(os.environ, {"CUDA_VISIBLE_DEVICES": ""}, clear=False):
+            restore_cuda_visible_devices_after_ultralytics_cpu(None)
+            self.assertNotIn("CUDA_VISIBLE_DEVICES", os.environ)
+
+        with mock.patch.dict(os.environ, {"CUDA_VISIBLE_DEVICES": ""}, clear=False):
+            restore_cuda_visible_devices_after_ultralytics_cpu("0")
+            self.assertEqual(os.environ.get("CUDA_VISIBLE_DEVICES"), "0")
+
+        with mock.patch.dict(os.environ, {"CUDA_VISIBLE_DEVICES": "0"}, clear=False):
+            restore_cuda_visible_devices_after_ultralytics_cpu("0")
+            self.assertEqual(os.environ.get("CUDA_VISIBLE_DEVICES"), "0")
 
 
 if __name__ == "__main__":

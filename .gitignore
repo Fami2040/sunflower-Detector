@@ -68,6 +68,8 @@ test_sunflower_tune.png
 *.temp
 temp/
 tmp/
+# Leaked unittest temp dirs (TemporaryDirectory under tests/)
+tests/tmp*/
 
 # OS
 Thumbs.db
@@ -109,6 +111,10 @@ reports/*
 !reports/**/README.md
 reports/**/*
 !reports/**/README.md
+# Ad-hoc agent probes (belong under scripts/ or harchoc/, not reports/)
+reports/gpu_queue/debug_*.py
+reports/gpu_queue/probe_*.py
+reports/gpu_queue/verify_*.py
 figures/*
 !figures/.gitkeep
 !figures/README.md

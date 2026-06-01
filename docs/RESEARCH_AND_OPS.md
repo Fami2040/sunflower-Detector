@@ -173,6 +173,7 @@ Short smokes: `export HARCHOC_MAX_EPOCHS=15 HARCHOC_MAX_IMGSZ=2048`.
 ```bash
 python scripts/bootstrap_env.py --env harchoc --verify-manifests
 python scripts/bootstrap_env.py --env harchoc --with-super-gradients   # YOLO-NAS only
+python scripts/bootstrap_env.py --env harchoc --with-external-detr      # DEIM / D-FINE / RT-DETRv2
 mamba run -n harchoc python scripts/check_gpu.py --json-out reports/hsp/gpu_check.json
 mamba run -n harchoc python scripts/validate_splits.py --require-test
 ```

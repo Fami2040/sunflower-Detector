@@ -621,6 +621,41 @@ class TrainConfigExtendsTests(unittest.TestCase):
         )
 
 
+class AugSmokeConfigValidateTests(unittest.TestCase):
+    def test_validate_aug_smoke_configs_clean_on_production_index(self) -> None:
+        from harchoc.aug_smoke_train import validate_aug_smoke_configs
+
+        repo_root = Path(__file__).resolve().parents[1]
+        errors = validate_aug_smoke_configs(repo_root)
+        self.assertEqual(errors, [], msg="\n".join(errors))
+
+    def test_validate_aug_smoke_configs_catches_runtime_smoke_train_config(self) -> None:
+        import json
+        import tempfile
+
+        from harchoc.aug_smoke_train import validate_aug_smoke_configs
+
+        repo_root = Path(__file__).resolve().parents[1]
+        prod = json.loads(
+            (repo_root / "configs/experiments/aug_smoke_index.json").read_text(encoding="utf-8")
+        )
+        prod = dict(prod)
+        prod["smokes"] = [
+            dict(
+                {**entry, "train_config": "configs/experiments/train_smoke_rank_15ep.json"}
+                if str(entry.get("id")).upper() == "S0"
+                else dict(entry)
+            )
+            for entry in prod.get("smokes") or []
+        ]
+        with tempfile.TemporaryDirectory(dir=repo_root / "tests") as td:
+            bad = Path(td) / "bad_index.json"
+            bad.write_text(json.dumps(prod), encoding="utf-8")
+            rel = str(bad.relative_to(repo_root))
+            errors = validate_aug_smoke_configs(repo_root, index_path=rel)
+        self.assertTrue(any("S0" in e and "train_config" in e for e in errors))
+
+
 class TrainConfigIsoConfigAuditTests(unittest.TestCase):
     """Iso-config audit: bench overlays may differ only on documented parity keys."""
 

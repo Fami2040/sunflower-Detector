@@ -113,7 +113,7 @@
       "aug_config": "configs/aug/robustness_smoke_close3.yaml",
       "run_name": "aug_smoke_yolo11s",
       "status": "complete",
-      "key_overrides": "train_bench_yolo11s fields + epochs=15",
+      "key_overrides": "train_smoke_rank_yolo11s_15ep.json + close3 aug",
       "summary": "reports/aug_smoke/s10_summary.json",
       "test_count_mae": 116.08256880733946
     },

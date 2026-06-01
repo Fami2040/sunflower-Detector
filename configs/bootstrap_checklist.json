@@ -11,6 +11,11 @@
   "when": {
     "with_super_gradients": [
       "mamba run -n {env} python -c \"import super_gradients; print('super_gradients', super_gradients.__version__)\""
+    ],
+    "with_external_detr": [
+      "HARCHOC_CHECK_EXTERNAL=1 mamba run -n {env} python scripts/check_gpu.py --verify-deps",
+      "mamba run -n {env} python scripts/check_weights_cache.py --sync-repos-manifest",
+      "mamba run -n {env} python scripts/check_weights_cache.py --download --strict --out reports/hsp/weights_cache.json"
     ]
   },
   "footer": "See docs/EXPERIMENTS.md (weights cache + dataset resolution)."

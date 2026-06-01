@@ -50,13 +50,14 @@ def export_split_to_coco_json(
     images: list[dict[str, Any]] = []
     annotations: list[dict[str, Any]] = []
     ann_id = 1
-    for image_id, img_path, file_name in iter_split_image_paths(
-        split_file, dataset_root=dataset_root
-    ):
-        if not img_path.is_file():
-            continue
+    rows = (
+        row
+        for row in iter_split_image_paths(split_file, dataset_root=dataset_root)
+        if row[1].is_file()
+    )
+    for seq_id, (_stem_id, img_path, file_name) in enumerate(rows, start=1):
         image, anns = _gt_record_to_coco(
-            image_id=image_id,
+            image_id=seq_id,
             file_name=Path(file_name).name,
             img_path=img_path,
             dataset_root=dataset_root,

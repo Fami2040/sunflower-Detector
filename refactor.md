@@ -45,7 +45,7 @@
 
 ## 2. Sprawl — entrypoints and scaffolds
 
-**Scale:** 29 executable files under `scripts/`, plus root `run_infer_once.py`, `telegram_bot.py`, `tune_sahi_params.py`.
+**Scale:** 29 executable files under `scripts/`, plus root `run_infer_once.py`, `telegram_bot.py`.
 
 | Pattern | Examples | Status | Notes |
 |--------|----------|--------|-------|

@@ -27,7 +27,7 @@ python scripts/experiment.py deploy-parity --locked-conf-from reports/hsp/thresh
 
 | Weight | Task (Ultralytics) | Role | Used by |
 |--------|-------------------|------|---------|
-| `models/best2.pt` | `detect` (2 classes) | **Seed detection + counting** on a sunflower head (developed vs aborted boxes) | `telegram_bot.py`, `run_infer_once.py`, `tune_sahi_params.py`, `scripts/eval.py`, `scripts/pipeline_request.py` (metadata) |
+| `models/best2.pt` | `detect` (2 classes) | **Seed detection + counting** on a sunflower head (developed vs aborted boxes) | `telegram_bot.py`, `run_infer_once.py`, `experiment.py tune-sahi` (dry-run), `scripts/eval.py`, `scripts/pipeline_request.py` (metadata) |
 | `models/classifier.pt` | `classify` (2 classes) | **Image gate**: accept only “sunflower” vs reject “other” before running detection | `telegram_bot.py` only (not HSP eval / not `eval.py`) |
 
 **Detection model class names in the checkpoint** (Ultralytics `names`): `0: fertilized_seed`, `1: unfertilized_seed`. These align with repo labels **developed** (0) and **aborted** (1). Deploy UI strings use “Fertilized” / “Unfertilized” (`telegram_bot.py` `CLASSES`); counts map to developed/aborted in `pipeline_request.v1` JSON.
@@ -64,7 +64,7 @@ python scripts/experiment.py deploy-parity --locked-conf-from reports/hsp/thresh
 | Post-filter conf (class 1 aborted) | 0.04 | `CONF_THR_UNFERTILIZED` |
 | SAHI merge NMS IoU | 0.50 | `NMS_IOU` |
 
-Comments in `telegram_bot.py` note prior tuning (560/0.3/0.55 vs current 500/0.35/0.50). `tune_sahi_params.py` grids slice/overlap/conf/NMS against manual GT on a single reference head (`MODEL_PATH` fixed to `models/best2.pt`, no env override).
+Comments in `telegram_bot.py` note prior tuning (560/0.3/0.55 vs current 500/0.35/0.50). Deploy SAHI parity vs HSP: `experiment.py deploy-parity`; single-image grid planning: `experiment.py tune-sahi --dry-run` only (live grid removed with `tune_sahi_params.py`).
 
 **Manuscript vs deploy confidence:** HSP threshold lock on val often lands near **~0.15** per class (see `reports/hsp/threshold_*.json`); deploy defaults above are **~0.04–0.06** post-filter — do not compare raw bot counts to locked manuscript MAE without aligning conf. Optional science bridge: `eval.py --locked-conf-from` (val lock JSON) on pred export; bot can opt in via `HARCHOC_LOCKED_CONF` / `HARCHOC_LOCKED_CONF_JSON` (applied before per-class deploy env in `DeployFilterConfig.resolve()`).
 

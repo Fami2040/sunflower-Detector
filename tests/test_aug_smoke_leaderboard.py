@@ -89,6 +89,31 @@ class AugSmokeLeaderboardPartitionTests(unittest.TestCase):
             "41e79d287721faf99c9de709d4578b09dd8f62af6d3fe00ee2cabece52387f4d",
         )
 
+    def test_fixture_summary_train_config_matches_resolver(self) -> None:
+        import json
+
+        from harchoc.aug_smoke_runner import find_smoke_entry, load_aug_smoke_index
+        from harchoc.aug_smoke_train import resolve_aug_smoke_train_config_path
+
+        repo = Path(__file__).resolve().parents[1]
+        fixture_root = repo / "tests/fixtures/aug_smoke_leaderboard"
+        index = load_aug_smoke_index(fixture_root / "index.json")
+        out_dir = fixture_root / "reports/aug_smoke"
+        for summary_path in sorted(out_dir.glob("*_summary.json")):
+            payload = json.loads(summary_path.read_text(encoding="utf-8"))
+            tc = payload.get("train_config")
+            if not tc:
+                continue
+            smoke_id = str(payload.get("smoke_id") or summary_path.stem.split("_")[0]).upper()
+            entry = find_smoke_entry(index, smoke_id)
+            expected = resolve_aug_smoke_train_config_path(entry, repo_root=repo)
+            self.assertEqual(
+                tc,
+                expected,
+                msg=f"{summary_path.name}: fixture train_config drift vs runtime resolver",
+            )
+            self.assertTrue((repo / tc).is_file(), msg=tc)
+
     def test_find_mae_clusters_requires_verified_preds_for_identical_claim(self) -> None:
         from harchoc.aug_smoke_leaderboard import find_mae_clusters
 

@@ -64,6 +64,19 @@ def release_cuda_after_train(model: object | None) -> None:
         pass
 
 
+def restore_cuda_visible_devices_after_ultralytics_cpu(prior: str | None) -> None:
+    """
+    Ultralytics ``select_device('cpu')`` sets ``CUDA_VISIBLE_DEVICES=''``, which breaks
+    a subsequent GPU train in the same Python process (matrix zoo rows).
+    """
+    if os.environ.get("CUDA_VISIBLE_DEVICES") != "":
+        return
+    if prior is None:
+        os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+    else:
+        os.environ["CUDA_VISIBLE_DEVICES"] = prior
+
+
 def build_post_train_eval_argv(
     *,
     recorded_weights: str,

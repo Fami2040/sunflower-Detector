@@ -11,6 +11,9 @@ _SG_PIP_CHECK_ALLOW = (
     re.compile(r"data-gradients.*(requires|has requirement).*numpy", re.I),
     re.compile(r"opencv-python\s+\d+.*(requires|has requirement).*numpy", re.I),
 )
+_PIP_CHECK_IGNORE = _SG_PIP_CHECK_ALLOW + (
+    re.compile(r"^ERROR conda\.cli\.main_run:execute", re.I),
+)
 
 
 def run_pip_check(*, env: str | None = None) -> tuple[int, str]:
@@ -27,16 +30,45 @@ def classify_pip_check_output(text: str) -> dict[str, Any]:
     issues: list[str] = []
     ignored: list[str] = []
     for ln in lines:
-        if any(pat.search(ln) for pat in _SG_PIP_CHECK_ALLOW):
+        if any(pat.search(ln) for pat in _PIP_CHECK_IGNORE):
             ignored.append(ln)
         else:
             issues.append(ln)
     return {
         "ok": len(issues) == 0,
         "issues": issues,
-        "ignored_sg_numpy": ignored,
+        "ignored_sg_numpy": [ln for ln in ignored if any(pat.search(ln) for pat in _SG_PIP_CHECK_ALLOW)],
+        "ignored_other": [ln for ln in ignored if not any(pat.search(ln) for pat in _SG_PIP_CHECK_ALLOW)],
         "raw_line_count": len(lines),
     }
+
+
+def verify_external_detr_imports(*, env: str | None = None) -> dict[str, Any]:
+    from harchoc.external_detector_train import external_detr_python_modules
+
+    modules = external_detr_python_modules() + ("gdown",)
+    missing: list[str] = []
+    versions: dict[str, str] = {}
+    for mod in modules:
+        code = (
+            f"import {mod}; "
+            f"print(getattr({mod}, '__version__', 'unknown'))"
+        )
+        cmd = ["python", "-c", code]
+        if env:
+            cmd = ["mamba", "run", "-n", env, *cmd]
+        p = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if p.returncode != 0:
+            missing.append(mod)
+            continue
+        versions[mod] = (p.stdout or "").strip()
+    if missing:
+        return {
+            "ok": False,
+            "missing": missing,
+            "versions": versions,
+        }
+    return {"ok": True, "versions": versions}
 
 
 def verify_supergradients_import(*, env: str | None = None) -> dict[str, Any]:
@@ -56,7 +88,12 @@ def verify_supergradients_import(*, env: str | None = None) -> dict[str, Any]:
     return {"ok": True, "version": (p.stdout or "").strip()}
 
 
-def env_health_report(*, env: str, with_super_gradients: bool) -> dict[str, Any]:
+def env_health_report(
+    *,
+    env: str,
+    with_super_gradients: bool = False,
+    with_external_detr: bool = False,
+) -> dict[str, Any]:
     rc, pip_out = run_pip_check(env=env)
     pip = classify_pip_check_output(pip_out)
     pip["returncode"] = rc
@@ -67,14 +104,29 @@ def env_health_report(*, env: str, with_super_gradients: bool) -> dict[str, Any]
     if with_super_gradients:
         sg = verify_supergradients_import(env=env)
 
-    ok = pip["ok"] and (sg is None or sg.get("ok"))
+    external: dict[str, Any] | None = None
+    if with_external_detr:
+        external = verify_external_detr_imports(env=env)
+
+    ok = pip["ok"] and (sg is None or sg.get("ok")) and (external is None or external.get("ok"))
+    remediation: list[str] = []
+    if not pip["ok"]:
+        remediation.append("Review pip check issues above; re-run bootstrap with needed --with-* flags.")
+    if with_super_gradients and sg is not None and not sg.get("ok"):
+        remediation.append(
+            "python scripts/bootstrap_env.py --env {env} --with-super-gradients "
+            "(re-pins numpy<2 after data-gradients)."
+        )
+    if with_external_detr and external is not None and not external.get("ok"):
+        remediation.append(
+            "python scripts/bootstrap_env.py --env {env} --with-external-detr "
+            "(faster-coco-eval, calflops, transformers, loguru, gdown)."
+        )
     return {
         "status": "ok" if ok else "issues",
         "env": env,
         "pip_check": pip,
         "super_gradients": sg,
-        "remediation": (
-            "Re-run: python scripts/bootstrap_env.py --env {env} --with-super-gradients "
-            "(re-pins numpy<2 after data-gradients)."
-        ).format(env=env),
+        "external_detr": external,
+        "remediation": " ".join(remediation).format(env=env) if remediation else None,
     }

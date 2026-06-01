@@ -95,6 +95,9 @@ python scripts/benchmark_matrix.py --scaffold-zoo --out reports/benchmarks/zoo_s
 
 # CI / pre-merge: bench + train_bench JSON match manifest (no ML deps)
 python scripts/benchmark_matrix.py --validate-zoo
+
+# CI / pre-merge: aug smoke index vs runtime train/aug configs (no ML deps)
+python scripts/experiment.py validate-aug-smoke
 ```
 
 Design and pruning: [`docs/zoo_comparison_design.md`](../../docs/zoo_comparison_design.md).
@@ -104,7 +107,7 @@ Design and pruning: [`docs/zoo_comparison_design.md`](../../docs/zoo_comparison_
 [`scripts/check_weights_cache.py`](../../scripts/check_weights_cache.py) is a thin CLI over `harchoc.bench_assets.build_weights_prep_report()` (alias `build_report`): Ultralytics `.pt` cache, external `.pth`, and `external/` git clones derived from bench configs.
 
 ```bash
-mamba run -n harchoc pip install gdown   # once — DEIM Drive checkpoints
+python scripts/bootstrap_env.py --env harchoc --with-external-detr   # includes gdown for DEIM Drive checkpoints
 mamba run -n harchoc python scripts/check_weights_cache.py --sync-repos-manifest
 mamba run -n harchoc python scripts/check_weights_cache.py --download --strict \
   --out reports/hsp/weights_cache.json

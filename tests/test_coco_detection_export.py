@@ -24,6 +24,7 @@ class CocoDetectionExportTests(unittest.TestCase):
             self.assertEqual(len(coco["categories"]), 2)
             self.assertGreaterEqual(len(coco["images"]), 1)
             self.assertGreaterEqual(len(coco["annotations"]), 1)
+            self.assertIsInstance(coco["images"][0]["id"], int)
 
 
 if __name__ == "__main__":

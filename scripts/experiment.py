@@ -494,7 +494,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pts = sp.add_parser(
         "tune-sahi",
-        help="Deploy SAHI slice/conf grid vs manual GT (delegates to tune_sahi_params.py).",
+        help="Deploy SAHI slice/conf grid vs manual GT (dry-run argv only; live grid removed).",
     )
     add_dry_run_arg(pts, suppress_defaults=True)
     pts.add_argument(
@@ -590,6 +590,16 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=argparse.SUPPRESS,
         help="GPU wait threshold MiB free (default 5500).",
+    )
+
+    pvas = sp.add_parser(
+        "validate-aug-smoke",
+        help="Validate aug_smoke_index.json vs runtime train/aug configs (CI-safe, no ML deps).",
+    )
+    pvas.add_argument(
+        "--index",
+        default=argparse.SUPPRESS,
+        help="aug_smoke_index.v1 JSON (default configs/experiments/aug_smoke_index.json).",
     )
 
     pal = sp.add_parser(
@@ -699,6 +709,21 @@ def main(argv: list[str] | None = None) -> int:
             skip_gpu_check=bool(merged_fields.get("skip_gpu_check")),
             include_test_map=bool(merged_fields.get("include_test_map")),
         )
+    if cmd == "validate-aug-smoke":
+        from harchoc.aug_smoke_train import validate_aug_smoke_configs
+
+        repo_root = Path(__file__).resolve().parents[1]
+        index_arg = merged_fields.get("index") or cli_fields.get("index")
+        errors = validate_aug_smoke_configs(
+            repo_root,
+            index_path=str(index_arg) if index_arg else None,
+        )
+        if errors:
+            for err in errors:
+                print(f"ERROR: {err}", file=sys.stderr)
+            return 1
+        print("aug_smoke config validation OK")
+        return 0
     if cmd == "aug-leaderboard":
         from harchoc.aug_smoke_leaderboard import write_aug_smoke_leaderboard
 

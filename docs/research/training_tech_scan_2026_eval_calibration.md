@@ -123,7 +123,7 @@ Literature closest to benchtop trays: separate **conf** and **NMS/match IoU** sw
 ### 2.5 SAHI / high resolution
 
 - **SAHI** active through 2026 ([obss/sahi](https://github.com/obss/sahi); latest release 0.11.36); Ultralytics documents **YOLO26 + SAHI** sliced inference ([guide](https://docs.ultralytics.com/guides/sahi-tiled-inference)) with batch paths and faster merge backends.
-- Repo: `telegram_bot.py`, `tune_sahi_params.py`, `run_infer_once.py` — **deploy/tuning**, not wired to `threshold_sweep` / `dual-metric`.
+- Repo: `telegram_bot.py`, `experiment.py tune-sahi` / `deploy-parity` — **deploy/tuning**, not wired to `threshold_sweep` / `dual-metric`.
 - **Eval protocol gap:** Paper numbers should use **full-frame export** (`eval.py`) unless the manuscript explicitly reports SAHI deploy metrics.
 
 ### 2.6 Multi-seed reporting & experiment tracking

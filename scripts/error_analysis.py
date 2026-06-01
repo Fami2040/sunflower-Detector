@@ -80,6 +80,11 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Path for tidecv_compare.v1 JSON (default: sibling of --report, *_tidecv_compare.json).",
     )
+    p.add_argument(
+        "--confusion-matrix-out",
+        default="",
+        help="Optional 3×3 class confusion matrix JSON (from --gt-json / --preds-json; no re-inference).",
+    )
     args = p.parse_args(argv)
 
     config_obj: dict[str, Any] = {}
@@ -127,6 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     args.tide_out = str(_pick("tide_out", default=""))
     args.tidecv = bool(_pick("tidecv", default=False))
     args.tidecv_compare_out = str(_pick("tidecv_compare_out", default=""))
+    args.confusion_matrix_out = str(_pick("confusion_matrix_out", default=""))
     args.light = bool(_pick("light", default=False))
     args.dry_run = bool(_pick("dry_run", default=False))
 
@@ -315,6 +321,28 @@ def main(argv: list[str] | None = None) -> int:
         )
         tide_path = write_json(tide_out, tide_payload)
         cli_print(f"Wrote {tide_path}")
+
+    confusion_out = (args.confusion_matrix_out or "").strip()
+    if confusion_out:
+        from harchoc.detection_confusion import (
+            confusion_matrix_from_exports,
+            format_confusion_matrix_text,
+        )
+
+        acc = confusion_matrix_from_exports(
+            gt_obj,
+            preds_obj,
+            conf_thr=float(args.conf),
+            iou_thr=float(args.iou),
+        )
+        cm_payload = acc.to_payload(
+            conf_thr=float(args.conf),
+            iou_thr=float(args.iou),
+            weights=str(Path(args.weights)),
+        )
+        cm_path = write_json(confusion_out, cm_payload)
+        cli_print(format_confusion_matrix_text(acc.matrix, acc.stats))
+        cli_print(f"Wrote {cm_path}")
 
     return 0
 
