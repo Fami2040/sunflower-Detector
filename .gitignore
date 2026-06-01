@@ -112,6 +112,12 @@ reports/*
 !reports/**/README.md
 reports/**/*
 !reports/**/README.md
+# Co-author rebuttal prose (markdown only; JSON/figures stay local)
+!reports/reviewer2.md
+!reports/manuscript/
+reports/manuscript/*
+!reports/manuscript/**/*.md
+reports/manuscript/**/*.json
 # Ad-hoc agent probes (belong under scripts/ or harchoc/, not reports/)
 reports/gpu_queue/debug_*.py
 reports/gpu_queue/probe_*.py

@@ -17,6 +17,8 @@ Repo-side **text and gap maps** for the sunflower HSP paper (LaTeX source is out
 
 ## Generated publication artifacts (not in `docs/`)
 
-Regenerated under [`reports/manuscript/`](../../reports/manuscript/README.md): preflight manifest, tables, docx catalog, backlog narrative. Figures: [`reports/figures/`](../../reports/figures/README.md). Reviewer CPU audits: `reports/reviewer2_*` ([`reviewer2_index.md`](../../reports/reviewer2_index.md)).
+Regenerated under [`reports/manuscript/`](../../reports/manuscript/README.md): preflight manifest, tables, docx catalog, backlog narrative. **Git-tracked:** `reports/manuscript/**/*.md`, `reports/reviewer2.md` — see [`FRESHNESS.md`](../../reports/manuscript/FRESHNESS.md) before paste. Figures/JSON stay local under `reports/`.  
+Integration map: [`fork_integration.md`](fork_integration.md), [`study_lineage.md`](study_lineage.md).  
+LLM validation: [`reports/_llm/index.md`](../../reports/_llm/index.md).
 
 **Command:** `mamba run -n harchoc python scripts/experiment.py manuscript-preflight` — see [`docs/EXPERIMENTS.md` § Publication preflight](../EXPERIMENTS.md#publication-preflight-before-word-paste).

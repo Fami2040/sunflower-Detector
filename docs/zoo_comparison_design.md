@@ -12,7 +12,8 @@ How we choose **which** detectors enter the matrix and **which group** to train/
 |-------|--------|
 | Weights | `models/best2.pt` (`HSP_DETECTION_WEIGHTS`) |
 | Architecture | YOLOv8-class detector (2-class developed/aborted) |
-| Matrix retrain anchor | `yolov8m.pt` @ `imgsz=1280`, `robustness_minimal` aug ([`train_yolov8m_baseline.json`](../configs/experiments/train_yolov8m_baseline.json)) |
+| Production anchor | `models/best2.pt` from [origin `main`](https://github.com/Fami2040/sunflower-Detector) — [`ORIGIN_MAIN_AND_DATASET.md`](ORIGIN_MAIN_AND_DATASET.md) |
+| Matrix retrain (v8m row) | Fresh `yolov8m.pt` @ 1280 on CVAT splits — compare to **best2**, not a copy of it |
 | Headline test MAE | ~**61.3** @ val-locked conf ~0.15 ([`threshold_test_locked.json`](../reports/hsp/threshold_test_locked.json)) |
 
 `zoo_core` includes only rows that **plausibly beat this anchor** on test count MAE after the shared 100-ep @ 1280 recipe—not every hub row we can train.
@@ -64,7 +65,8 @@ There are **26 bench YAML files** total. Groups are **filters**, not disjoint bu
 
 | Group | What it selects | Count | GPU if you run *only this filter* |
 |-------|-----------------|-------|-----------------------------------|
-| **`zoo_core`** | Mid+ YOLO gens, counting-oriented DETR, external DETR stack | **10** | **10 × 100 ep** (default P0-5) |
+| **`zoo_core`** | Mid+ YOLO gens, counting-oriented DETR, external DETR stack | **10** | **10 × 100 ep** (full zoo; post–P0-5; **Ultralytics RT-DETR** train needs >8 GiB on this machine) |
+| **`zoo_yolo_only`** | Four M-scale Ultralytics YOLO rows only | **4** | **4 × 100 ep** (**P0-5** on 8 GiB — [`gpu_queue_full.json`](../configs/experiments/gpu_queue_full.json) `zoo_matrix_p0_5`) |
 | **`sota_2026`** | Every hub-backed Ultralytics row + NAS | **~22** | ~22 × 100 ep |
 | **`zoo_scale`** | n/s/l/x/b rows **excluding** the single “m” pick per YOLO family | **14** | 14 × 100 ep (optional) |
 | **`sota_deim`** | `rtdetrv2_l`, `dfine_l`, `deim_*` | **4** | 4 × 100 ep (subset of `zoo_core`) |
@@ -83,9 +85,10 @@ python scripts/benchmark_matrix.py --validate-zoo   # exit non-zero on drift
 
 Shared infer/epochs/patience/seed: [`configs/bench/_defaults.yaml`](../configs/bench/_defaults.yaml) (included via `include: _defaults.yaml`).
 
-1. **First:** `--group zoo_core` → **10** trains (not 26).
-2. **Only if needed:** `--group zoo_scale` on the **one** YOLO family that wins on test count MAE.
-3. **Full** `sota_2026` only for a complete hub leaderboard — rarely needed if core + scale answer the science question.
+1. **On 8 GiB (P0-5):** `--group zoo_yolo_only` → **4** trains (`yolov8m`, `yolov10m`, `yolo11m`, `yolo26m`) — queue job `zoo_matrix_p0_5`.
+2. **When queue/integration allows:** `--group zoo_core` → **10** trains (not 26). **Ultralytics RT-DETR** @ 1280 batch=1 OOMs on 8 GiB; external DETR may run (e.g. D-FINE ~6.7 GiB peak) but DEIM/rtdetrv2 need working imports and non-conflicting distributed ports.
+3. **Only if needed:** `--group zoo_scale` on the **one** YOLO family that wins on test count MAE.
+4. **Full** `sota_2026` only for a complete hub leaderboard — rarely needed if core + scale answer the science question.
 
 Example: `yolov8m` is in `zoo_core`, `sota_2026`, and `yolov8_scales` — it is **one** row, not three.
 
@@ -118,17 +121,21 @@ Objective rule: **capacity ≥ production anchor** (YOLOv8m) or **architecture/d
 | `deim_rtdetrv2_l` | DEIM on RT-DETRv2-L |
 | `deim_dfine_l` | DEIM on D-FINE-L |
 
-### `zoo_core_8gb` (8 rows, 8 GiB GPUs)
+### `zoo_yolo_only` (4 rows, 8 GiB P0-5)
 
-On **8 GiB** GPUs, Ultralytics RT-DETR @ `imgsz=1280` `batch=1` OOMs (see `train_batch_probe_rtdetr-l.json`). Use **`--group zoo_core_8gb`** for P0-5 instead of full `zoo_core`:
+On **8 GiB** GPUs, Ultralytics RT-DETR @ `imgsz=1280` `batch=1` OOMs (see `train_batch_probe_rtdetr-l.json`). **P0-5** uses **`--group zoo_yolo_only`** (four M-scale YOLO rows only — no external DETR stack):
 
-| Row | In `zoo_core_8gb` |
-|-----|-------------------|
+| Row | In `zoo_yolo_only` |
+|-----|---------------------|
 | `yolov8m`, `yolov10m`, `yolo11m`, `yolo26m` | Yes |
-| `rtdetrv2_l`, `dfine_l`, `deim_rtdetrv2_l`, `deim_dfine_l` | Yes |
-| `rtdetr_l_nq1024`, `rtdetr_x` | **No** — defer to >8 GiB |
+| External DETR (`rtdetrv2_l`, `dfine_l`, `deim_*`) | **No** in P0-5 — optional via `zoo_core` / `zoo_core_8gb` (VRAM often OK; integration/port scheduling is the usual blocker) |
+| `rtdetr_l_nq1024`, `rtdetr_x` | **No** — Ultralytics RT-DETR train OOM @ 1280 batch=1 on 8 GiB |
 
-Queue default on this machine: `gpu_queue_full.json` job `zoo_matrix_p0_5` uses `matrix_group: zoo_core_8gb`.
+Queue default on this machine: `gpu_queue_full.json` job `zoo_matrix_p0_5` uses `matrix_group: zoo_yolo_only` (~480 min).
+
+### `zoo_core_8gb` (8 rows, optional 8 GiB superset)
+
+Same four YOLO rows as **`zoo_yolo_only`**, plus external DETR four-pack when integration is ready — still **no** Ultralytics RT-DETR **train** on 8 GiB (vram probe OOM). External stacks: verify imports and exclusive GPU (avoid `EADDRINUSE` on port 29500).
 
 **Excluded from core** (still in `sota_2026` / `zoo_scale` where applicable):
 
@@ -163,7 +170,7 @@ Tier E — zoo_scale (optional)
 ## Pruning rules (avoid 25×100 ep)
 
 1. **Never** run full scale ladders for every YOLO generation up front — O(~20) × 100 ep.
-2. **Always** run `zoo_core` first (10 × 100 ep).
+2. **On 8 GiB:** run **`zoo_yolo_only`** first (P0-5, 4 × 100 ep). **Full `zoo_core`** (10 × 100 ep) when GPU and integration allow.
 3. After `zoo_core`, promote **one** YOLO family to `zoo_scale` if it beats `yolov8m` on test MAE by a pre-registered margin (e.g. ≥5% relative MAE reduction).
 4. **DETR external rows** share high integration cost — run 15-ep smokes on `deim_dfine_l` and `rtdetrv2_l` before committing 100 ep on all four.
 5. Vanilla **`rtdetr-l`** is **`sota_2026` only**; core uses **`rtdetr_l_nq1024`** for the query-cap hypothesis.

@@ -10,7 +10,7 @@
 |----------|----------|-------------------|
 | `max_det: 3000` on dense trays | S14 truncation study | **Done** P0-1, [`s14_maxdet_truncation.json`](../../reports/hsp/s14_maxdet_truncation.json) |
 | Val tune → lock conf → test reporting | HSP protocol, threshold literature | P0-3 chain, [`dual_metric.json`](../../reports/hsp/dual_metric.json) |
-| 8-model zoo @ imgsz 1280 | Detector SOTA expectation | **P0-5**, plan [`matrix_plan.json`](../../reports/hsp/matrix_plan.json) / train [`matrix_train.json`](../../reports/hsp/matrix_train.json) (dry-run plan also under `reports/benchmarks/matrix.json`) |
+| **`zoo_yolo_only`** @ imgsz 1280 (4 YOLO rows; 8 GiB) | Detector SOTA on constrained GPU | **P0-5** Next (`zoo_matrix_p0_5`); **`yolov10m`** not trained yet (fits VRAM); Ultralytics RT-DETR train OOM @ 1280; partial [`matrix_train.json`](../../reports/hsp/matrix_train.json) |
 | Grad-CAM on FP crops | LWCD-YOLO, Yang/Ren XAI narrative | **Done** P2-FIG-CAM, `experiment.py gradcam` → [`gradcam_routing.md`](gradcam_routing.md) |
 | Two-weight deploy gate | Alshehri analogy; production path | [`HSP_BASELINE_MODELS.md`](../HSP_BASELINE_MODELS.md), [gap §14](reviewer_comments_backlog_gap.md#14-manuscript-draft--two-stage-deploy-discussion) (**MS-DEPLOY-2STG** Done) |
 | Manuscript repro one-command | Reviewer reproducibility | **Done** MS-REPRO, `experiment.py repro` |
@@ -24,7 +24,7 @@ Stack step numbers follow [`backlog.md` § Model improvement stack](../backlog.m
 
 | Recommendation | Literature | Stack | Backlog ID |
 |----------------|------------|-------|------------|
-| Full zoo matrix + count MAE columns | GrainNet, MS-SOTA | **5** | **P0-5**, **P1-ZOO-PARITY**, **P2-SEED-MAE** |
+| **`zoo_yolo_only`** matrix + count MAE columns | GrainNet, MS-SOTA | **5** | **P0-5** (4×100 ep), **P1-ZOO-PARITY**, **P2-SEED-MAE**; defer full **`zoo_core`** on 8 GiB |
 | Test mAP on CPU export | Eval VRAM policy | — | **SCI-MAP-CPU** (unblocks **R-SCI-1**, **MS-SOTA**) |
 | Mosaic=0 ablation vs S0 baseline | `lwcd_yolo2025` | **4** | **ARCH-MOSAIC0-AB** (aug S2) |
 | TFA / staged YOLO freeze on tray holdout | `tfa2020`, `gandhi2025_yolov8_freeze` | **6** | **P1-FINETUNE-LOOP**, **MS-DOMAIN-ADAPT** |
