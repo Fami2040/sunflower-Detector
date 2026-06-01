@@ -58,6 +58,7 @@ Single entry point for **how we train, evaluate, and improve** sunflower seed de
 | Doc | Role |
 |-----|------|
 | [EXPERIMENTS.md](EXPERIMENTS.md) | Live CLI, configs, matrix, threshold workflow |
+| [../reports/README.md](../reports/README.md) | Canonical `./reports` layout (HSP science vs manuscript vs archive) |
 | [HSP_BASELINE_MODELS.md](HSP_BASELINE_MODELS.md) | `best2.pt` / `classifier.pt`, deploy vs HSP eval |
 | [training_budget.md](training_budget.md) | `HARCHOC_MAX_*`, RT-DETR smoke, export device |
 | [../data/README.md](../data/README.md) | Dataset tree, `data.yaml`, splits |

@@ -51,8 +51,10 @@ Never infer "no GPU" from bare `python` on base. CI lightweight import is for Gi
 |-----|------|
 | [backlog.md](../backlog.md) | Task status — [§ Work queue](../backlog.md#work-queue-p0--p2) |
 | [HSP_BASELINE_MODELS.md](HSP_BASELINE_MODELS.md) | Weights, deploy SAHI vs manuscript eval |
-| [reports/hsp/p0_summary.md](../reports/hsp/p0_summary.md) | Frozen headline metrics |
-| [reports/hsp/README.md](../reports/hsp/README.md) | Canonical report paths |
+| [reports/README.md](../reports/README.md) | **Scientific artifact tree** (HSP → aug → manuscript → reviewer2; anti-sprawl) |
+| [reports/hsp/README.md](../reports/hsp/README.md) | Canonical HSP JSON paths (cite for paper numbers) |
+| [reports/hsp/p0_summary.md](../reports/hsp/p0_summary.md) | One-page headline metrics (local) |
+| [reports/manuscript/README.md](../reports/manuscript/README.md) | Preflight, tables, docx exports |
 
 ## Research scans (2026)
 
@@ -338,11 +340,13 @@ Accepts legacy CLI flags and/or `--config` (inline JSON or path). If both are pr
 
 ### Examples (legacy args)
 
+For **live HSP / manuscript metrics**, use paths under [`reports/hsp/`](../reports/hsp/README.md) (see [`reports/README.md`](../reports/README.md)). Generic `--out` paths below are valid for dry-run smoke only.
+
 ```bash
 mamba run -n harchoc python scripts/experiment.py --dry-run splits
 mamba run -n harchoc python scripts/experiment.py --dry-run describe --out reports/split_stats.json
-mamba run -n harchoc python scripts/experiment.py --dry-run eval --out reports/eval.json
-mamba run -n harchoc python scripts/experiment.py --dry-run benchmark --out reports/benchmarks/matrix.json
+mamba run -n harchoc python scripts/experiment.py --dry-run eval --out reports/hsp/eval_dry_run.json
+mamba run -n harchoc python scripts/experiment.py --dry-run benchmark --out reports/hsp/matrix_plan.json
 mamba run -n harchoc python scripts/experiment.py cv-eval --dry-run
 mamba run -n harchoc python scripts/experiment.py --dry-run \
   --config configs/experiments/cv_eval_dry.json cv-eval

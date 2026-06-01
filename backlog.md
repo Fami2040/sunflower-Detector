@@ -10,7 +10,7 @@ Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **B
 | Error mix @ locked conf | FN ~53% ΔAP share; among FPs loc ~58%, bg ~35%, cls ~3% — [`error_test_report.json`](reports/hsp/error_test_report.json) |
 | **Next GPU job** | `zoo_matrix_p0_5` in [`gpu_queue_full.json`](configs/experiments/gpu_queue_full.json) |
 
-**Doc map:** [RESEARCH_AND_OPS](docs/RESEARCH_AND_OPS.md) · [EXPERIMENTS](docs/EXPERIMENTS.md) · [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) · [zoo_comparison_design](docs/zoo_comparison_design.md) · [HSP_BASELINE_MODELS](docs/HSP_BASELINE_MODELS.md) · [reports/hsp/README](reports/hsp/README.md) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer gap](docs/manuscript/reviewer_comments_backlog_gap.md) · [refactor.md](refactor.md)
+**Doc map:** [RESEARCH_AND_OPS](docs/RESEARCH_AND_OPS.md) · [EXPERIMENTS](docs/EXPERIMENTS.md) · [reports/README](reports/README.md) · [reports/hsp/README](reports/hsp/README.md) · [FINETUNE_WEAK_TRAYS](docs/FINETUNE_WEAK_TRAYS.md) · [zoo_comparison_design](docs/zoo_comparison_design.md) · [HSP_BASELINE_MODELS](docs/HSP_BASELINE_MODELS.md) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer gap](docs/manuscript/reviewer_comments_backlog_gap.md) · [refactor.md](refactor.md)
 
 **Convention:** Only **Next** / **Partial** / **Blocked** appear in [Now](#now). Everything finished lives in [Archive](#archive).
 
@@ -189,21 +189,27 @@ export DATASET_ROOT="$(pwd)/data/raw/extracted/dataset"
 PYTHONPATH=. python scripts/experiment.py manuscript-docx-repro   # docx Fig 1,2,4–6 + Tables 1–3 → reports/manuscript/docx/
 ```
 
-Stages: `post-zoo` = reviewer2 only; `preflight` = figures + tables + aug + narrative + reviewer2. Manifest: [`preflight_manifest.json`](reports/manuscript/preflight_manifest.json).
+Stages: `post-zoo` = reviewer2 only; `preflight` = reviewer2 → figures → tables → **docx** → aug → narrative. Manifest: [`preflight_manifest.json`](reports/manuscript/preflight_manifest.json). Layout: [`reports/manuscript/README.md`](reports/manuscript/README.md) · index [`reports/README.md`](reports/README.md).
 
 ---
 
 ## Reporting quick ref
 
+**Index:** [`reports/README.md`](reports/README.md) (scientific layers — avoid citing stale root paths).
+
 | Output | Path |
 |--------|------|
 | Headline | [`p0_summary.md`](reports/hsp/p0_summary.md) |
+| HSP core (cite for science) | [`reports/hsp/README.md`](reports/hsp/README.md) — `dual_metric.json`, `threshold_*.json`, `gt_*.json`, `preds_*.json`, `error_*.json` |
 | Thresholds / errors / TIDE | `reports/hsp/threshold_*.json`, `error_*.json`, `tide_bucket_summary*.json` |
-| Confusion 3×3 | `eval.py --confusion-matrix-only` |
+| Confusion 3×3 | `eval.py --confusion-matrix-only` → `reports/hsp/*_confusion.json` |
+| Zoo matrix train | [`matrix_train.json`](reports/hsp/matrix_train.json) (not `reports/benchmarks/matrix_train.json`) |
 | Domain | [`domain_eval.json`](reports/domains/domain_eval.json) |
 | Aug | [`reports/aug_smoke/leaderboard.md`](reports/aug_smoke/leaderboard.md) |
+| Figures | [`reports/figures/manifest.json`](reports/figures/manifest.json) |
+| Reviewer-2 | [`reviewer2_index.md`](reports/reviewer2_index.md), `reviewer2_*.json` / `reviewer2_*.md` |
 | Gap map | [`reviewer_comments_backlog_gap.md`](docs/manuscript/reviewer_comments_backlog_gap.md) |
-| Preflight / tables / narrative | [`preflight_manifest.json`](reports/manuscript/preflight_manifest.json), `reports/manuscript/tables/`, [`narrative_from_backlog.md`](reports/manuscript/narrative_from_backlog.md) |
+| Preflight / tables / docx / narrative | [`manuscript/README.md`](reports/manuscript/README.md), [`preflight_manifest.json`](reports/manuscript/preflight_manifest.json) |
 
 **CI:** `PYTHONPATH=. HARCHOC_ALLOW_BASE_PYTHON=1 python -m unittest discover -s tests`
 

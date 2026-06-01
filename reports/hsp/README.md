@@ -2,6 +2,8 @@
 
 This directory is the **single source of truth** for the HSP (harchoc sunflower-seed) **P0 credibility gate** on frozen splits (`875` train / `109` val / `109` test). Manuscript metrics, threshold locking, and dual-metric tables should cite paths here—not stale exports at the repo root.
 
+**Tree index:** [../README.md](../README.md) (all `reports/` layers). **Publication exports:** [../manuscript/README.md](../manuscript/README.md).
+
 **Further reading:**
 
 - [docs/HSP_BASELINE_MODELS.md](../../docs/HSP_BASELINE_MODELS.md) — `models/best2.pt` / `classifier.pt`, deploy vs eval paths

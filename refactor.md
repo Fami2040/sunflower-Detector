@@ -98,7 +98,7 @@ Production:      telegram_bot / run_infer_once → harchoc/sahi_infer + deploy_f
 
 - **Triple config:** `configs/bench/*.yaml` + runtime `train_bench` (`bench_config` + `matrix_rows`) + aug YAML — aug smokes use `aug_smoke_index.json` + `train_smoke_rank_15ep.json` (**DRY-AUG-SMOKE-CONFIG**); committed exceptions S9–S13 + sweeps only.
 - **Root sprawl:** deploy SAHI grid — **Done** via `experiment.py tune-sahi` dry-run argv only (removed `tune_sahi_params.py`).
-- **Reports:** canonical `reports/hsp/` on disk; tracked git content is `README.md` only — generated `reports/hsp/*.md`, `reports/aug_smoke/*.{md,json}` removed (**DRY-TRACKED-REPORTS**).
+- **Reports:** scientific index [`reports/README.md`](reports/README.md) (layers: `hsp/` → `aug_smoke/` → `manuscript/` + `figures/` + `reviewer2_*`); cite metrics only under `reports/hsp/`; tracked git content is README placeholders — generated JSON/MD local (**DRY-TRACKED-REPORTS**).
 - **Docs:** `docs/research/*` + `docs/manuscript/*` — intentional synthesis, not code DRY.
 
 ---

@@ -96,16 +96,18 @@ Generate a benchmark plan (no heavy imports):
 ```bash
 export DATASET_ROOT=/path/to/dataset
 export PYTHONPATH=.
-python scripts/benchmark_matrix.py --out reports/benchmarks/matrix.json
+python scripts/benchmark_matrix.py --dry-run --out reports/hsp/matrix_plan.json
 ```
 
-Ops notes (disk, run naming `{model}_e{N}_s{seed}`, feature-branch training): see `docs/EXPERIMENTS.md`. Budget caps: `docs/training_budget.md`.
+Canonical scientific outputs live under **`reports/hsp/`** (and publication exports under `reports/manuscript/`). See [`reports/README.md`](reports/README.md).
+
+Ops notes (disk, run naming `{model}_e{N}_s{seed}`, PR branch `pr/backlog-ci-dataset`): see `docs/EXPERIMENTS.md`. Budget caps: `docs/training_budget.md`.
 
 Compute train/val/test drift proxies (stdlib):
 
 ```bash
 DATASET_ROOT=/path/to/dataset \
-python scripts/split_drift.py --out reports/split_drift/report.json
+python scripts/split_drift.py --out reports/hsp/split_drift_p0.json
 ```
 
 The bot returns:
