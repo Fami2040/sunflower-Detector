@@ -1,0 +1,74 @@
+REVIEWER — LINE-LEVEL RESPONSES (validated against repo, 2026-06-03)
+Brief prose, no tables. Numbers from dual_metric, best2_test_confusion, domain_count_mae, gap-map drafts.
+================================================================================
+
+Lines 41–43 (Abstract) — quantitative manual counting baseline
+Location: Abstract; Section 2.2
+--------------------------------------------------------------------------------
+
+We thank the reviewer. We added a quantitative baseline in the Abstract and Methods: manual counting of developed and aborted seeds on a capitulum is labor-intensive, requiring approximately one person-hour per head under our annotator-reported protocol (separate tallies for each class, with a planned blind recount on a subset). This figure reflects complete manual classification on dense benchtop heads, not automated inference. It is referenced consistently in the methodology section.
+
+
+Lines 70–72 (Section 2.2) — peak validation mAP ~0.97 vs test mAP
+Location: Section 2.2, Abstract
+--------------------------------------------------------------------------------
+
+We appreciate this important point and have corrected the manuscript throughout. The held-out test ranking mAP50 under our counting-first evaluation protocol is 0.18, not 0.793; the latter was an error in the original submission and has been reconciled (see docx_vs_submission.md and val_test_map_gap.md in the repository).
+
+Peak validation mAP50 near 0.97 refers to in-training performance on the validation split during Ultralytics training (early-stop / ranking metric), not to generalization on the held-out test set. We now label validation detection metrics explicitly as “peak validation during training (not generalization)” and report test ranking mAP only from the canonical test evaluation path. Counting MAE at the locked operating point (validation-selected, test-applied) remains the primary endpoint; test count MAE (61.3) is actually lower than validation count MAE (~71) at that operating point, while the reviewer’s concern about ranking mAP is addressed by separating metric roles.
+
+
+Lines 96–98 (Figure 3b) — central clustering of seeds
+Location: Section 2.3, Figure 3b
+--------------------------------------------------------------------------------
+
+We added discussion of spatial layout. Central clustering reflects expected phyllotaxis on intact capitula. We also state explicitly that performance on heads with strongly asymmetric or off-centre seed distributions after biotic or abiotic damage was not evaluated separately; such atypical layouts remain a limitation for irregular loss patterns.
+
+
+Lines 142–145 (Figures 4–5) — confusion matrices and error source
+Location: Section 2.4, Figures 4–5
+--------------------------------------------------------------------------------
+
+We agree and moved this interpretation into the main Results text (not only the caption). At the locked counting operating point (confidence ≈0.15; match IoU 0.3), cross-class assignments among matched detections total 2,600 instances (developed→aborted 826; aborted→developed 1,774) versus 35,714 true positives—substantially smaller than missed detections, background false positives, and localization-related errors. TIDE-style decomposition on test exports is consistent: miss, localization, and background dominate; class confusion accounts for a minor share (~3%). We therefore describe localization and detection quality, not pairwise class confusion, as the primary error budget.
+
+
+Lines 306–308 — single-site limitation and domain adaptation
+Location: Discussion, Future directions
+--------------------------------------------------------------------------------
+
+We agree that single-site benchtop imaging of dried capitula is a major limitation for broad generalization, and we state this explicitly. We also describe a staged adaptation programme: pilot tray-targeted fine-tuning on high-error acquisition sessions (completed under a canonical test gate on pooled metrics) and, as future work, transfer from dried benchtop data (source) toward fresh material and field lighting (target), following established transfer-learning practice (we cite Yang et al., 2024, by analogy for domain-shift methodology—not as a claim that their OCT task equals ours). Leave-one-tray-out evaluation is listed as planned robustness analysis when additional trays and conditions are available.
+
+
+Line 295 — model interpretability
+Location: Future directions
+--------------------------------------------------------------------------------
+
+We expanded the interpretability discussion. The current manuscript reports what the model detects and how errors decompose; explaining which visual cues drive each prediction is future work. We reference interpretability-oriented ML literature (including Ren et al., Scripta Materialia, by analogy for materials-focused interpretability framing) and plan feature-level visualizations (colour, texture, size, boundary cues) and Grad-CAM-style panels on seed patches where appropriate—separating cited methods from our HARCHOC implementation.
+
+
+Section 4.9 — two-stage deployment analogy
+Location: Deployment
+--------------------------------------------------------------------------------
+
+We added a citation to Alshehri et al. (2025) on UAV-based multi-person detection (Frontiers in Neurorobotics), whose two-stage pipeline (detection then identification) is conceptually analogous to our content verification followed by seed detection. This situates our deployment path relative to established staged inference workflows while noting different modality and task.
+
+
+Section 3.4 — ambiguous / boundary seeds
+Location: Error sources
+--------------------------------------------------------------------------------
+
+We added discussion of seeds near developmental boundaries where developed versus aborted labels are inherently uncertain. We cite Yao et al. (IEEE Transactions on Fuzzy Systems, 2025) as an analogy for graded outputs in high-dimensional regression—not as a vision method for our boxes. In HARCHOC we address ambiguity through a low-confidence score band and error taxonomy (graded trust on two-class exports), not a third YOLO class or fuzzy relabelling of instances.
+
+
+Overstatement of validation mAP (major concern)
+Location: Section 2.2, throughout
+--------------------------------------------------------------------------------
+
+We thank the reviewer for highlighting this. We removed undue prominence of peak validation mAP, added the caveat “peak validation during training (not generalization),” and centre generalization on held-out test ranking mAP50 = 0.18 (corrected from the erroneous 0.793). The Abstract omits validation mAP and foregrounds count MAE and test ranking mAP under the locked protocol. Section 2.2 now separates in-training ranking metrics from test evaluation and from counting metrics.
+
+
+Section 2.7 — manual validation n = 50
+Location: Section 2.7
+--------------------------------------------------------------------------------
+
+We clarified sampling and representativeness. The n = 50 manual audit draws only from the 109-image held-out test split; train and validation images are excluded, and this subset did not influence confidence locking or model training. Sampling uses density-stratified quotas by ground-truth boxes per image (tertiles on the test pool; documented seed), with at most one image per tray key when possible. Mean density in the audit subset is comparable to the full test set (order ~550 boxes per image on test). We distinguish this qualitative audit from the full test-set counting metrics (n = 109) reported as primary results.

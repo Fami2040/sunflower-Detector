@@ -706,6 +706,8 @@ def build_job_stages(
                         count_mae,
                         "--domain-eval",
                         domain_eval,
+                        "--domains-dir",
+                        domains_dir,
                         "--top-k",
                         str(top_k),
                     ]

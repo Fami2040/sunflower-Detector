@@ -475,7 +475,7 @@ def main(argv: list[str] | None = None) -> int:
     per_class: list[dict[str, object]] | None = None
     runtime_s = 0.0
     eval_device: str | None = None
-    cuda_visible_prior: str | None = None
+    cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
 
     if not args.export_only and not args.confusion_matrix_only:
         eval_device = args.device
@@ -483,8 +483,6 @@ def main(argv: list[str] | None = None) -> int:
             eval_device = args.export_device
         if eval_device is None:
             eval_device = (os.getenv("HARCHOC_EXPORT_DEVICE") or "").strip() or None
-        if str(eval_device or "").lower() == "cpu":
-            cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
         if data_yaml_path is None:
             raise SystemExit("internal: data_yaml missing for validation eval")
         t0 = time.perf_counter()

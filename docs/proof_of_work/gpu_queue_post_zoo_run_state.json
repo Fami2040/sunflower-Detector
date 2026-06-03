@@ -1,0 +1,21 @@
+{
+  "schema_version": "gpu_queue_run.v1",
+  "manifest": "/root/development/harchoc/sunflower-Detector/configs/experiments/gpu_queue_post_zoo.json",
+  "started_at": "2026-06-03T09:08:24Z",
+  "dry_run": false,
+  "completed": [
+    "domain_tray_audit_refresh",
+    "finetune_weak_tray_1",
+    "finetune_weak_tray_2",
+    "finetune_weak_tray_3",
+    "finetune_weak_tray_1_s2",
+    "finetune_weak_tray_2_s2",
+    "finetune_weak_tray_3_s2",
+    "head_roi_eval_smoke"
+  ],
+  "skipped": [],
+  "failed": null,
+  "current_job": null,
+  "updated_at": "2026-06-03T11:28:23Z",
+  "finished_at": "2026-06-03T11:28:23Z"
+}

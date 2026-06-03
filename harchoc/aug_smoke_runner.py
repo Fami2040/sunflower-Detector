@@ -265,13 +265,18 @@ def finalize_smoke_job(
     patch_index: bool = False,
     train_runtime_s: float | None = None,
     refresh_leaderboard: bool = True,
+    hsp_artifacts: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Write aug_smoke_summary.v1; optionally patch index and refresh leaderboard."""
     rr = Path(repo_root).resolve()
     sid = str(smoke_id).strip().upper()
     prefix = f"{out_dir}/{run_name}"
-    error_json = str((rr / f"{prefix}_error.json").resolve())
-    eval_json = str((rr / f"{prefix}_eval.json").resolve())
+    if hsp_artifacts:
+        error_json = str(hsp_artifacts.get("error") or (rr / f"{prefix}_error.json").resolve())
+        eval_json = str(hsp_artifacts.get("eval") or (rr / f"{prefix}_eval.json").resolve())
+    else:
+        error_json = str((rr / f"{prefix}_error.json").resolve())
+        eval_json = str((rr / f"{prefix}_eval.json").resolve())
 
     payload = build_aug_smoke_summary(
         smoke_id=sid,

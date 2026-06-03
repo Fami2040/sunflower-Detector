@@ -1,0 +1,58 @@
+{
+  "schema_version": "gpu_queue_manifest.v1",
+  "description": "Joined optimization Phase 1: promote best aug smoke S1 (close3) to 100-epoch retrains across selected YOLO families/sizes, with HSP test eval + summary artifacts. Zoo-parity rows (11m/26m) use baseline tensor dedup to skip redundant GPU train+eval when checkpoints match matrix runs.",
+  "defaults": {
+    "locked_conf_from": "reports/hsp/threshold_val.json",
+    "min_free_mib": 5500,
+    "dedup_baseline_runs_dir": "runs/hsp_zoo",
+    "dedup_skip_eval_when_identical": true,
+    "env": {
+      "HARCHOC_MAX_BATCH": "1",
+      "PYTHONUNBUFFERED": "1"
+    }
+  },
+  "jobs": [
+    {
+      "id": "joined_close3_yolov8m_100ep",
+      "kind": "train_compare",
+      "backlog": ["P1-AUG", "P1-ZOO-PARITY"],
+      "train_config": "configs/experiments/train_yolov8m_close3_100ep.json",
+      "run_name": "joined_close3_yolov8m_e100_s0",
+      "eval_out_dir": "reports/hsp",
+      "estimated_minutes": 160,
+      "dedup_baseline_run_name": "yolov8m_e100_s0",
+      "notes": "v8m close3 differs from zoo minimal (tensor check); always train+eval.",
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/joined_close3_yolov8m_100ep.json"
+      }
+    },
+    {
+      "id": "joined_close3_yolo11m_100ep",
+      "kind": "train_compare",
+      "backlog": ["P1-AUG", "P1-ZOO-PARITY"],
+      "train_config": "configs/experiments/train_yolo11m_close3_100ep.json",
+      "run_name": "joined_close3_yolo11m_e100_s0",
+      "eval_out_dir": "reports/hsp",
+      "estimated_minutes": 180,
+      "dedup_baseline_run_name": "yolo11m_e100_s0",
+      "dedup_pre_skip_train": true,
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/joined_close3_yolo11m_100ep.json"
+      }
+    },
+    {
+      "id": "joined_close3_yolo26m_100ep",
+      "kind": "train_compare",
+      "backlog": ["P1-AUG", "P1-ZOO-PARITY"],
+      "train_config": "configs/experiments/train_yolo26m_close3_100ep.json",
+      "run_name": "joined_close3_yolo26m_e100_s0",
+      "eval_out_dir": "reports/hsp",
+      "estimated_minutes": 220,
+      "dedup_baseline_run_name": "yolo26m_e100_s0",
+      "dedup_pre_skip_train": true,
+      "skip_if": {
+        "summary": "reports/gpu_queue/summaries/joined_close3_yolo26m_100ep.json"
+      }
+    }
+  ]
+}

@@ -23,5 +23,36 @@ class RunGpuQueueCliTests(unittest.TestCase):
         self.assertEqual(rc, 0)
 
 
+class RepairResumeStateTests(unittest.TestCase):
+    def test_resume_after_failure_keeps_completed(self) -> None:
+        from harchoc.gpu_queue_runner import repair_resume_state
+
+        repo = Path(__file__).resolve().parents[1]
+        manifest = repo / "configs/experiments/gpu_queue_post_zoo.json"
+        state = {
+            "manifest": str(manifest.resolve()),
+            "dry_run": False,
+            "completed": ["domain_tray_audit_refresh"],
+            "failed": {"job_id": "finetune_weak_tray_1", "stage_id": "finetune"},
+        }
+        out = repair_resume_state(state, manifest_path=manifest, dry_run=False)
+        self.assertEqual(out["completed"], ["domain_tray_audit_refresh"])
+        self.assertIsNone(out.get("failed"))
+
+    def test_relative_manifest_path_does_not_wipe_completed(self) -> None:
+        from harchoc.gpu_queue_runner import repair_resume_state
+
+        repo = Path(__file__).resolve().parents[1]
+        manifest = repo / "configs/experiments/gpu_queue_post_zoo.json"
+        state = {
+            "manifest": "configs/experiments/gpu_queue_post_zoo.json",
+            "dry_run": False,
+            "completed": ["domain_tray_audit_refresh"],
+            "failed": None,
+        }
+        out = repair_resume_state(state, manifest_path=manifest, dry_run=False)
+        self.assertEqual(out["completed"], ["domain_tray_audit_refresh"])
+
+
 if __name__ == "__main__":
     unittest.main()

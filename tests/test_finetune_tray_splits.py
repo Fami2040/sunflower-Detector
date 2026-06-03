@@ -87,6 +87,34 @@ class FinetuneTraySplitsTests(unittest.TestCase):
     def test_tray_key_from_stem(self) -> None:
         self.assertEqual(tray_key_from_stem("349-10-2_aug0"), "349-10-2")
 
+    def test_tray_adapt_aggregates_family_splits_for_parent_tray_key(self) -> None:
+        from harchoc.finetune_tray_splits import compose_tray_adapt_splits
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            ds = root / "dataset"
+            ds.mkdir()
+            splits = root / "splits"
+            domains = root / "domains"
+            splits.mkdir()
+            domains.mkdir()
+            work = root / "work"
+            (splits / "test.txt").write_text("images/test/holdout.jpg\n", encoding="utf-8")
+
+            (domains / "test_350.txt").write_text("images/test/t350.jpg\n", encoding="utf-8")
+            (domains / "train_350-3-1.txt").write_text("images/train/a.jpg\n", encoding="utf-8")
+            (domains / "val_350-3-1.txt").write_text("images/val/b.jpg\n", encoding="utf-8")
+
+            plan = compose_tray_adapt_splits(
+                ["350"],
+                domains_dir=domains,
+                splits_dir=splits,
+                dataset_root=ds,
+                work_dir=work,
+            )
+            self.assertEqual(plan.tray_keys, ["350"])
+            self.assertGreaterEqual(plan.n_train, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

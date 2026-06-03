@@ -1,6 +1,6 @@
 # Manuscript docx reproduction (HSP data, journal style)
 
-Generated: 2026-06-01T11:42:54Z
+Generated: 2026-06-03T11:58:21Z
 
 Reproduces **quantitative** figures/tables aligned with `reports/plants-4336582.docx` from frozen HSP exports. Photos/setup figures (7–11) remain manual.
 

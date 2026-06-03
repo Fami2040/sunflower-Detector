@@ -14,6 +14,7 @@ from harchoc.gpu_queue_dedup import (
     filter_duplicate_train_recipes,
     job_train_recipe_fingerprint,
 )
+from harchoc.retrain_baseline_dedup import annotate_train_compare_dedup_skips
 
 GPU_QUEUE_MANIFEST_SCHEMA = "gpu_queue_manifest.v1"
 AUG_SMOKE_PENDING_STATUSES = frozenset({"gpu_pending"})
@@ -139,9 +140,8 @@ def load_gpu_queue_manifest(
     idx = str(out.get("aug_smoke_index") or "configs/experiments/aug_smoke_index.json")
     if out.get("aug_smoke_from_index"):
         jobs = merge_aug_smoke_jobs(jobs, repo_root=rr, index_path=idx)
-    out["jobs"] = filter_duplicate_preds_sha(
-        filter_duplicate_train_recipes(jobs, repo_root=rr),
-        repo_root=rr,
-        index_path=idx,
-    )
+    defs = out.get("defaults") or {}
+    jobs = filter_duplicate_train_recipes(jobs, repo_root=rr)
+    jobs = annotate_train_compare_dedup_skips(jobs, repo_root=rr, defaults=defs)
+    out["jobs"] = filter_duplicate_preds_sha(jobs, repo_root=rr, index_path=idx)
     return out

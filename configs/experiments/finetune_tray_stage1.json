@@ -3,7 +3,7 @@
   "epochs": 25,
   "imgsz": 1280,
   "batch": 1,
-  "patience": 50,
+  "patience": 10,
   "lr0": 0.001,
   "notes": "Stage 1: frozen backbone (freeze policy in configs/transfer/finetune_stage1.yaml: freeze_backbone=true, lr=0.001, epochs=25). Run stage 2 with finetune_tray_stage2.json and stage-1 best.pt."
 }

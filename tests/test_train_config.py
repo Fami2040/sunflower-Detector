@@ -630,6 +630,18 @@ class TrainConfigExtendsTests(unittest.TestCase):
             cfg, repo_root=repo_root, label="train_aug_winner_100ep"
         )
 
+    def test_finetune_tray_stage_configs_satisfy_close_mosaic_runway(self) -> None:
+        from harchoc.train_config import load_train_config_json, validate_epochs_patience_close_mosaic
+
+        repo_root = Path(__file__).resolve().parents[1]
+        for rel in (
+            "configs/experiments/finetune_tray_stage1.json",
+            "configs/experiments/finetune_tray_stage2.json",
+        ):
+            cfg = load_train_config_json(repo_root / rel, repo_root=repo_root)
+            validate_epochs_patience_close_mosaic(cfg, repo_root=repo_root, label=rel)
+            self.assertLessEqual(int(cfg["patience"]), int(cfg["epochs"]) - 15)
+
 
 class AugSmokeConfigValidateTests(unittest.TestCase):
     def test_validate_aug_smoke_configs_clean_on_production_index(self) -> None:

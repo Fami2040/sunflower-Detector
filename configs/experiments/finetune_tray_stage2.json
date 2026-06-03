@@ -3,7 +3,7 @@
   "epochs": 25,
   "imgsz": 1280,
   "batch": 1,
-  "patience": 50,
+  "patience": 10,
   "lr0": 0.0005,
   "notes": "Stage 2: full unfreeze (configs/transfer/finetune_stage2.yaml: freeze_backbone=false, lr=0.0005, epochs=25). Set --base-weights to stage-1 runs/transfer/<run_name>/weights/best.pt."
 }

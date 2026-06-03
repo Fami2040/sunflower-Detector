@@ -9,6 +9,8 @@ from typing import Any, Literal
 from harchoc.domain_eval import domain_split_file
 from harchoc.splits_io import read_split_list, resolve_split_entry
 
+MERGED_FAMILY_SPLIT_SUFFIX = "_family.txt"
+
 TrainMode = Literal["canonical", "tray_adapt", "lofo_pool"]
 
 FINETUNE_SPLIT_PLAN_SCHEMA = "finetune_split_plan.v1"
@@ -45,6 +47,96 @@ def _read_rel_paths(path: Path) -> list[str]:
     entries = read_split_list(path, missing_ok=True)
     assert isinstance(entries, list)
     return [str(x) for x in entries if str(x).strip()]
+
+
+def _split_has_entries(path: Path) -> bool:
+    return bool(_read_rel_paths(path))
+
+
+def _family_split_stem(*, split: str, tray_key: str, path: Path) -> str | None:
+    """Return tray suffix when ``path`` is ``{split}_{tray_key}`` or a family variant."""
+    prefix = f"{split}_"
+    stem = path.stem
+    if not stem.startswith(prefix):
+        return None
+    suffix = stem[len(prefix) :]
+    key = tray_key.strip()
+    if suffix == key:
+        return suffix
+    if suffix.startswith(key + "-") or suffix.startswith(key + "_"):
+        return suffix
+    return None
+
+
+def domain_split_paths_for_tray_adapt(
+    tray_key: str,
+    *,
+    split: str,
+    domains_dir: Path,
+) -> list[Path]:
+    """
+    Domain split list files for tray_adapt.
+
+    Uses exact ``{split}_{tray_key}.txt`` when non-empty; otherwise merges all
+    non-empty family lists ``{split}_{tray_key}-*.txt`` / ``{split}_{tray_key}_*.txt``.
+    """
+    key = str(tray_key).strip()
+    if not key:
+        return []
+    root = domains_dir.resolve()
+    exact = root / f"{split}_{key}.txt"
+    if _split_has_entries(exact):
+        return [exact]
+
+    family: list[Path] = []
+    for path in sorted(root.glob(f"{split}_{key}*.txt")):
+        if path == exact:
+            continue
+        if _family_split_stem(split=split, tray_key=key, path=path) is None:
+            continue
+        if _split_has_entries(path):
+            family.append(path)
+    return family
+
+
+def tray_key_has_tray_adapt_splits(tray_key: str, *, domains_dir: Path) -> bool:
+    """True when tray_adapt can assemble non-empty train (or val) domain lists."""
+    train_paths = domain_split_paths_for_tray_adapt(tray_key, split="train", domains_dir=domains_dir)
+    val_paths = domain_split_paths_for_tray_adapt(tray_key, split="val", domains_dir=domains_dir)
+    return bool(train_paths or val_paths)
+
+
+def ensure_domain_split_file(
+    tray_key: str,
+    *,
+    split: str,
+    domains_dir: Path,
+    cache_dir: Path | None = None,
+) -> Path | None:
+    """
+    Resolve a single split list path for eval/finetune (exact or merged family cache).
+    """
+    paths = domain_split_paths_for_tray_adapt(tray_key, split=split, domains_dir=domains_dir)
+    if not paths:
+        return None
+    if len(paths) == 1:
+        return paths[0]
+
+    cache = (cache_dir or (domains_dir / "_merged")).resolve()
+    cache.mkdir(parents=True, exist_ok=True)
+    safe_key = tray_key.replace("/", "_")
+    out = cache / f"{split}_{safe_key}{MERGED_FAMILY_SPLIT_SUFFIX}"
+    merged: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        for rel in _read_rel_paths(path):
+            if rel not in seen:
+                seen.add(rel)
+                merged.append(rel)
+    if not merged:
+        return None
+    out.write_text("\n".join(merged) + "\n", encoding="utf-8")
+    return out
 
 
 def _canonical_test_abs_set(*, canonical_test: Path, dataset_root: Path) -> set[str]:
@@ -107,10 +199,16 @@ def compose_tray_adapt_splits(
     val_entries: list[str] = []
 
     for key in tray_keys:
-        train_tray = Path(domain_split_file(tray_key=key, split="train", domains_dir=domains_dir))
-        val_tray = Path(domain_split_file(tray_key=key, split="val", domains_dir=domains_dir))
-        t_train = _read_rel_paths(train_tray)
-        t_val = _read_rel_paths(val_tray)
+        train_paths = domain_split_paths_for_tray_adapt(
+            key, split="train", domains_dir=domains_dir
+        )
+        val_paths = domain_split_paths_for_tray_adapt(key, split="val", domains_dir=domains_dir)
+        t_train: list[str] = []
+        t_val: list[str] = []
+        for path in train_paths:
+            t_train.extend(_read_rel_paths(path))
+        for path in val_paths:
+            t_val.extend(_read_rel_paths(path))
         if not t_train and not t_val:
             raise SystemExit(
                 f"No domain split lists for tray {key!r}. Run:\n"

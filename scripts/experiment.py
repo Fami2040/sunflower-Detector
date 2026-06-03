@@ -175,21 +175,25 @@ def _run_domain_tray_audit(fields: dict[str, Any]) -> int:
                 mamba=False,
             )
         )
+        domains_dir = Path(str(fields.get("domains_dir") or "data/domains"))
         payload = build_weak_tray_plan(
             count_mae_path=Path(str(fields.get("count_mae") or "reports/domains/domain_count_mae.json")),
             domain_eval_path=Path(str(fields.get("domain_eval") or "reports/domains/domain_eval.json")),
             top_k=top_k,
             global_mae=global_ref,
+            domains_dir=domains_dir,
         )
         write_weak_tray_plan(Path(out), payload)
         print(f"Wrote dry-run plan {out}")
         return 0
 
+    domains_dir = Path(str(fields.get("domains_dir") or "data/domains"))
     payload = build_weak_tray_plan(
         count_mae_path=Path(str(fields.get("count_mae") or "reports/domains/domain_count_mae.json")),
         domain_eval_path=Path(str(fields.get("domain_eval") or "reports/domains/domain_eval.json")),
         top_k=top_k,
         global_mae=global_ref,
+        domains_dir=domains_dir,
     )
     write_weak_tray_plan(Path(out), payload)
     print(f"Wrote {out}")
@@ -197,6 +201,51 @@ def _run_domain_tray_audit(fields: dict[str, Any]) -> int:
     if keys:
         print(f"Recommended finetune tray_key(s): {', '.join(keys)}")
     return 0 if payload.get("status") in ("ok", "pending", "empty") else 1
+
+
+def _run_finetune_base_selection(fields: dict[str, Any]) -> int:
+    from harchoc.finetune_base_selection import (
+        DEFAULT_JOINED_STUDY_PATH,
+        DEFAULT_SELECTION_PATH,
+        build_finetune_base_selection,
+        build_joined_close3_study_summary,
+        write_finetune_base_selection,
+        write_joined_close3_study_summary,
+    )
+    from harchoc.manuscript_repro import _format_cmd
+
+    repo_root = Path(__file__).resolve().parents[1]
+    sel_out = str(fields.get("out") or DEFAULT_SELECTION_PATH)
+    study_out = str(fields.get("study_out") or DEFAULT_JOINED_STUDY_PATH)
+    anchor = fields.get("global_mae")
+    anchor_mae = float(anchor) if anchor is not None else 61.3
+
+    if bool(fields.get("dry_run")):
+        print("# finetune-base-selection")
+        print(
+            _format_cmd(
+                ["scripts/experiment.py", "finetune-base-selection", "--out", sel_out],
+                mamba=False,
+            )
+        )
+        payload = build_finetune_base_selection(repo_root, anchor_mae=anchor_mae)
+        write_json(sel_out, payload)
+        study = build_joined_close3_study_summary(repo_root, anchor_mae=anchor_mae)
+        write_json(study_out, study)
+        print(f"Wrote dry-run {sel_out} and {study_out}")
+        return 0
+
+    sel_path = write_finetune_base_selection(repo_root, sel_out, anchor_mae=anchor_mae)
+    study_path = write_joined_close3_study_summary(repo_root, study_out, anchor_mae=anchor_mae)
+    doc = build_finetune_base_selection(repo_root, anchor_mae=anchor_mae)
+    selected = doc.get("selected") or {}
+    print(f"Wrote {sel_path.relative_to(repo_root)}")
+    print(f"Wrote {study_path.relative_to(repo_root)}")
+    print(
+        f"Stage-1 base: {doc.get('stage1_base_weights')} "
+        f"({selected.get('reason', 'n/a')})"
+    )
+    return 0
 
 
 def _run_map_cpu(fields: dict[str, Any]) -> int:
@@ -993,8 +1042,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     pda.add_argument("--count-mae", default=argparse.SUPPRESS)
     pda.add_argument("--domain-eval", default=argparse.SUPPRESS)
+    pda.add_argument("--domains-dir", default=argparse.SUPPRESS)
     pda.add_argument("--top-k", type=int, default=argparse.SUPPRESS)
     pda.add_argument("--global-mae", type=float, default=argparse.SUPPRESS)
+
+    pfbs = sp.add_parser(
+        "finetune-base-selection",
+        help="Pick stage-1 finetune base weights after joined close3 retrains (vs best2 anchor).",
+    )
+    add_dry_run_arg(pfbs, suppress_defaults=True)
+    pfbs.add_argument(
+        "--out",
+        default=argparse.SUPPRESS,
+        help="finetune_base_selection.v1 JSON (default reports/hsp/finetune_base_selection.json).",
+    )
+    pfbs.add_argument(
+        "--study-out",
+        default=argparse.SUPPRESS,
+        help="joined_close3_study_summary.v1 (default reports/gpu_queue/joined_close3_study_summary.json).",
+    )
+    pfbs.add_argument("--global-mae", type=float, default=argparse.SUPPRESS)
 
     pr2m = sp.add_parser(
         "reviewer2-map50",
@@ -1362,6 +1429,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_finetune_tray(merged_fields)
     if cmd == "domain-tray-audit":
         return _run_domain_tray_audit(merged_fields)
+    if cmd == "finetune-base-selection":
+        return _run_finetune_base_selection(merged_fields)
     if cmd == "map-cpu":
         return _run_map_cpu(merged_fields)
     if cmd == "reviewer2-map50":

@@ -1,0 +1,8 @@
+{
+  "extends": "configs/experiments/train_yolov8m_baseline.json",
+  "epochs": 100,
+  "patience": 50,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "notes": "Joined search: promote S1 (close3) aug to 100-ep YOLOv8m retrain for canonical test count MAE comparison."
+}
+

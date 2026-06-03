@@ -55,6 +55,7 @@ def build_weak_tray_plan(
     domain_eval_path: Path | None,
     top_k: int = 3,
     global_mae: float | None = 61.3,
+    domains_dir: Path | None = None,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     if count_mae_path is not None and count_mae_path.is_file():
@@ -89,7 +90,22 @@ def build_weak_tray_plan(
             }
         )
     ranked.sort(key=lambda x: float(x["count_mae"]), reverse=True)
-    top = ranked[: max(1, int(top_k))]
+    skipped_not_finetunable: list[dict[str, Any]] = []
+    finetunable = ranked
+    if domains_dir is not None:
+        from harchoc.finetune_tray_splits import tray_key_has_tray_adapt_splits
+
+        dd = domains_dir.resolve()
+        finetunable = []
+        for rec in ranked:
+            key = str(rec["tray_key"])
+            if tray_key_has_tray_adapt_splits(key, domains_dir=dd):
+                finetunable.append(rec)
+            else:
+                skipped_not_finetunable.append(
+                    {**rec, "skip_reason": "no train/val domain split lists for tray_adapt"}
+                )
+    top = finetunable[: max(1, int(top_k))]
 
     return with_schema_version(
         {
@@ -97,6 +113,8 @@ def build_weak_tray_plan(
             "source": source,
             "global_mae_reference": global_mae,
             "n_trays_ranked": len(ranked),
+            "n_trays_finetunable": len(finetunable),
+            "skipped_not_finetunable": skipped_not_finetunable,
             "recommended_tray_keys": [t["tray_key"] for t in top],
             "top_trays": top,
             "finetune_hint": (

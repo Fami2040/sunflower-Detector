@@ -1,0 +1,274 @@
+{
+  "status": "ok",
+  "script": "finetune",
+  "dataset": "/root/development/harchoc/sunflower-Detector/data/raw/extracted/dataset",
+  "base_weights": "models/best2.pt",
+  "config": "/root/development/harchoc/sunflower-Detector/configs/experiments/finetune_tray_stage1.json",
+  "transfer_config": "/root/development/harchoc/sunflower-Detector/configs/transfer/finetune_stage1.yaml",
+  "transfer_policy": {
+    "freeze_backbone": true,
+    "unfreeze_epoch": 10,
+    "freeze": null
+  },
+  "train_mode": "tray_adapt",
+  "split_plan": {
+    "schema_version": "finetune_split_plan.v1",
+    "train_mode": "tray_adapt",
+    "tray_keys": [
+      "350"
+    ],
+    "train_split_file": "/root/development/harchoc/sunflower-Detector/reports/transfer/split_lists/finetune_train_350.txt",
+    "val_split_file": "/root/development/harchoc/sunflower-Detector/reports/transfer/split_lists/finetune_val_350.txt",
+    "n_train": 171,
+    "n_val": 21,
+    "canonical_test_file": "/root/development/harchoc/sunflower-Detector/data/splits/test.txt",
+    "notes": "train=union(domain train+val per tray); val=domain val per tray (fallback train)"
+  },
+  "train_split_file": "/root/development/harchoc/sunflower-Detector/reports/transfer/split_lists/finetune_train_350.txt",
+  "val_split_file": "/root/development/harchoc/sunflower-Detector/reports/transfer/split_lists/finetune_val_350.txt",
+  "tray_eval_enabled": true,
+  "hsp_counting": true,
+  "locked_conf_from": "reports/hsp/threshold_val.json",
+  "tray_keys": [
+    "350"
+  ],
+  "tray_eval_before": {
+    "350": {
+      "tray": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_preds.json",
+        "count_mae": 162.0,
+        "mAP50": null,
+        "mAP50_95": null
+      },
+      "val": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_preds.json",
+        "count_mae": 54.23809523809524,
+        "mAP50": null,
+        "mAP50_95": null
+      }
+    },
+    "test": {
+      "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_eval.json",
+      "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_error.json",
+      "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_gt.json",
+      "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_preds.json",
+      "count_mae": 61.26605504587156,
+      "mAP50": null,
+      "mAP50_95": null
+    }
+  },
+  "tray_eval_after": {
+    "350": {
+      "tray": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_preds.json",
+        "count_mae": 7.0,
+        "mAP50": null,
+        "mAP50_95": null
+      },
+      "val": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_preds.json",
+        "count_mae": 75.47619047619048,
+        "mAP50": null,
+        "mAP50_95": null
+      }
+    },
+    "test": {
+      "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_eval.json",
+      "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_error.json",
+      "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_gt.json",
+      "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_preds.json",
+      "count_mae": 51.54128440366973,
+      "mAP50": null,
+      "mAP50_95": null
+    }
+  },
+  "tray_eval_warnings": null,
+  "weak_tray_plan": {
+    "status": "ok",
+    "source": "reports/domains/domain_count_mae.json",
+    "global_mae_reference": 61.3,
+    "n_trays_ranked": 41,
+    "n_trays_finetunable": 41,
+    "skipped_not_finetunable": [],
+    "recommended_tray_keys": [
+      "3a5-9",
+      "350",
+      "200-3-1"
+    ],
+    "top_trays": [
+      {
+        "tray_key": "3a5-9",
+        "count_mae": 243.5,
+        "delta_vs_global": 182.2,
+        "mAP50": null
+      },
+      {
+        "tray_key": "350",
+        "count_mae": 162.0,
+        "delta_vs_global": 100.7,
+        "mAP50": null
+      },
+      {
+        "tray_key": "200-3-1",
+        "count_mae": 150.5,
+        "delta_vs_global": 89.2,
+        "mAP50": null
+      }
+    ],
+    "finetune_hint": "mamba run -n harchoc python scripts/finetune.py --tray-key 3a5-9 --train-mode tray_adapt --dataset-root $DATASET_ROOT",
+    "docs": "docs/FINETUNE_WEAK_TRAYS.md",
+    "schema_version": "weak_tray_plan.v1"
+  },
+  "tide_guidance": {
+    "status": "ok",
+    "source": "/root/development/harchoc/sunflower-Detector/reports/hsp/tide_bucket_summary.json",
+    "tray_key": "350",
+    "dominant_bucket": "Miss",
+    "loc_plus_bkg_over_cls_ratio": 15.073424657534247,
+    "buckets": {
+      "Miss": 32884,
+      "Loc": 17107,
+      "Bkg": 10402,
+      "Cls": 1825,
+      "Dupe": 0
+    },
+    "recommended_train_mode": "defer_finetune",
+    "notes": "Dominant Miss: try max_det / recall before tray_adapt."
+  },
+  "finetune_outcome": {
+    "tray_keys": [
+      "350"
+    ],
+    "tray_holdout": [
+      {
+        "tray_key": "350",
+        "count_mae_before": 162.0,
+        "count_mae_after": 7.0,
+        "delta_mae": -155.0,
+        "improved": true
+      }
+    ],
+    "domain_baseline_mae": {
+      "350": 162.0
+    },
+    "canonical_gate": {
+      "global_mae_reference": 61.3,
+      "gate_pct": 0.1,
+      "limit_mae": 67.43,
+      "before_mae": 61.26605504587156,
+      "after_mae": 51.54128440366973,
+      "passed": true,
+      "detail": null
+    },
+    "tide_guidance": {
+      "status": "ok",
+      "source": "/root/development/harchoc/sunflower-Detector/reports/hsp/tide_bucket_summary.json",
+      "tray_key": "350",
+      "dominant_bucket": "Miss",
+      "loc_plus_bkg_over_cls_ratio": 15.073424657534247,
+      "buckets": {
+        "Miss": 32884,
+        "Loc": 17107,
+        "Bkg": 10402,
+        "Cls": 1825,
+        "Dupe": 0
+      },
+      "recommended_train_mode": "defer_finetune",
+      "notes": "Dominant Miss: try max_det / recall before tray_adapt."
+    },
+    "metrics_before": {
+      "350": {
+        "tray": {
+          "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_eval.json",
+          "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_error.json",
+          "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_gt.json",
+          "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_tray_350_preds.json",
+          "count_mae": 162.0,
+          "mAP50": null,
+          "mAP50_95": null
+        },
+        "val": {
+          "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_eval.json",
+          "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_error.json",
+          "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_gt.json",
+          "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_val_350_preds.json",
+          "count_mae": 54.23809523809524,
+          "mAP50": null,
+          "mAP50_95": null
+        }
+      },
+      "canonical_test": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_before_test_preds.json",
+        "count_mae": 61.26605504587156,
+        "mAP50": null,
+        "mAP50_95": null
+      }
+    },
+    "metrics_after": {
+      "350": {
+        "tray": {
+          "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_eval.json",
+          "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_error.json",
+          "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_gt.json",
+          "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_tray_350_preds.json",
+          "count_mae": 7.0,
+          "mAP50": null,
+          "mAP50_95": null
+        },
+        "val": {
+          "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_eval.json",
+          "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_error.json",
+          "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_gt.json",
+          "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_val_350_preds.json",
+          "count_mae": 75.47619047619048,
+          "mAP50": null,
+          "mAP50_95": null
+        }
+      },
+      "canonical_test": {
+        "eval_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_eval.json",
+        "error_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_error.json",
+        "gt_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_gt.json",
+        "preds_json": "/root/development/harchoc/sunflower-Detector/reports/transfer/hsp_after_test_preds.json",
+        "count_mae": 51.54128440366973,
+        "mAP50": null,
+        "mAP50_95": null
+      }
+    },
+    "schema_version": "finetune_outcome.v1"
+  },
+  "debug": false,
+  "train_returncode": 0,
+  "tray_eval_returncodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "run_dir": "/root/development/harchoc/sunflower-Detector/runs/transfer/finetune_350_s1",
+  "weights": "/root/development/harchoc/sunflower-Detector/runs/transfer/finetune_350_s1/weights/best.pt",
+  "schema_version": "finetune_run.v1"
+}

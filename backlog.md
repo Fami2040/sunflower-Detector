@@ -8,7 +8,7 @@ Task tracker for HARCHOC sunflower seed counting. **Updated:** 2026-06-01 · **B
 | **best2** | **61.3** MAE @ conf ~0.15 — [`ORIGIN_MAIN_AND_DATASET.md`](docs/ORIGIN_MAIN_AND_DATASET.md) |
 | Dataset | CVAT **1093** — [`data/manifest.json`](data/manifest.json) (`y9xGFqCW`) |
 | Aug 100 ep confirm | **64.1** — did not beat best2 |
-| **Next GPU job** | P0-5 → [`gpu_queue_post_zoo.json`](configs/experiments/gpu_queue_post_zoo.json) |
+| **Next GPU job** | Post-zoo → [`gpu_queue_post_zoo.json`](configs/experiments/gpu_queue_post_zoo.json) (base: `models/best2.pt`, see [`finetune_base_selection.json`](reports/hsp/finetune_base_selection.json)) |
 
 **Doc map:** [EXPERIMENTS](docs/EXPERIMENTS.md) · [**status**](docs/manuscript/status.md) · [gap map](docs/manuscript/reviewer_comments_backlog_gap.md) · [reports/manuscript](reports/manuscript/) · [p0_summary](reports/hsp/p0_summary.md) · [reviewer2](reports/reviewer2.md) · [backlog_archive.md](backlog_archive.md)
 

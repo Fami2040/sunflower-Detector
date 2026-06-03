@@ -1,0 +1,31 @@
+{
+  "schema_version": "proof_of_work.v1",
+  "generated_at": "2026-06-03",
+  "anchor": {
+    "weights": "models/best2.pt",
+    "test_count_mae": 61.3,
+    "mAP50": 0.18
+  },
+  "zoo_close3_100ep_m_scale": [
+    {"model": "yolov8m", "test_count_mae": 111.9, "mAP50": 0.064},
+    {"model": "yolo11m", "test_count_mae": 119.6, "mAP50": 0.077},
+    {"model": "yolo26m", "test_count_mae": 95.3, "mAP50": 0.406},
+    {"model": "yolov10m", "test_count_mae": 182.0, "mAP50": 0.352}
+  ],
+  "finetune_tray_350_stage1": {
+    "base_weights": "models/best2.pt",
+    "run_dir": "runs/transfer/finetune_350_s1",
+    "checkpoint_in_repo": "docs/proof_of_work/checkpoints/finetune_tray350_stage1_best.pt",
+    "tray_mae_before": 162.0,
+    "tray_mae_after": 7.0,
+    "canonical_test_mae_before": 61.266,
+    "canonical_test_mae_after": 51.541,
+    "canonical_gate_passed": true
+  },
+  "gpu_queue_post_zoo": {
+    "manifest": "configs/experiments/gpu_queue_post_zoo.json",
+    "jobs_completed": 8,
+    "failed": null,
+    "finished_at": "2026-06-03T11:28:23Z"
+  }
+}

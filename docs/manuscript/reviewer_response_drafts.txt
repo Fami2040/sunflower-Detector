@@ -1,0 +1,33 @@
+REVIEWER RESPONSE DRAFTS (validated against repo artifacts, 2026-06-03)
+================================================================================
+
+TECHNICAL — YOLO comparisons (v8 vs newer generations; model sizes)
+--------------------------------------------------------------------------------
+
+We thank the reviewer for raising this point. All models were evaluated on identical frozen splits using a counting-first protocol: confidence is selected on the validation split by minimizing per-image count MAE, then locked and applied unchanged on the held-out test set (n = 109 images; locked confidence ≈ 0.15). Count MAE is the primary endpoint; ranking mAP is reported separately.
+
+The production anchor (best2.pt) achieved test count MAE 61.3 (95% CI 51.3–71.3). We trained four Ultralytics YOLO variants at medium scale for 100 epochs each (1280 px, shared augmentation, 8 GiB GPU constraint): YOLOv8m retrain MAE 111.9; YOLO11m 119.6; YOLO26m 95.3; YOLOv10m 182.0. None improved counting accuracy versus the anchor. YOLO26m illustrates the separation of metrics: test mAP50 was higher (0.41 vs 0.18) but count MAE was much worse (95.3 vs 61.3).
+
+We have not completed a full comparison across YOLO 9 or 12 or a systematic small/medium/large grid; that remains future work. The completed comparisons address whether recent M-scale YOLO retrains outperform our anchor under fair evaluation—they do not. Our contribution is the reproducible counting-first protocol and operating-point selection, not a new architecture.
+
+Staged tray-targeted fine-tuning on the worst acquisition sessions (post-zoo queue) improved holdout error on one tray family (350; test MAE 51.5 after stage 1) but did not provide a globally safe replacement: other trays raised pooled test MAE, so best2.pt remains the manuscript default.
+
+
+WRITING FORMAT — Results structure, confusion matrices, discussion
+--------------------------------------------------------------------------------
+
+We agree that Results should interpret findings rather than repeat table values. We reorganized accordingly.
+
+The non-normalized confusion matrix now precedes the normalized matrix. Both use the locked counting operating point (≈0.15 confidence; IoU 0.3 for matches). Cross-class errors among matched detections total 2,600 instances (developed→aborted 826; aborted→developed 1,774) versus 35,714 true positives—substantially smaller than missed detections, background false positives, and localization-related failures. TIDE-style decomposition on test exports is consistent: miss, localization, and background dominate; class confusion is a minor share (~3%). We state this in the main text and Discussion, not only in captions.
+
+We shortened repetitive result-spelling prose and expanded discussion of (i) val versus test mAP versus count MAE, (ii) tray/session heterogeneity, and (iii) limits of single-site benchtop imaging for generalization.
+
+
+TITLE
+--------------------------------------------------------------------------------
+
+We revised the title to:
+
+Rapid classification and deep learning-based development estimation of sunflower (Helianthus annuus) seeds.
+
+This states the task and method clearly, uses the common name first with the scientific name in parentheses, and matches the study scope (developed versus aborted seeds; counting-first evaluation).

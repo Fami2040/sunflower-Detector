@@ -1,0 +1,10 @@
+{
+  "extends": "configs/experiments/train_bench_base.json",
+  "model": "yolo11m.pt",
+  "batch": 1,
+  "epochs": 100,
+  "patience": 50,
+  "aug_config": "configs/aug/robustness_smoke_close3.yaml",
+  "notes": "Joined search: promote S1 (close3) aug to 100-ep YOLO11m retrain; compare canonical test count MAE against best2 and zoo baselines."
+}
+

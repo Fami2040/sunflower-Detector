@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -580,9 +581,14 @@ def main(argv: list[str] | None = None) -> int:
         tray_eval_warnings.extend(warns)
         return paths or None
 
+    cuda_visible_prior = os.environ.get("CUDA_VISIBLE_DEVICES")
     try:
         if bool(args.tray_eval):
             tray_eval_before = _run_phase("before", str(args.base_weights))
+
+        from harchoc.post_train_eval import restore_cuda_visible_devices_after_ultralytics_cpu
+
+        restore_cuda_visible_devices_after_ultralytics_cpu(cuda_visible_prior)
 
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
             json.dump(train_doc, tmp)

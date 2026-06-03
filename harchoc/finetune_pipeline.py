@@ -57,9 +57,13 @@ def resolve_finetune_base_weights(
 ) -> str:
     """Queue/live argv: stage 1 uses best2.pt unless overridden; stage 2 uses stage-1 best.pt."""
     defs = defaults or {}
-    explicit = job.get("base_weights") or defs.get("base_weights")
+    explicit = job.get("base_weights")
     if explicit:
         return str(explicit)
+    if stage == 1:
+        def_bw = defs.get("base_weights")
+        if def_bw:
+            return str(def_bw)
     if stage == 2:
         stage1_run = str(
             job.get("stage1_run_name") or job.get("base_weights_from_run") or ""
@@ -169,14 +173,17 @@ def ensure_weak_tray_plan(
     domain_eval_path: Path,
     global_mae: float,
     top_k: int = 3,
+    domains_dir: Path | None = None,
     write: bool = True,
 ) -> dict[str, Any]:
     """Build or refresh weak_tray_plan.v1 from domain MAE artifacts."""
+    dd = domains_dir or (repo_root / "data/domains")
     payload = build_weak_tray_plan(
         count_mae_path=count_mae_path if count_mae_path.is_file() else None,
         domain_eval_path=domain_eval_path if domain_eval_path.is_file() else None,
         top_k=top_k,
         global_mae=global_mae,
+        domains_dir=dd,
     )
     if write:
         write_weak_tray_plan(weak_plan_path, payload)
@@ -252,11 +259,17 @@ def merge_finetune_eval_section(
         out["hsp_counting"] = True
     if out.get("max_det") is None:
         out["max_det"] = 3000
-    if out.get("device") is None:
-        env_dev = (os.environ.get("HARCHOC_EXPORT_DEVICE") or "").strip()
-        out["device"] = env_dev if env_dev else "cpu"
-    if out.get("export_device") is None:
-        out["export_device"] = out.get("device", "cpu")
+    env_dev = (os.environ.get("HARCHOC_EXPORT_DEVICE") or "").strip()
+    if env_dev and env_dev.lower() != "cpu":
+        # train_bench_base.json sets eval.device=cpu for post-train val; GPU queue jobs
+        # set HARCHOC_EXPORT_DEVICE=0 for tray exports — do not inherit CPU here.
+        out["device"] = env_dev
+        out["export_device"] = env_dev
+    else:
+        if out.get("device") is None:
+            out["device"] = env_dev if env_dev else "cpu"
+        if out.get("export_device") is None:
+            out["export_device"] = out.get("device", "cpu")
     return out
 
 

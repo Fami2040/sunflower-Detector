@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harchoc.domain_eval import domain_split_file, tray_keys_from_catalog_blob
+from harchoc.domain_eval import tray_keys_from_catalog_blob
+from harchoc.finetune_tray_splits import ensure_domain_split_file
 from harchoc.finetune_pipeline import (
     hsp_transfer_paths,
     metrics_from_eval_json,
@@ -72,7 +73,16 @@ def split_file_for_role(
     if tray_key is None:
         raise ValueError(f"tray_key required for role {role!r}")
     split_name = "test" if role == "tray" else role
-    return domain_split_file(tray_key=tray_key, split=split_name, domains_dir=domains_dir)
+    resolved = ensure_domain_split_file(
+        tray_key,
+        split=split_name,
+        domains_dir=Path(domains_dir),
+    )
+    if resolved is None:
+        from harchoc.domain_eval import domain_split_file
+
+        return domain_split_file(tray_key=tray_key, split=split_name, domains_dir=domains_dir)
+    return str(resolved.resolve())
 
 
 def tray_eval_out_path(

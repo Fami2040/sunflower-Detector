@@ -97,6 +97,37 @@ class GpuQueueStagesRunnerTests(unittest.TestCase):
             )
             self.assertEqual(result["status"], "dry_run_complete")
 
+    def test_internal_summary_stage_always_writes_stage_log(self) -> None:
+        """Regression: internal job_summary must write logs/{job_id}/summary.log (docs + postmortems)."""
+        from harchoc.gpu_queue import run_job
+
+        repo = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as td:
+            log_root = Path(td) / "logs"
+            job = {
+                "id": "x_smoke",
+                "kind": "train_compare",
+                "train_config": "configs/experiments/train_rtdetr_imgsz640_smoke_15ep.json",
+                "run_name": "x_smoke_15ep",
+                # Avoid trying to finalize a real summary; we only care that the stage log exists.
+                "skip_eval": True,
+            }
+            # Force subprocess stages to be no-ops and pretend weights exist so summary runs.
+            with mock.patch("harchoc.gpu_queue_runner.resolve_train_weights", return_value=repo / "models/best2.pt"):
+                with mock.patch("harchoc.gpu_queue._run_subprocess_stage", return_value=0):
+                    result = run_job(
+                        job,
+                        repo_root=repo,
+                        defaults={},
+                        dry_run=False,
+                        min_free_mib=5500,
+                        log_root=log_root,
+                    )
+            # summary may still fail depending on job kind; but the stage log must exist either way.
+            self.assertIn(result["status"], ("complete", "failed"))
+            summary_log = log_root / "x_smoke" / "summary.log"
+            self.assertTrue(summary_log.is_file())
+
     def test_dry_run_preflight_job(self) -> None:
         from harchoc.gpu_queue import run_gpu_queue
 

@@ -28,6 +28,16 @@ from harchoc.gpu_queue_skip import (
 )
 from harchoc.gpu_queue_stages import build_job_stages, validate_job_files
 from harchoc.gpu_queue_stages import _smoke_weights_run_name
+from harchoc.retrain_baseline_dedup import (
+    baseline_hsp_eval_artifacts,
+    build_dedup_summary_overlay,
+    checkpoint_max_tensor_diff,
+    checkpoints_tensor_identical,
+    resolve_dedup_baseline_hsp_run_name,
+    resolve_dedup_baseline_weights,
+    seed_run_weights_from_baseline,
+    should_pre_skip_redundant_train,
+)
 from harchoc.json_io import load_json_dict
 from harchoc.manuscript_repro import _format_cmd
 from harchoc.queue_notify import (
@@ -236,7 +246,16 @@ def _finalize_job_summary(
         patch_index=summary_kind == "aug_smoke",
         train_runtime_s=job_context.get("train_runtime_s"),
         refresh_leaderboard=False,
+        hsp_artifacts=job_context.get("eval_artifacts"),
     )
+    if job_context.get("dedup_baseline_identical"):
+        baseline_path = job_context.get("dedup_baseline_weights")
+        if baseline_path:
+            payload["dedup"] = build_dedup_summary_overlay(
+                job=job,
+                job_context=job_context,
+                baseline=Path(str(baseline_path)),
+            )
     prefix = f"{out_dir}/{run_name}"
     error_json = str((repo_root / f"{prefix}_error.json").resolve())
     transcript: dict[str, Any] = {
@@ -273,6 +292,7 @@ def _run_smoke_hsp_eval_stage(
     log_path: Path,
     dry_run: bool,
     job_context: dict[str, Any],
+    defaults: dict[str, Any] | None = None,
 ) -> int:
     run_name = str(meta.get("run_name") or job.get("run_name") or "")
     weights_run_name = _smoke_weights_run_name(job=job, meta=meta, run_name=run_name)
@@ -305,6 +325,26 @@ def _run_smoke_hsp_eval_stage(
                 on_stage=_on,
             )
             return 0
+
+        if job_context.get("dedup_baseline_identical") and job.get(
+            "dedup_skip_eval_when_identical",
+            (defaults or {}).get("dedup_skip_eval_when_identical", True),
+        ):
+            hsp_run = resolve_dedup_baseline_hsp_run_name(job, defaults=defaults) or ""
+            if hsp_run:
+                artifacts = baseline_hsp_eval_artifacts(
+                    repo_root=repo_root,
+                    baseline_hsp_run_name=hsp_run,
+                    out_dir=out_dir,
+                )
+                job_context["eval_artifacts"] = artifacts
+                job_context["dedup_eval_skipped"] = True
+                f.write(
+                    f"# eval_test skipped: tensor-identical to baseline HSP exports ({hsp_run})\n"
+                )
+                for k, v in artifacts.items():
+                    f.write(f"#   {k}: {v}\n")
+                return 0
 
         weights = resolve_train_weights(repo_root=repo_root, run_name=weights_run_name)
         if weights is None:
@@ -358,10 +398,15 @@ def _run_subprocess_stage(
         print(f"# {line}")
         return 0
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    run_env = dict(os.environ)
+    run_env.update(env)
+    run_env.setdefault("PYTHONUNBUFFERED", "1")
     with log_path.open("w", encoding="utf-8") as log_f:
         log_f.write(f"# started {_utc_now()}\n# cmd: {line}\n\n")
         log_f.flush()
-        proc = subprocess.run(cmd, cwd=str(repo_root), env=env, stdout=log_f, stderr=subprocess.STDOUT)
+        proc = subprocess.run(
+            cmd, cwd=str(repo_root), env=run_env, stdout=log_f, stderr=subprocess.STDOUT
+        )
         log_f.write(f"\n# exit_code={proc.returncode} finished {_utc_now()}\n")
     return int(proc.returncode)
 
@@ -375,6 +420,7 @@ def _run_internal_stage(
     dry_run: bool,
     job_context: dict[str, Any],
     min_free_mib: int,
+    defaults: dict[str, Any] | None = None,
 ) -> int:
     internal = stage.get("internal")
     if internal == "gpu_wait":
@@ -474,6 +520,7 @@ def _run_internal_stage(
             log_path=log_path,
             dry_run=dry_run,
             job_context=job_context,
+            defaults=defaults,
         )
 
     if internal == "finetune_summary":
@@ -538,23 +585,52 @@ def run_job(
     job_context: dict[str, Any] = {"run_name": job.get("run_name")}
     stage_results: list[dict[str, Any]] = []
     train_start: float | None = None
+    kind = str(job.get("kind") or "")
+    dedup_baseline: Path | None = None
+    if kind == "train_compare":
+        dedup_baseline = resolve_dedup_baseline_weights(
+            job, repo_root=repo_root, defaults=defaults
+        )
+        if dedup_baseline is not None:
+            job_context["dedup_baseline_weights"] = str(dedup_baseline)
 
     for stage in stages:
         stage_id = str(stage.get("stage_id") or "unknown")
         log_path = log_root / job_id / f"{stage_id}.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         if stage.get("internal"):
+            # Internal stages sometimes only emit JSON artifacts, not a stage log.
+            # The docs + failure handler expect `logs/{job_id}/{stage_id}.log` to exist,
+            # so we always create a minimal log with exit status.
+            if not log_path.exists():
+                log_path.write_text(
+                    f"# started {_utc_now()}\n# job={job_id} stage={stage_id} internal={stage.get('internal')}\n",
+                    encoding="utf-8",
+                )
             if stage_id == "train" or stage_id.startswith("train_"):
                 train_start = time.monotonic()
-            rc = _run_internal_stage(
-                stage,
-                job=job,
-                repo_root=repo_root,
-                log_path=log_path,
-                dry_run=dry_run,
-                job_context=job_context,
-                min_free_mib=min_free_mib,
-            )
+            try:
+                rc = _run_internal_stage(
+                    stage,
+                    job=job,
+                    repo_root=repo_root,
+                    log_path=log_path,
+                    dry_run=dry_run,
+                    job_context=job_context,
+                    min_free_mib=min_free_mib,
+                    defaults=defaults,
+                )
+            except Exception as e:
+                # Keep the queue debuggable even if summary code raises.
+                with log_path.open("a", encoding="utf-8") as f:
+                    f.write(f"\n# exception: {type(e).__name__}: {e}\n")
+                raise
+            finally:
+                # Append exit code marker (even if internal stage wrote its own content).
+                # This keeps stage logs uniform across internal vs subprocess stages.
+                if not dry_run:
+                    with log_path.open("a", encoding="utf-8") as f:
+                        f.write(f"# exit_code={rc}\n# finished {_utc_now()}\n")
             if stage_id == "train" or stage_id.startswith("train_"):
                 if train_start is not None and not dry_run:
                     job_context["train_runtime_s"] = time.monotonic() - train_start
@@ -563,6 +639,42 @@ def run_job(
             if stage_id == "train":
                 train_start = time.monotonic()
                 run_name = str(job_context.get("run_name") or job.get("run_name") or "")
+                if not dry_run and dedup_baseline is not None and run_name:
+                    pre_skip, pre_reason = should_pre_skip_redundant_train(
+                        job,
+                        repo_root=repo_root,
+                        baseline=dedup_baseline,
+                        defaults=defaults,
+                    )
+                    if pre_skip:
+                        w = seed_run_weights_from_baseline(
+                            baseline=dedup_baseline,
+                            run_name=run_name,
+                            repo_root=repo_root,
+                        )
+                        job_context["weights"] = str(w)
+                        job_context["dedup_pre_skip_train"] = True
+                        job_context["dedup_pre_skip_reason"] = pre_reason
+                        diff = checkpoint_max_tensor_diff(w, dedup_baseline)
+                        job_context["dedup_max_tensor_diff"] = diff
+                        if checkpoints_tensor_identical(w, dedup_baseline):
+                            job_context["dedup_baseline_identical"] = True
+                        log_path.write_text(
+                            f"train skipped: {pre_reason}\nseeded weights: {w}\n",
+                            encoding="utf-8",
+                        )
+                        stage_results.append(
+                            {
+                                "stage_id": stage_id,
+                                "exit_code": 0,
+                                "log_path": str(log_path),
+                                "skipped": True,
+                                "dedup_pre_skip": True,
+                            }
+                        )
+                        if train_start is not None:
+                            job_context["train_runtime_s"] = time.monotonic() - train_start
+                        continue
                 if (
                     not dry_run
                     and run_name
@@ -570,7 +682,17 @@ def run_job(
                 ):
                     w = resolve_train_weights(repo_root=repo_root, run_name=run_name)
                     job_context["weights"] = str(w)
-                    log_path.write_text(f"train skipped: weights exist ({w})\n", encoding="utf-8")
+                    skip_msg = f"train skipped: weights exist ({w})\n"
+                    if dedup_baseline is not None:
+                        diff = checkpoint_max_tensor_diff(Path(str(w)), dedup_baseline)
+                        job_context["dedup_max_tensor_diff"] = diff
+                        if checkpoints_tensor_identical(w, dedup_baseline):
+                            job_context["dedup_baseline_identical"] = True
+                            skip_msg += (
+                                "tensor-identical to zoo baseline "
+                                f"({dedup_baseline})\n"
+                            )
+                    log_path.write_text(skip_msg, encoding="utf-8")
                     stage_results.append(
                         {"stage_id": stage_id, "exit_code": 0, "log_path": str(log_path), "skipped": True}
                     )
@@ -587,6 +709,18 @@ def run_job(
             )
             if stage_id == "train" and train_start is not None and not dry_run:
                 job_context["train_runtime_s"] = time.monotonic() - train_start
+                if dedup_baseline is not None and run_name:
+                    w_after = resolve_train_weights(repo_root=repo_root, run_name=run_name)
+                    if w_after is not None:
+                        diff = checkpoint_max_tensor_diff(w_after, dedup_baseline)
+                        job_context["dedup_max_tensor_diff"] = diff
+                        if checkpoints_tensor_identical(w_after, dedup_baseline):
+                            job_context["dedup_baseline_identical"] = True
+                            with log_path.open("a", encoding="utf-8") as dedup_f:
+                                dedup_f.write(
+                                    f"\n# post-train dedup: tensor-identical to baseline "
+                                    f"{dedup_baseline} (max_diff={diff})\n"
+                                )
 
         stage_results.append({"stage_id": stage_id, "exit_code": rc, "log_path": str(log_path)})
         if rc != 0:
@@ -621,13 +755,16 @@ def repair_resume_state(
     """Drop stale fields when resuming a different manifest or switching dry_run → live."""
     manifest = str(manifest_path.resolve())
     out = dict(state)
-    manifest_changed = str(out.get("manifest") or "") != manifest
+    prev_manifest = str(Path(str(out.get("manifest") or "")).resolve()) if out.get("manifest") else ""
+    manifest_changed = bool(prev_manifest) and prev_manifest != manifest
     dry_mismatch = bool(out.get("dry_run")) != bool(dry_run)
     if manifest_changed:
         out["completed"] = []
         out["skipped"] = []
         out["failed"] = None
         out["started_at"] = _utc_now()
+    elif out.get("failed") and not dry_run:
+        out["failed"] = None
     if manifest_changed or dry_mismatch or out.get("finished_at"):
         out["manifest"] = manifest
         out["dry_run"] = dry_run

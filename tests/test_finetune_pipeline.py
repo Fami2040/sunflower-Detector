@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,20 @@ _FIXTURES = Path(__file__).resolve().parent / "fixtures" / "finetune"
 
 
 class FinetunePipelineTests(unittest.TestCase):
+    def test_merge_finetune_eval_section_honors_harchoc_export_device_over_cpu_config(
+        self,
+    ) -> None:
+        from harchoc.finetune_pipeline import merge_finetune_eval_section
+
+        with patch.dict(os.environ, {"HARCHOC_EXPORT_DEVICE": "0"}, clear=False):
+            out = merge_finetune_eval_section(
+                {"device": "cpu", "export_device": "cpu"},
+                locked_conf_from="reports/hsp/threshold_val.json",
+                hsp_counting=True,
+            )
+        self.assertEqual(out["device"], "0")
+        self.assertEqual(out["export_device"], "0")
+
     def test_tide_guidance_tray_adapt(self) -> None:
         from harchoc.finetune_pipeline import finetune_tide_guidance
 
@@ -225,6 +240,16 @@ class FinetuneGpuQueueTests(unittest.TestCase):
         bw = resolve_finetune_base_weights(
             {"tray_key": "3a5-9", "stage1_run_name": "finetune_3a5-9_s1"},
             stage=2,
+        )
+        self.assertEqual(bw, "runs/transfer/finetune_3a5-9_s1/weights/best.pt")
+
+    def test_resolve_finetune_base_weights_stage2_ignores_defaults_base(self) -> None:
+        from harchoc.finetune_pipeline import resolve_finetune_base_weights
+
+        bw = resolve_finetune_base_weights(
+            {"tray_key": "3a5-9", "stage1_run_name": "finetune_3a5-9_s1", "stage": 2},
+            stage=2,
+            defaults={"base_weights": "models/best2.pt"},
         )
         self.assertEqual(bw, "runs/transfer/finetune_3a5-9_s1/weights/best.pt")
 

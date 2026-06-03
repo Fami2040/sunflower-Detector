@@ -12,9 +12,12 @@
     "locked_conf_from": "reports/hsp/threshold_val.json",
     "weak_plan": "reports/domains/weak_tray_plan.json",
     "tide_summary": "reports/hsp/tide_bucket_summary.json",
+    "base_weights": "models/best2.pt",
+    "finetune_base_selection": "reports/hsp/finetune_base_selection.json",
     "min_free_mib": 5500,
     "env": {
-      "HARCHOC_MAX_BATCH": "1"
+      "HARCHOC_MAX_BATCH": "1",
+      "PYTHONUNBUFFERED": "1"
     }
   },
   "jobs": [
@@ -59,7 +62,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": true,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Weak-tray rank #1: tray_adapt when TIDE Loc+Bkg dominates (tide_bucket_summary); stage-1 frozen backbone matches finetune.py --stage 1 defaults.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_1.json"},
@@ -88,7 +91,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": true,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Weak-tray rank #2 from domain_tray_audit_refresh; same stage-1 protocol as finetune_weak_tray_1.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_2.json"}
@@ -116,7 +119,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": true,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Weak-tray rank #3 from domain_tray_audit_refresh; same stage-1 protocol as finetune_weak_tray_1.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_3.json"}
@@ -143,7 +146,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": false,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Stage-2 full unfreeze after finetune_weak_tray_1; base_weights runs/transfer/finetune_3a5-9_s1/weights/best.pt.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_1_s2.json"},
@@ -171,7 +174,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": false,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Stage-2 full unfreeze after finetune_weak_tray_2; base_weights runs/transfer/finetune_350_s1/weights/best.pt.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_2_s2.json"}
@@ -198,7 +201,7 @@
         "imgsz": 1280,
         "batch": 1,
         "freeze_backbone": false,
-        "patience": 50
+        "patience": 10
       },
       "rationale": "Stage-2 full unfreeze after finetune_weak_tray_3; base_weights runs/transfer/finetune_200-3-1_s1/weights/best.pt.",
       "skip_if": {"finetune_out": "reports/transfer/finetune_queue_finetune_weak_tray_3_s2.json"}
